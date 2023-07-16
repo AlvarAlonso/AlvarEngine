@@ -1,0 +1,34 @@
+#pragma once
+
+#include "defines.h"
+
+#include <windows.h>
+
+class Engine
+{
+public:
+    static Engine* Get();
+
+    void StartUp();
+
+    void Run();
+
+    void Shutdown();
+
+    LRESULT WinProc(HWND aWindowHandle, UINT aMsg, WPARAM aWParam, LPARAM aLParam);
+
+private:
+    Engine();
+
+    Engine(const Engine& aEngine) = delete;
+    bool operator== (const Engine& aEngine) = delete;
+
+    bool InitWindowsApp();
+
+    //bool InitWindowsApp();
+private:
+    static Engine* m_pInstance;
+
+    HINSTANCE m_WindowsInstance = 0;
+    HWND m_WindowHandle = 0;
+};

@@ -38,3 +38,14 @@ STATIC_ASSERT(sizeof(bool) == 1, "Expected bool to be 8 byte.");
 
 // Pass function X with the event as parameter in arg position _1
 #define BIND_EVENT_FUNC(x) std::bind(&x, this, std::placeholders::_1)
+
+#ifdef SGSEXPORT
+#ifdef _MSC_VER
+#define SGS __declspec(dllexport)
+#endif // _MSC_VER
+#else
+#ifdef _MSC_VER
+#define SGS __declspec(dllimport)
+#endif // _MSC_VER
+
+#endif // SGEXPORT

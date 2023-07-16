@@ -1,11 +1,17 @@
 #include <iostream>
+
 #include <logger.h>
+#include <engine.hpp>
 
 int main()
 {
-    std::cout<<"Hello World!"<<std::endl;
+    Engine* App = Engine::Get();
 
-    SGSINFO("Ay dios mio manuela!");
+    App->StartUp();
+
+    App->Run();
+
+    App->Shutdown();
 
     return 0;
 }
