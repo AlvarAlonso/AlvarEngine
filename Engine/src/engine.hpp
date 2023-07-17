@@ -1,6 +1,6 @@
 #pragma once
 
-#include "defines.h"
+#include "core/defines.h"
 
 #include <windows.h>
 
@@ -25,7 +25,6 @@ private:
 
     bool InitWindowsApp();
 
-    //bool InitWindowsApp();
 private:
     static Engine* m_pInstance;
 

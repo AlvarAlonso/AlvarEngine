@@ -2,7 +2,7 @@
 
 echo "building sandbox"
 
-set include_paths= /I..\Engine\src
+set include_paths= /I..\Engine\src /I..\ThirdParty\VulkanBootstrap
 set file_paths= ..\Sandbox\main.cpp
 
 pushd ..\bin
