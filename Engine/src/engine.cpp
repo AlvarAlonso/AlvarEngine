@@ -76,6 +76,12 @@ bool Engine::InitWindowsApp()
         return false;
     }
 
+    // Compute window dimensions
+    RECT Rect = {0, 0, (LONG)m_ClientWidth, (LONG)m_ClientHeight};
+    AdjustWindowRect(&Rect, WS_OVERLAPPEDWINDOW, false);
+    LONG Width = Rect.right - Rect.left;
+    LONG Height = Rect.bottom - Rect.top;
+
     // Create Window
     m_WindowHandle =  CreateWindow(
         "WindowClass",
@@ -83,8 +89,8 @@ bool Engine::InitWindowsApp()
         WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT,
         CW_USEDEFAULT,
-        CW_USEDEFAULT,
-        CW_USEDEFAULT,
+        Width,
+        Height,
         0,
         0,
         m_WindowsInstance,
@@ -104,5 +110,22 @@ bool Engine::InitWindowsApp()
 
 LRESULT CALLBACK Engine::WinProc(HWND aWindowHandle, UINT aMsg, WPARAM aWParam, LPARAM aLParam)
 {
+    switch (aMsg)
+    {
+        // Sent when the window is activated or deactivated.
+        case WM_ACTIVATE:
+            if(LOWORD(aWParam) == WA_INACTIVE)
+            {
+                // TODO: Pause game
+            }
+            else
+            {
+                // TODO: Unpause game
+            }
+            return 0;
+        // Sent when the user resizes the window.
+        case WM_SIZE:
+        break;
+    }
     return DefWindowProcA(aWindowHandle, aMsg, aWParam, aLParam);
 }

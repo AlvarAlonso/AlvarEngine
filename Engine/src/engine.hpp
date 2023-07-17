@@ -31,4 +31,7 @@ private:
 
     HINSTANCE m_WindowsInstance = 0;
     HWND m_WindowHandle = 0;
+
+    uint32 m_ClientWidth = 800;
+    uint32 m_ClientHeight = 600;
 };
