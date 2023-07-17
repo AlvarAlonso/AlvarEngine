@@ -125,7 +125,66 @@ LRESULT CALLBACK Engine::WinProc(HWND aWindowHandle, UINT aMsg, WPARAM aWParam, 
             return 0;
         // Sent when the user resizes the window.
         case WM_SIZE:
+            m_ClientWidth = LOWORD(aLParam);
+            m_ClientHeight = HIWORD(aLParam);
+
+            if(aWParam == SIZE_MINIMIZED)
+            {
+                // TODO: Handle minimization of window. Pause game, etc.
+            }
+            else if (aWParam == SIZE_MAXIMIZED)
+            {
+                // TODO: Handle maximization of window. Unpause game, etc.
+            }
+            else if (aWParam == SIZE_RESTORED)
+            {
+                // TODO: Handle restoration of window, from minimized, maximized or resizing state.
+            }
+            else
+            {
+                // TODO: Handle resizing.
+            }
+
+            return 0;
         break;
+        // Sent when the user grabs the resize bars.
+        case WM_ENTERSIZEMOVE:
+            // TOOD:
+            // Pause game
+            // Handle resizing
+            return 0;
+        // Sent when the user releases the resize bars.
+        case WM_EXITSIZEMOVE:
+            // TODO:
+            // Handle resizing
+            return 0;
+        // Prevent window from becoming to small
+        case WM_GETMINMAXINFO:
+            ((MINMAXINFO*)aLParam)->ptMinTrackSize.x = 200;
+            ((MINMAXINFO*)aLParam)->ptMinTrackSize.y = 200;
+            return 0;
+        
+        case WM_LBUTTONDOWN:
+        case WM_MBUTTONDOWN:
+        case WM_RBUTTONDOWN:
+            // TODO: Handle mouse button down
+            return 0;
+        case WM_LBUTTONUP:
+        case WM_MBUTTONUP:
+        case WM_RBUTTONUP:
+            // TODO: Handle mouse button up
+            return 0;
+        case WM_MOUSEMOVE:
+            // TODO: Handle mouse move
+            return 0;
+        case WM_KEYUP:
+            if(aWParam == VK_ESCAPE)
+            {
+                PostQuitMessage(0);
+            }
+
+            return 0;
     }
+    
     return DefWindowProcA(aWindowHandle, aMsg, aWParam, aLParam);
 }
