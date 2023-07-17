@@ -1,5 +1,7 @@
 #include "vulkan_module.hpp"
 
+#include "core/defines.h"
+#include "core/logger.h"
 #include "vk_types.hpp"
 #include "vk_initializers.hpp"
 
@@ -18,6 +20,11 @@
 			std::abort();                                                \
 		}                                                           \
 	} while (0)														\
+
+VulkanModule::VulkanModule()
+{
+
+}
 
 bool VulkanModule::Initialize(const HINSTANCE aInstanceHandle, const HWND aWindowHandle)
 {
@@ -81,9 +88,28 @@ bool VulkanModule::Initialize(const HINSTANCE aInstanceHandle, const HWND aWindo
 
 void VulkanModule::Render()
 {
+
 }
 
 bool VulkanModule::Shutdown()
 {
+	if (m_bIsInitialized)
+	{
+		SGSINFO("Shutting down Vulkan");
+
+		vkDestroySwapchainKHR(m_Device, m_Swapchain, nullptr);
+
+		for (int32 i = 0; i < m_SwapchainImageViews.size(); ++i)
+		{
+			vkDestroyImageView(m_Device, m_SwapchainImageViews[i], nullptr);
+		}
+
+		vkDestroyDevice(m_Device, nullptr);
+		vkDestroySurfaceKHR(m_VulkanInstance, m_Surface, nullptr);
+		vkb::destroy_debug_utils_messenger(m_VulkanInstance, m_DebugMessenger);
+
+		vkDestroyInstance(m_VulkanInstance, nullptr);
+	}
+
     return false;
 }

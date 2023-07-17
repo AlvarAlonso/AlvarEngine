@@ -7,6 +7,8 @@
 class VulkanModule
 {
 public:
+    VulkanModule();
+
     bool Initialize(const HINSTANCE aInstanceHandle, const HWND aWindowHandle);
 
     void Render();

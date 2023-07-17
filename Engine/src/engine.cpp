@@ -27,12 +27,15 @@ void Engine::StartUp()
 {
     SGSINFO("StartUp!");
     InitWindowsApp();
+    
+    m_VulkanModule.Initialize(m_WindowsInstance, m_WindowHandle);
 }
 
 void Engine::Run()
 {
     MSG msg = {0};
 
+    // TODO: does not quit when clicking the cross.
     while(msg.message != WM_QUIT)
 	{
 		// If there are Window messages then process them.
@@ -49,6 +52,7 @@ void Engine::Run()
 void Engine::Shutdown()
 {
     SGSINFO("Shutdown!");
+    m_VulkanModule.Shutdown();
 }
 
 bool Engine::InitWindowsApp()
@@ -184,7 +188,7 @@ LRESULT CALLBACK Engine::WinProc(HWND aWindowHandle, UINT aMsg, WPARAM aWParam, 
             }
 
             return 0;
+        default:
+            return DefWindowProcA(aWindowHandle, aMsg, aWParam, aLParam);
     }
-    
-    return DefWindowProcA(aWindowHandle, aMsg, aWParam, aLParam);
 }

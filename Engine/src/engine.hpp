@@ -4,6 +4,8 @@
 
 #include <windows.h>
 
+#include "renderer/vulkan_module.hpp"
+
 class Engine
 {
 public:
@@ -33,4 +35,6 @@ private:
 
     uint32 m_ClientWidth = 800;
     uint32 m_ClientHeight = 600;
+
+    VulkanModule m_VulkanModule;
 };
