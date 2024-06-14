@@ -37,5 +37,22 @@ private:
 
     // ------------
 
+    // Vulkan Commands
+
+    VkQueue m_GraphicsQueue;
+    uint32_t m_GraphicsQueueFamily;
+
+    VkCommandPool m_CommandPool;
+    VkCommandBuffer m_CommandBuffer;
+
+    // ------------
+
+    // Render passes
+
+    VkRenderPass m_RenderPass;
+    std::vector<VkFramebuffer> m_Framebuffers;
+
+    // ------------
+
     VkExtent2D m_WindowExtent = { 800, 600 };
 };

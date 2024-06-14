@@ -81,6 +81,65 @@ bool VulkanModule::Initialize(const HINSTANCE aInstanceHandle, const HWND aWindo
 	m_SwapchainImages = vkbSwapchain.get_images().value();
 	m_SwapchainImageViews = vkbSwapchain.get_image_views().value();
 
+	// Get Graphics Queue
+	m_GraphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
+	m_GraphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
+
+	// Creation of command structures
+	VkCommandPoolCreateInfo CommandPoolInfo = vkinit::CommandPoolCreateInfo(m_GraphicsQueueFamily, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+	VK_CHECK(vkCreateCommandPool(m_Device, &CommandPoolInfo, nullptr, &m_CommandPool));
+
+	VkCommandBufferAllocateInfo CmdAllocInfo = vkinit::CommandBufferAllocateInfo(m_CommandPool, 1);
+	VK_CHECK(vkAllocateCommandBuffers(m_Device, &CmdAllocInfo, &m_CommandBuffer));
+
+	// Render pass creation
+	VkAttachmentDescription ColorAttachment = {};
+	ColorAttachment.format = m_SwapchainImageFormat;
+	ColorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	ColorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	ColorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	ColorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	ColorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	ColorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	ColorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+	VkAttachmentReference ColorAttachmentRef = {};
+	ColorAttachmentRef.attachment = 0;
+	ColorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+	VkSubpassDescription Subpass = {};
+	Subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	Subpass.colorAttachmentCount = 1;
+	Subpass.pColorAttachments = &ColorAttachmentRef;
+
+	VkRenderPassCreateInfo RenderPassInfo = {};
+	RenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+	RenderPassInfo.attachmentCount = 1;
+	RenderPassInfo.pAttachments = &ColorAttachment;
+	RenderPassInfo.subpassCount = 1;
+	RenderPassInfo.pSubpasses = &Subpass;
+
+	VK_CHECK(vkCreateRenderPass(m_Device, &RenderPassInfo, nullptr, &m_RenderPass));
+
+	// Framebuffers creation
+	VkFramebufferCreateInfo FramebufferInfo = {};
+	FramebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+	FramebufferInfo.pNext = nullptr;
+	FramebufferInfo.renderPass = m_RenderPass;
+	FramebufferInfo.attachmentCount = 1;
+	FramebufferInfo.width = m_WindowExtent.width;
+	FramebufferInfo.height = m_WindowExtent.height;
+	FramebufferInfo.layers = 1;
+
+	const uint32 SwapchainImageCount = m_SwapchainImages.size();
+	m_Framebuffers = std::vector<VkFramebuffer>(SwapchainImageCount);
+
+	for (int32 i = 0; i < SwapchainImageCount; ++i)
+	{
+		FramebufferInfo.pAttachments = &m_SwapchainImageViews[i];
+		VK_CHECK(vkCreateFramebuffer(m_Device, &FramebufferInfo, nullptr, &m_Framebuffers[i]));
+	}
+
     m_bIsInitialized = true;
 
     return true;
@@ -97,10 +156,15 @@ bool VulkanModule::Shutdown()
 	{
 		SGSINFO("Shutting down Vulkan");
 
+		vkDestroyCommandPool(m_Device, m_CommandPool, nullptr);
+
 		vkDestroySwapchainKHR(m_Device, m_Swapchain, nullptr);
+
+		vkDestroyRenderPass(m_Device, m_RenderPass, nullptr);
 
 		for (int32 i = 0; i < m_SwapchainImageViews.size(); ++i)
 		{
+			vkDestroyFramebuffer(m_Device, m_Framebuffers[i], nullptr);
 			vkDestroyImageView(m_Device, m_SwapchainImageViews[i], nullptr);
 		}
 
