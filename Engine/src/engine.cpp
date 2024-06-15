@@ -44,6 +44,8 @@ void Engine::Run()
             TranslateMessage(&msg);
             DispatchMessage(&msg);
 		}
+
+        m_VulkanModule.Render();
     }
 
     return;
@@ -120,11 +122,11 @@ LRESULT CALLBACK Engine::WinProc(HWND aWindowHandle, UINT aMsg, WPARAM aWParam, 
         case WM_ACTIVATE:
             if(LOWORD(aWParam) == WA_INACTIVE)
             {
-                // TODO: Pause game
+                // TODO: Pause game.
             }
             else
             {
-                // TODO: Unpause game
+                // TODO: Unpause game.
             }
             return 0;
         // Sent when the user resizes the window.
@@ -160,9 +162,9 @@ LRESULT CALLBACK Engine::WinProc(HWND aWindowHandle, UINT aMsg, WPARAM aWParam, 
         // Sent when the user releases the resize bars.
         case WM_EXITSIZEMOVE:
             // TODO:
-            // Handle resizing
+            // Handle resizing.
             return 0;
-        // Prevent window from becoming to small
+        // Prevent window from becoming to small.
         case WM_GETMINMAXINFO:
             ((MINMAXINFO*)aLParam)->ptMinTrackSize.x = 200;
             ((MINMAXINFO*)aLParam)->ptMinTrackSize.y = 200;
@@ -171,15 +173,15 @@ LRESULT CALLBACK Engine::WinProc(HWND aWindowHandle, UINT aMsg, WPARAM aWParam, 
         case WM_LBUTTONDOWN:
         case WM_MBUTTONDOWN:
         case WM_RBUTTONDOWN:
-            // TODO: Handle mouse button down
+            // TODO: Handle mouse button down.
             return 0;
         case WM_LBUTTONUP:
         case WM_MBUTTONUP:
         case WM_RBUTTONUP:
-            // TODO: Handle mouse button up
+            // TODO: Handle mouse button up.
             return 0;
         case WM_MOUSEMOVE:
-            // TODO: Handle mouse move
+            // TODO: Handle mouse move.
             return 0;
         case WM_KEYUP:
             if(aWParam == VK_ESCAPE)

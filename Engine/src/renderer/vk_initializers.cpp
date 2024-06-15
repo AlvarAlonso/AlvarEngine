@@ -18,6 +18,7 @@ VkCommandBufferAllocateInfo vkinit::CommandBufferAllocateInfo(VkCommandPool aCom
     CreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     CreateInfo.pNext = nullptr;
     CreateInfo.commandPool = aCommandPool;
+    CreateInfo.commandBufferCount = aCount;
     CreateInfo.level = aLevel;
 
     return CreateInfo;
@@ -36,6 +37,16 @@ VkPipelineLayoutCreateInfo vkinit::PipelineLayoutCreateInfo()
 	Info.pushConstantRangeCount = 0;
 	Info.pPushConstantRanges = nullptr;
 	return Info;
+}
+
+VkPipelineDynamicStateCreateInfo vkinit::DynamicStateCreateInfo(const std::vector<VkDynamicState>& aDynamicStates)
+{
+    VkPipelineDynamicStateCreateInfo DynamicState{};
+    DynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    DynamicState.dynamicStateCount = static_cast<uint32_t>(aDynamicStates.size());
+    DynamicState.pDynamicStates = aDynamicStates.data();
+
+    return DynamicState;
 }
 
 VkPipelineVertexInputStateCreateInfo vkinit::VertexInputStateCreateInfo()
@@ -141,6 +152,86 @@ VkPipelineShaderStageCreateInfo vkinit::PipelineShaderStageCreateInfo(VkShaderSt
 	return Info;
 }
 
+VkCommandBufferBeginInfo vkinit::CommandBufferBeginInfo(VkCommandBufferUsageFlags aFlags)
+{
+	VkCommandBufferBeginInfo Info = {};
+	Info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	Info.pNext = nullptr;
+	
+	Info.pInheritanceInfo = nullptr;
+	Info.flags = aFlags;
+	return Info;
+}
+
+VkRenderPassBeginInfo vkinit::RenderPassBeginInfo(VkRenderPass aRenderPass, VkExtent2D aWindowExtent, VkFramebuffer aFramebuffer)
+{
+    VkRenderPassBeginInfo Info = {};
+	Info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	Info.pNext = nullptr;
+
+	Info.renderPass = aRenderPass;
+	Info.renderArea.offset.x = 0;
+	Info.renderArea.offset.y = 0;
+	Info.renderArea.extent = aWindowExtent;
+	Info.clearValueCount = 1;
+	Info.pClearValues = nullptr;
+	Info.framebuffer = aFramebuffer;
+
+	return Info;
+}
+
+VkFenceCreateInfo vkinit::FenceCreateInfo(VkFenceCreateFlags aFlags)
+{
+	VkFenceCreateInfo Info = {};
+	Info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	Info.pNext = nullptr;
+
+	Info.flags = aFlags;
+
+	return Info;
+}
+
+VkSemaphoreCreateInfo vkinit::SemaphoreCreateInfo(VkSemaphoreCreateFlags aFlags)
+{
+	VkSemaphoreCreateInfo Info = {};
+	Info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+	Info.pNext = nullptr;
+	Info.flags = aFlags;
+	return Info;
+}
+
+VkSubmitInfo vkinit::SubmitInfo(VkCommandBuffer* aCmd)
+{
+	VkSubmitInfo Info = {};
+	Info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	Info.pNext = nullptr;
+
+	Info.waitSemaphoreCount = 0;
+	Info.pWaitSemaphores = nullptr;
+	Info.pWaitDstStageMask = nullptr;
+	Info.commandBufferCount = 1;
+	Info.pCommandBuffers = aCmd;
+	Info.signalSemaphoreCount = 0;
+	Info.pSignalSemaphores = nullptr;
+
+	return Info;
+}
+
+VkPresentInfoKHR vkinit::PresentInfo()
+{
+	VkPresentInfoKHR Info = {};
+	Info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	Info.pNext = nullptr;
+
+	Info.swapchainCount = 0;
+	Info.pSwapchains = nullptr;
+	Info.pWaitSemaphores = nullptr;
+	Info.waitSemaphoreCount = 0;
+	Info.pImageIndices = nullptr;
+
+	return Info;
+}
+
 VkPipeline PipelineBuilder::BuildPipeline(VkDevice aDevice, VkRenderPass aRenderPass)
 {
     VkPipelineViewportStateCreateInfo ViewportState = {};
@@ -175,6 +266,7 @@ VkPipeline PipelineBuilder::BuildPipeline(VkDevice aDevice, VkRenderPass aRender
 	PipelineInfo.pRasterizationState = &m_Rasterizer;
 	PipelineInfo.pMultisampleState = &m_Multisampling;
 	PipelineInfo.pColorBlendState = &ColorBlending;
+    PipelineInfo.pDynamicState = &m_DynamicState;
 	PipelineInfo.layout = m_PipelineLayout;
 	PipelineInfo.renderPass = aRenderPass;
 	PipelineInfo.subpass = 0;

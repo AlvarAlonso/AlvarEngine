@@ -47,6 +47,9 @@ private:
     void InitFramebuffers();
     void InitPipelines();
 
+    void RecordCommandBuffer(VkCommandBuffer aCommandBuffer, uint32_t aImageIdx);
+    void RenderFrame();
+
     bool m_bIsInitialized = false;
 
     // Vulkan core.
@@ -62,6 +65,7 @@ private:
     VkFormat m_SwapchainImageFormat;
     std::vector<VkImage> m_SwapchainImages;
     std::vector<VkImageView> m_SwapchainImageViews;
+    uint32_t m_ImageIdx;
     // ------------
 
     // Vulkan Commands.
@@ -80,6 +84,12 @@ private:
     // Pipelines.
     VkPipelineLayout m_ForwardPipelineLayout;
     VkPipeline m_ForwardPipeline;
+    //-------------
+
+    // Synchronization structures.
+    VkSemaphore m_ImageAvailableSemaphore;
+    VkSemaphore m_RenderFinishedSemaphore;
+    VkFence m_InFlightFence;
     //-------------
 
     VkExtent2D m_WindowExtent = { 800, 600 };

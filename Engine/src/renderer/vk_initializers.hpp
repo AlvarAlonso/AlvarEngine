@@ -12,6 +12,8 @@ namespace vkinit
 
 	VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo();
 
+    VkPipelineDynamicStateCreateInfo DynamicStateCreateInfo(const std::vector<VkDynamicState>& aDynamicStates);
+
 	VkPipelineVertexInputStateCreateInfo VertexInputStateCreateInfo();
 
     VkPipelineInputAssemblyStateCreateInfo InputAssemblyCreateInfo(VkPrimitiveTopology aTopology);
@@ -25,6 +27,18 @@ namespace vkinit
 	VkPipelineColorBlendAttachmentState ColorBlendAttachmentState();
    	
     VkPipelineShaderStageCreateInfo PipelineShaderStageCreateInfo(VkShaderStageFlagBits aStage, VkShaderModule aShaderModule);
+
+	VkCommandBufferBeginInfo CommandBufferBeginInfo(VkCommandBufferUsageFlags aFlags = 0);
+
+    VkRenderPassBeginInfo RenderPassBeginInfo(VkRenderPass aRenderPass, VkExtent2D aWindowExtent, VkFramebuffer aFramebuffer);
+
+	VkFenceCreateInfo FenceCreateInfo(VkFenceCreateFlags aFlags = 0);
+
+	VkSemaphoreCreateInfo SemaphoreCreateInfo(VkSemaphoreCreateFlags aFlags = 0);
+
+    VkSubmitInfo SubmitInfo(VkCommandBuffer* aCmd);
+
+	VkPresentInfoKHR PresentInfo();
 }
 
 // TODO: Make namespaces for everything related to my code.
@@ -40,6 +54,7 @@ public:
 	std::vector<VkPipelineColorBlendAttachmentState> m_ColorBlendAttachment;
 	VkPipelineMultisampleStateCreateInfo m_Multisampling;
 	VkPipelineLayout m_PipelineLayout;
+    VkPipelineDynamicStateCreateInfo m_DynamicState;
 
 	VkPipeline BuildPipeline(VkDevice aDevice, VkRenderPass aRenderPass);
 };

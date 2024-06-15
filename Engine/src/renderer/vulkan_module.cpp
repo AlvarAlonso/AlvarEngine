@@ -22,7 +22,8 @@
 		}                                                           \
 	} while (0)														\
 
-VulkanModule::VulkanModule()
+VulkanModule::VulkanModule() :
+	m_ImageIdx(0)
 {
 
 }
@@ -37,6 +38,10 @@ bool VulkanModule::Initialize(const HINSTANCE aInstanceHandle, const HWND aWindo
 
 	InitFramebuffers();
 
+	InitPipelines();
+
+	InitSyncStructures();
+
     m_bIsInitialized = true;
 
     return true;
@@ -44,7 +49,9 @@ bool VulkanModule::Initialize(const HINSTANCE aInstanceHandle, const HWND aWindo
 
 void VulkanModule::Render()
 {
+	assert(m_bIsInitialized);
 
+	RenderFrame();
 }
 
 bool VulkanModule::Shutdown()
@@ -157,7 +164,21 @@ void VulkanModule::InitCommandPools()
 
 void VulkanModule::InitSyncStructures()
 {
+	VkSemaphoreCreateInfo SemaphoreInfo = vkinit::SemaphoreCreateInfo();
 
+	VK_CHECK(vkCreateSemaphore(m_Device, &SemaphoreInfo, nullptr, &m_ImageAvailableSemaphore));
+	VK_CHECK(vkCreateSemaphore(m_Device, &SemaphoreInfo, nullptr, &m_RenderFinishedSemaphore));
+
+	VkFenceCreateInfo FenceInfo = vkinit::FenceCreateInfo(VK_FENCE_CREATE_SIGNALED_BIT);
+
+	VK_CHECK(vkCreateFence(m_Device, &FenceInfo, nullptr, &m_InFlightFence));
+
+	m_MainDeletionQueue.PushFunction([=]
+	{
+		vkDestroySemaphore(m_Device, m_ImageAvailableSemaphore, nullptr);
+		vkDestroySemaphore(m_Device, m_RenderFinishedSemaphore, nullptr);
+		vkDestroyFence(m_Device, m_InFlightFence, nullptr);
+	});
 }
 
 void VulkanModule::InitDescriptorSetPool()
@@ -192,12 +213,22 @@ void VulkanModule::InitRenderPass()
 	Subpass.colorAttachmentCount = 1;
 	Subpass.pColorAttachments = &ColorAttachmentRef;
 
+	VkSubpassDependency Dependency{};
+	Dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+	Dependency.dstSubpass = 0;
+	Dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	Dependency.srcAccessMask = 0;
+	Dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	Dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
 	VkRenderPassCreateInfo RenderPassInfo = {};
 	RenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 	RenderPassInfo.attachmentCount = 1;
 	RenderPassInfo.pAttachments = &ColorAttachment;
 	RenderPassInfo.subpassCount = 1;
 	RenderPassInfo.pSubpasses = &Subpass;
+	RenderPassInfo.dependencyCount = 1;
+	RenderPassInfo.pDependencies = &Dependency;
 
 	VK_CHECK(vkCreateRenderPass(m_Device, &RenderPassInfo, nullptr, &m_RenderPass));
 }
@@ -222,13 +253,21 @@ void VulkanModule::InitFramebuffers()
 		FramebufferInfo.pAttachments = &m_SwapchainImageViews[i];
 		VK_CHECK(vkCreateFramebuffer(m_Device, &FramebufferInfo, nullptr, &m_Framebuffers[i]));
 	}
+
+	m_MainDeletionQueue.PushFunction([=]
+	{
+		for (auto Framebuffer : m_Framebuffers)
+		{
+			vkDestroyFramebuffer(m_Device, Framebuffer, nullptr);
+		}
+	});
 }
 
 void VulkanModule::InitPipelines()
 {
 	VkShaderModule VertShader;
 	// TODO: Do not hardcode this.
-	if (!vkutils::LoadShaderModule(m_Device, "../shaders/vert.spv", &VertShader))
+	if (!vkutils::LoadShaderModule(m_Device, "../Engine/shaders/vert.spv", &VertShader))
 	{
 		std::cout << "Error when building the vertex shader module" << std::endl;
 	}
@@ -238,7 +277,7 @@ void VulkanModule::InitPipelines()
 	}
 
 	VkShaderModule FragShader;
-	if (!vkutils::LoadShaderModule(m_Device, "../shaders/frag.spv", &FragShader))
+	if (!vkutils::LoadShaderModule(m_Device, "../Engine/shaders/frag.spv", &FragShader))
 	{
 		std::cout << "Error when building the fragment shader module" << std::endl;
 	}
@@ -252,6 +291,14 @@ void VulkanModule::InitPipelines()
 	VK_CHECK(vkCreatePipelineLayout(m_Device, &PipelineLayoutInfo, nullptr, &m_ForwardPipelineLayout));
 
 	PipelineBuilder PipelineBuilder;
+
+	std::vector<VkDynamicState> DynamicStates = 
+	{
+		VK_DYNAMIC_STATE_VIEWPORT,
+		VK_DYNAMIC_STATE_SCISSOR
+	};
+
+	PipelineBuilder.m_DynamicState = vkinit::DynamicStateCreateInfo(DynamicStates);
 
 	PipelineBuilder.m_VertexInputInfo = vkinit::VertexInputStateCreateInfo();
 
@@ -287,4 +334,79 @@ void VulkanModule::InitPipelines()
 		vkDestroyPipeline(m_Device, m_ForwardPipeline, nullptr);
 		vkDestroyPipelineLayout(m_Device, m_ForwardPipelineLayout, nullptr);
 	});
+}
+
+void VulkanModule::RecordCommandBuffer(VkCommandBuffer aCommandBuffer, uint32_t aImageIdx)
+{
+	VkCommandBufferBeginInfo BeginInfo = vkinit::CommandBufferBeginInfo();
+
+	VK_CHECK(vkBeginCommandBuffer(m_CommandBuffer, &BeginInfo));
+
+	VkRenderPassBeginInfo RenderPassInfo = vkinit::RenderPassBeginInfo(m_RenderPass, m_WindowExtent, m_Framebuffers[aImageIdx]);
+
+	VkClearValue ClearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+	RenderPassInfo.clearValueCount = 1;
+	RenderPassInfo.pClearValues = &ClearColor;
+
+	vkCmdBeginRenderPass(m_CommandBuffer, &RenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+	vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ForwardPipeline);
+
+	// TODO: Check if this state is dynamic or not.
+	VkViewport Viewport{};
+	Viewport.x = 0.0f;
+	Viewport.y = 0.0f;
+	Viewport.width = static_cast<float>(m_WindowExtent.width);
+	Viewport.height = static_cast<float>(m_WindowExtent.height);
+	Viewport.minDepth = 0.0f;
+	Viewport.maxDepth = 1.0f;
+	vkCmdSetViewport(m_CommandBuffer, 0, 1, &Viewport);
+
+	VkRect2D Scissor{};
+	Scissor.offset = {0, 0};
+	Scissor.extent = m_WindowExtent;
+	vkCmdSetScissor(m_CommandBuffer, 0, 1, &Scissor);
+
+	vkCmdDraw(m_CommandBuffer, 3, 1, 0, 0);
+
+	vkCmdEndRenderPass(m_CommandBuffer);
+
+	VK_CHECK(vkEndCommandBuffer(m_CommandBuffer));
+}
+
+void VulkanModule::RenderFrame()
+{
+	vkWaitForFences(m_Device, 1, &m_InFlightFence, VK_TRUE, UINT64_MAX);
+
+	vkResetFences(m_Device, 1, &m_InFlightFence);
+
+	uint32_t ImageIndex;
+	vkAcquireNextImageKHR(m_Device, m_Swapchain, UINT64_MAX, m_ImageAvailableSemaphore, VK_NULL_HANDLE, &ImageIndex);
+
+	vkResetCommandBuffer(m_CommandBuffer, 0);
+	RecordCommandBuffer(m_CommandBuffer, ImageIndex);
+
+	VkSubmitInfo SubmitInfo = vkinit::SubmitInfo(&m_CommandBuffer);
+
+	VkSemaphore WaitSemaphores[] = {m_ImageAvailableSemaphore};
+	VkPipelineStageFlags WaitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+	SubmitInfo.waitSemaphoreCount = 1;
+	SubmitInfo.pWaitSemaphores = WaitSemaphores;
+	SubmitInfo.pWaitDstStageMask = WaitStages;
+
+	VkSemaphore SignalSemaphores[] = {m_RenderFinishedSemaphore};
+	SubmitInfo.signalSemaphoreCount = 1;
+	SubmitInfo.pSignalSemaphores = SignalSemaphores;
+
+	VK_CHECK(vkQueueSubmit(m_GraphicsQueue, 1, &SubmitInfo, m_InFlightFence));
+
+	VkPresentInfoKHR PresentInfo = vkinit::PresentInfo();
+	PresentInfo.waitSemaphoreCount = 1;
+	PresentInfo.pWaitSemaphores = SignalSemaphores;
+	VkSwapchainKHR SwapChains[] = {m_Swapchain};
+	PresentInfo.swapchainCount = 1;
+	PresentInfo.pSwapchains = SwapChains;
+	PresentInfo.pImageIndices = &ImageIndex;
+
+	vkQueuePresentKHR(m_GraphicsQueue, &PresentInfo);
 }
