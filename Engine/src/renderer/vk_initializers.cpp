@@ -1,4 +1,5 @@
 #include "vk_initializers.hpp"
+#include <iostream>
 
 VkCommandPoolCreateInfo vkinit::CommandPoolCreateInfo(uint32 aQueueFamilyIndex, VkCommandPoolCreateFlags aFlags)
 {
@@ -20,4 +21,174 @@ VkCommandBufferAllocateInfo vkinit::CommandBufferAllocateInfo(VkCommandPool aCom
     CreateInfo.level = aLevel;
 
     return CreateInfo;
+}
+
+VkPipelineLayoutCreateInfo vkinit::PipelineLayoutCreateInfo()
+{
+    VkPipelineLayoutCreateInfo Info{};
+	Info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+	Info.pNext = nullptr;
+
+	//empty defaults
+	Info.flags = 0;
+	Info.setLayoutCount = 0;
+	Info.pSetLayouts = nullptr;
+	Info.pushConstantRangeCount = 0;
+	Info.pPushConstantRanges = nullptr;
+	return Info;
+}
+
+VkPipelineVertexInputStateCreateInfo vkinit::VertexInputStateCreateInfo()
+{
+	VkPipelineVertexInputStateCreateInfo Info = {};
+	Info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+	Info.pNext = nullptr;
+
+	//no vertex bindings or attributes
+	Info.vertexBindingDescriptionCount = 0;
+	Info.vertexAttributeDescriptionCount = 0;
+	return Info;
+}
+
+VkPipelineInputAssemblyStateCreateInfo vkinit::InputAssemblyCreateInfo(VkPrimitiveTopology aTopology)
+{
+    VkPipelineInputAssemblyStateCreateInfo Info = {};
+	Info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+	Info.pNext = nullptr;
+	Info.topology = aTopology;
+	Info.primitiveRestartEnable = VK_FALSE;
+	return Info;
+}
+
+VkPipelineDepthStencilStateCreateInfo vkinit::DepthStencilCreateInfo(bool abDepthTest, bool abDepthWrite, VkCompareOp aCompareOp)
+{
+	VkPipelineDepthStencilStateCreateInfo Info = {};
+	Info.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+	Info.pNext = nullptr;
+
+	Info.depthTestEnable = abDepthTest ? VK_TRUE : VK_FALSE;
+	Info.depthWriteEnable = abDepthWrite ? VK_TRUE : VK_FALSE;
+	Info.depthCompareOp = abDepthTest ? aCompareOp : VK_COMPARE_OP_ALWAYS;
+	Info.depthBoundsTestEnable = VK_FALSE;
+	Info.minDepthBounds = 0.0f; // Optional.
+	Info.maxDepthBounds = 1.0f; // Optional.
+	Info.stencilTestEnable = VK_FALSE;
+
+	return Info;
+}
+
+VkPipelineRasterizationStateCreateInfo vkinit::RasterizationStateCreateInfo(VkPolygonMode aPolygonMode)
+{
+	VkPipelineRasterizationStateCreateInfo Info = {};
+	Info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+	Info.pNext = nullptr;
+
+	Info.depthClampEnable = VK_FALSE;
+	//rasterizer discard allows objects with holes, default to no
+	Info.rasterizerDiscardEnable = VK_FALSE;
+
+	Info.polygonMode = aPolygonMode;
+	Info.lineWidth = 1.0f;
+	//no backface cull
+	Info.cullMode = VK_CULL_MODE_NONE;
+	Info.frontFace = VK_FRONT_FACE_CLOCKWISE;
+	//no depth bias
+	Info.depthBiasEnable = VK_FALSE;
+	Info.depthBiasConstantFactor = 0.0f;
+	Info.depthBiasClamp = 0.0f;
+	Info.depthBiasSlopeFactor = 0.0f;
+
+	return Info;
+}
+
+VkPipelineMultisampleStateCreateInfo vkinit::MultisamplingStateCreateInfo()
+{
+	VkPipelineMultisampleStateCreateInfo Info = {};
+	Info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+	Info.pNext = nullptr;
+
+	Info.sampleShadingEnable = VK_FALSE;
+	//multisampling defaulted to no multisampling (1 sample per pixel)
+	Info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+	Info.minSampleShading = 1.0f;
+	Info.pSampleMask = nullptr;
+	Info.alphaToCoverageEnable = VK_FALSE;
+	Info.alphaToOneEnable = VK_FALSE;
+	return Info;
+}
+
+VkPipelineColorBlendAttachmentState vkinit::ColorBlendAttachmentState()
+{
+	VkPipelineColorBlendAttachmentState ColorBlendAttachment = {};
+	ColorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+		VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+	ColorBlendAttachment.blendEnable = VK_FALSE;
+	return ColorBlendAttachment;
+}
+
+VkPipelineShaderStageCreateInfo vkinit::PipelineShaderStageCreateInfo(VkShaderStageFlagBits aStage, VkShaderModule aShaderModule)
+{
+    VkPipelineShaderStageCreateInfo Info{};
+	Info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	Info.pNext = nullptr;
+
+	//shader stage
+	Info.stage = aStage;
+	//module containing the code for this shader stage
+	Info.module = aShaderModule;
+	//the entry point of the shader
+	Info.pName = "main";
+	return Info;
+}
+
+VkPipeline PipelineBuilder::BuildPipeline(VkDevice aDevice, VkRenderPass aRenderPass)
+{
+    VkPipelineViewportStateCreateInfo ViewportState = {};
+	ViewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+	ViewportState.pNext = nullptr;
+
+	ViewportState.viewportCount = 1;
+	ViewportState.pViewports = &m_Viewport;
+	ViewportState.scissorCount = 1;
+	ViewportState.pScissors = &m_Scissor;
+
+	VkPipelineColorBlendStateCreateInfo ColorBlending = {};
+	ColorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+	ColorBlending.pNext = nullptr;
+
+	ColorBlending.logicOpEnable = VK_FALSE;
+	ColorBlending.logicOp = VK_LOGIC_OP_COPY;
+	ColorBlending.attachmentCount = static_cast<uint32_t>(m_ColorBlendAttachment.size());
+	ColorBlending.pAttachments = m_ColorBlendAttachment.data();
+
+
+	VkGraphicsPipelineCreateInfo PipelineInfo = {};
+	PipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+	PipelineInfo.pNext = nullptr;
+
+	PipelineInfo.stageCount = static_cast<uint32_t>(m_ShaderStages.size());
+	PipelineInfo.pStages = m_ShaderStages.data();
+	PipelineInfo.pVertexInputState = &m_VertexInputInfo;
+	PipelineInfo.pInputAssemblyState = &m_InputAssembly;
+	PipelineInfo.pViewportState = &ViewportState;
+	PipelineInfo.pDepthStencilState = &m_DepthStencil;
+	PipelineInfo.pRasterizationState = &m_Rasterizer;
+	PipelineInfo.pMultisampleState = &m_Multisampling;
+	PipelineInfo.pColorBlendState = &ColorBlending;
+	PipelineInfo.layout = m_PipelineLayout;
+	PipelineInfo.renderPass = aRenderPass;
+	PipelineInfo.subpass = 0;
+	PipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+
+	VkPipeline NewPipeline;
+	if (vkCreateGraphicsPipelines(
+		aDevice, VK_NULL_HANDLE, 1, &PipelineInfo, nullptr, &NewPipeline) != VK_SUCCESS)
+	{
+		std::cout << "failed to create pipeline\n";
+		return VK_NULL_HANDLE;
+	}
+	else
+	{
+		return NewPipeline;
+	}
 }

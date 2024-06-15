@@ -4,6 +4,7 @@
 #include "core/logger.h"
 #include "vk_types.hpp"
 #include "vk_initializers.hpp"
+#include "vk_utils.hpp"
 
 // TODO: Include path correctly
 #include "../../ThirdParty/VulkanBootstrap/VkBootstrap.h"
@@ -27,6 +28,54 @@ VulkanModule::VulkanModule()
 }
 
 bool VulkanModule::Initialize(const HINSTANCE aInstanceHandle, const HWND aWindowHandle)
+{
+	InitVulkan(aInstanceHandle, aWindowHandle);
+
+	InitCommandPools();
+
+	InitRenderPass();
+
+	InitFramebuffers();
+
+    m_bIsInitialized = true;
+
+    return true;
+}
+
+void VulkanModule::Render()
+{
+
+}
+
+bool VulkanModule::Shutdown()
+{
+	if (m_bIsInitialized)
+	{
+		SGSINFO("Shutting down Vulkan");
+
+		vkDestroyCommandPool(m_Device, m_CommandPool, nullptr);
+
+		vkDestroySwapchainKHR(m_Device, m_Swapchain, nullptr);
+
+		vkDestroyRenderPass(m_Device, m_RenderPass, nullptr);
+
+		for (int32 i = 0; i < m_SwapchainImageViews.size(); ++i)
+		{
+			vkDestroyFramebuffer(m_Device, m_Framebuffers[i], nullptr);
+			vkDestroyImageView(m_Device, m_SwapchainImageViews[i], nullptr);
+		}
+
+		vkDestroyDevice(m_Device, nullptr);
+		vkDestroySurfaceKHR(m_VulkanInstance, m_Surface, nullptr);
+		vkb::destroy_debug_utils_messenger(m_VulkanInstance, m_DebugMessenger);
+
+		vkDestroyInstance(m_VulkanInstance, nullptr);
+	}
+
+    return false;
+}
+
+void VulkanModule::InitVulkan(const HINSTANCE aInstanceHandle, const HWND aWindowHandle)
 {
 	vkb::InstanceBuilder InstanceBuilder;
 
@@ -85,6 +134,14 @@ bool VulkanModule::Initialize(const HINSTANCE aInstanceHandle, const HWND aWindo
 	m_GraphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
 	m_GraphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
 
+	m_MainDeletionQueue.PushFunction([=]()
+	{
+		vkDestroySwapchainKHR(m_Device, m_Swapchain, nullptr);
+	});
+}
+
+void VulkanModule::InitCommandPools()
+{
 	// Creation of command structures
 	VkCommandPoolCreateInfo CommandPoolInfo = vkinit::CommandPoolCreateInfo(m_GraphicsQueueFamily, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 	VK_CHECK(vkCreateCommandPool(m_Device, &CommandPoolInfo, nullptr, &m_CommandPool));
@@ -92,6 +149,29 @@ bool VulkanModule::Initialize(const HINSTANCE aInstanceHandle, const HWND aWindo
 	VkCommandBufferAllocateInfo CmdAllocInfo = vkinit::CommandBufferAllocateInfo(m_CommandPool, 1);
 	VK_CHECK(vkAllocateCommandBuffers(m_Device, &CmdAllocInfo, &m_CommandBuffer));
 
+	m_MainDeletionQueue.PushFunction([=]
+	{
+		vkDestroyCommandPool(m_Device, m_CommandPool, nullptr);
+	});
+}
+
+void VulkanModule::InitSyncStructures()
+{
+
+}
+
+void VulkanModule::InitDescriptorSetPool()
+{
+
+}
+
+void VulkanModule::InitDescriptorSetLayouts()
+{
+
+}
+
+void VulkanModule::InitRenderPass()
+{
 	// Render pass creation
 	VkAttachmentDescription ColorAttachment = {};
 	ColorAttachment.format = m_SwapchainImageFormat;
@@ -120,7 +200,10 @@ bool VulkanModule::Initialize(const HINSTANCE aInstanceHandle, const HWND aWindo
 	RenderPassInfo.pSubpasses = &Subpass;
 
 	VK_CHECK(vkCreateRenderPass(m_Device, &RenderPassInfo, nullptr, &m_RenderPass));
+}
 
+void VulkanModule::InitFramebuffers()
+{
 	// Framebuffers creation
 	VkFramebufferCreateInfo FramebufferInfo = {};
 	FramebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -139,41 +222,69 @@ bool VulkanModule::Initialize(const HINSTANCE aInstanceHandle, const HWND aWindo
 		FramebufferInfo.pAttachments = &m_SwapchainImageViews[i];
 		VK_CHECK(vkCreateFramebuffer(m_Device, &FramebufferInfo, nullptr, &m_Framebuffers[i]));
 	}
-
-    m_bIsInitialized = true;
-
-    return true;
 }
 
-void VulkanModule::Render()
+void VulkanModule::InitPipelines()
 {
-
-}
-
-bool VulkanModule::Shutdown()
-{
-	if (m_bIsInitialized)
+	VkShaderModule VertShader;
+	// TODO: Do not hardcode this.
+	if (!vkutils::LoadShaderModule(m_Device, "../shaders/vert.spv", &VertShader))
 	{
-		SGSINFO("Shutting down Vulkan");
-
-		vkDestroyCommandPool(m_Device, m_CommandPool, nullptr);
-
-		vkDestroySwapchainKHR(m_Device, m_Swapchain, nullptr);
-
-		vkDestroyRenderPass(m_Device, m_RenderPass, nullptr);
-
-		for (int32 i = 0; i < m_SwapchainImageViews.size(); ++i)
-		{
-			vkDestroyFramebuffer(m_Device, m_Framebuffers[i], nullptr);
-			vkDestroyImageView(m_Device, m_SwapchainImageViews[i], nullptr);
-		}
-
-		vkDestroyDevice(m_Device, nullptr);
-		vkDestroySurfaceKHR(m_VulkanInstance, m_Surface, nullptr);
-		vkb::destroy_debug_utils_messenger(m_VulkanInstance, m_DebugMessenger);
-
-		vkDestroyInstance(m_VulkanInstance, nullptr);
+		std::cout << "Error when building the vertex shader module" << std::endl;
+	}
+	else
+	{
+		std::cout << "Vertex Shader loaded SUCCESSFULLY!" << std::endl;
 	}
 
-    return false;
+	VkShaderModule FragShader;
+	if (!vkutils::LoadShaderModule(m_Device, "../shaders/frag.spv", &FragShader))
+	{
+		std::cout << "Error when building the fragment shader module" << std::endl;
+	}
+	else
+	{
+		std::cout << "Fragment Shader loaded SUCCESSFULLY!" << std::endl;
+	}
+
+	VkPipelineLayoutCreateInfo PipelineLayoutInfo = vkinit::PipelineLayoutCreateInfo();
+
+	VK_CHECK(vkCreatePipelineLayout(m_Device, &PipelineLayoutInfo, nullptr, &m_ForwardPipelineLayout));
+
+	PipelineBuilder PipelineBuilder;
+
+	PipelineBuilder.m_VertexInputInfo = vkinit::VertexInputStateCreateInfo();
+
+	PipelineBuilder.m_InputAssembly = vkinit::InputAssemblyCreateInfo(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+
+	PipelineBuilder.m_Viewport.x = 0.0f;
+	PipelineBuilder.m_Viewport.y = 0.0f;
+	PipelineBuilder.m_Viewport.width = static_cast<float>(m_WindowExtent.width);
+	PipelineBuilder.m_Viewport.height = static_cast<float>(m_WindowExtent.height);
+	PipelineBuilder.m_Viewport.minDepth = 0.0f;
+	PipelineBuilder.m_Viewport.maxDepth = 1.0f;
+
+	PipelineBuilder.m_Scissor.offset = {0, 0};
+	PipelineBuilder.m_Scissor.extent = m_WindowExtent;
+
+	PipelineBuilder.m_DepthStencil = vkinit::DepthStencilCreateInfo(true, true, VK_COMPARE_OP_LESS_OR_EQUAL);
+	PipelineBuilder.m_Rasterizer = vkinit::RasterizationStateCreateInfo(VK_POLYGON_MODE_FILL);
+	PipelineBuilder.m_Multisampling = vkinit::MultisamplingStateCreateInfo();
+	PipelineBuilder.m_ColorBlendAttachment.push_back(vkinit::ColorBlendAttachmentState());
+
+	PipelineBuilder.m_ShaderStages.push_back(vkinit::PipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, VertShader));
+	PipelineBuilder.m_ShaderStages.push_back(vkinit::PipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, FragShader));
+
+	PipelineBuilder.m_PipelineLayout = m_ForwardPipelineLayout;
+
+	m_ForwardPipeline = PipelineBuilder.BuildPipeline(m_Device, m_RenderPass);
+
+	vkDestroyShaderModule(m_Device, VertShader, nullptr);
+	vkDestroyShaderModule(m_Device, FragShader, nullptr);
+
+	m_MainDeletionQueue.PushFunction([=]()
+	{
+		vkDestroyPipeline(m_Device, m_ForwardPipeline, nullptr);
+		vkDestroyPipelineLayout(m_Device, m_ForwardPipelineLayout, nullptr);
+	});
 }
