@@ -23,9 +23,10 @@
 	} while (0)														\
 
 VulkanModule::VulkanModule() :
-	m_ImageIdx(0)
+	m_bIsInitialized(false),
+	m_ImageIdx(0),
+	m_CurrentFrame(0)
 {
-
 }
 
 bool VulkanModule::Initialize(const HINSTANCE aInstanceHandle, const HWND aWindowHandle)
@@ -153,8 +154,11 @@ void VulkanModule::InitCommandPools()
 	VkCommandPoolCreateInfo CommandPoolInfo = vkinit::CommandPoolCreateInfo(m_GraphicsQueueFamily, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 	VK_CHECK(vkCreateCommandPool(m_Device, &CommandPoolInfo, nullptr, &m_CommandPool));
 
-	VkCommandBufferAllocateInfo CmdAllocInfo = vkinit::CommandBufferAllocateInfo(m_CommandPool, 1);
-	VK_CHECK(vkAllocateCommandBuffers(m_Device, &CmdAllocInfo, &m_CommandBuffer));
+	for (int32_t i = 0; i < FRAME_OVERLAP; ++i)
+	{
+		VkCommandBufferAllocateInfo CmdAllocInfo = vkinit::CommandBufferAllocateInfo(m_CommandPool, 1);
+		VK_CHECK(vkAllocateCommandBuffers(m_Device, &CmdAllocInfo, &m_FramesData[i].MainCommandBuffer));
+	}
 
 	m_MainDeletionQueue.PushFunction([=]
 	{
@@ -166,18 +170,24 @@ void VulkanModule::InitSyncStructures()
 {
 	VkSemaphoreCreateInfo SemaphoreInfo = vkinit::SemaphoreCreateInfo();
 
-	VK_CHECK(vkCreateSemaphore(m_Device, &SemaphoreInfo, nullptr, &m_ImageAvailableSemaphore));
-	VK_CHECK(vkCreateSemaphore(m_Device, &SemaphoreInfo, nullptr, &m_RenderFinishedSemaphore));
+	for (int32_t i = 0; i < FRAME_OVERLAP; ++i)
+	{
+		VK_CHECK(vkCreateSemaphore(m_Device, &SemaphoreInfo, nullptr, &m_FramesData[i].PresentSemaphore));
+		VK_CHECK(vkCreateSemaphore(m_Device, &SemaphoreInfo, nullptr, &m_FramesData[i].RenderSemaphore));
 
-	VkFenceCreateInfo FenceInfo = vkinit::FenceCreateInfo(VK_FENCE_CREATE_SIGNALED_BIT);
+		VkFenceCreateInfo FenceInfo = vkinit::FenceCreateInfo(VK_FENCE_CREATE_SIGNALED_BIT);
 
-	VK_CHECK(vkCreateFence(m_Device, &FenceInfo, nullptr, &m_InFlightFence));
+		VK_CHECK(vkCreateFence(m_Device, &FenceInfo, nullptr, &m_FramesData[i].RenderFence));
+	}
 
 	m_MainDeletionQueue.PushFunction([=]
 	{
-		vkDestroySemaphore(m_Device, m_ImageAvailableSemaphore, nullptr);
-		vkDestroySemaphore(m_Device, m_RenderFinishedSemaphore, nullptr);
-		vkDestroyFence(m_Device, m_InFlightFence, nullptr);
+		for (int32_t i = 0; i < FRAME_OVERLAP; ++i)
+		{
+			vkDestroySemaphore(m_Device, m_FramesData[i].PresentSemaphore, nullptr);
+			vkDestroySemaphore(m_Device, m_FramesData[i].RenderSemaphore, nullptr);
+			vkDestroyFence(m_Device, m_FramesData[i].RenderFence, nullptr);
+		}
 	});
 }
 
@@ -340,7 +350,7 @@ void VulkanModule::RecordCommandBuffer(VkCommandBuffer aCommandBuffer, uint32_t 
 {
 	VkCommandBufferBeginInfo BeginInfo = vkinit::CommandBufferBeginInfo();
 
-	VK_CHECK(vkBeginCommandBuffer(m_CommandBuffer, &BeginInfo));
+	VK_CHECK(vkBeginCommandBuffer(aCommandBuffer, &BeginInfo));
 
 	VkRenderPassBeginInfo RenderPassInfo = vkinit::RenderPassBeginInfo(m_RenderPass, m_WindowExtent, m_Framebuffers[aImageIdx]);
 
@@ -348,9 +358,9 @@ void VulkanModule::RecordCommandBuffer(VkCommandBuffer aCommandBuffer, uint32_t 
 	RenderPassInfo.clearValueCount = 1;
 	RenderPassInfo.pClearValues = &ClearColor;
 
-	vkCmdBeginRenderPass(m_CommandBuffer, &RenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+	vkCmdBeginRenderPass(aCommandBuffer, &RenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-	vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ForwardPipeline);
+	vkCmdBindPipeline(aCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ForwardPipeline);
 
 	// TODO: Check if this state is dynamic or not.
 	VkViewport Viewport{};
@@ -360,45 +370,44 @@ void VulkanModule::RecordCommandBuffer(VkCommandBuffer aCommandBuffer, uint32_t 
 	Viewport.height = static_cast<float>(m_WindowExtent.height);
 	Viewport.minDepth = 0.0f;
 	Viewport.maxDepth = 1.0f;
-	vkCmdSetViewport(m_CommandBuffer, 0, 1, &Viewport);
+	vkCmdSetViewport(aCommandBuffer, 0, 1, &Viewport);
 
 	VkRect2D Scissor{};
 	Scissor.offset = {0, 0};
 	Scissor.extent = m_WindowExtent;
-	vkCmdSetScissor(m_CommandBuffer, 0, 1, &Scissor);
+	vkCmdSetScissor(aCommandBuffer, 0, 1, &Scissor);
 
-	vkCmdDraw(m_CommandBuffer, 3, 1, 0, 0);
+	vkCmdDraw(aCommandBuffer, 3, 1, 0, 0);
 
-	vkCmdEndRenderPass(m_CommandBuffer);
+	vkCmdEndRenderPass(aCommandBuffer);
 
-	VK_CHECK(vkEndCommandBuffer(m_CommandBuffer));
+	VK_CHECK(vkEndCommandBuffer(aCommandBuffer));
 }
 
 void VulkanModule::RenderFrame()
 {
-	vkWaitForFences(m_Device, 1, &m_InFlightFence, VK_TRUE, UINT64_MAX);
-
-	vkResetFences(m_Device, 1, &m_InFlightFence);
+	vkWaitForFences(m_Device, 1, &m_FramesData[m_CurrentFrame].RenderFence, VK_TRUE, UINT64_MAX);
+	vkResetFences(m_Device, 1, &m_FramesData[m_CurrentFrame].RenderFence);
 
 	uint32_t ImageIndex;
-	vkAcquireNextImageKHR(m_Device, m_Swapchain, UINT64_MAX, m_ImageAvailableSemaphore, VK_NULL_HANDLE, &ImageIndex);
+	vkAcquireNextImageKHR(m_Device, m_Swapchain, UINT64_MAX, m_FramesData[m_CurrentFrame].PresentSemaphore, VK_NULL_HANDLE, &ImageIndex);
 
-	vkResetCommandBuffer(m_CommandBuffer, 0);
-	RecordCommandBuffer(m_CommandBuffer, ImageIndex);
+	vkResetCommandBuffer(m_FramesData[m_CurrentFrame].MainCommandBuffer, 0);
+	RecordCommandBuffer(m_FramesData[m_CurrentFrame].MainCommandBuffer, ImageIndex);
 
-	VkSubmitInfo SubmitInfo = vkinit::SubmitInfo(&m_CommandBuffer);
+	VkSubmitInfo SubmitInfo = vkinit::SubmitInfo(&m_FramesData[m_CurrentFrame].MainCommandBuffer);
 
-	VkSemaphore WaitSemaphores[] = {m_ImageAvailableSemaphore};
+	VkSemaphore WaitSemaphores[] = {m_FramesData[m_CurrentFrame].PresentSemaphore};
 	VkPipelineStageFlags WaitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 	SubmitInfo.waitSemaphoreCount = 1;
 	SubmitInfo.pWaitSemaphores = WaitSemaphores;
 	SubmitInfo.pWaitDstStageMask = WaitStages;
 
-	VkSemaphore SignalSemaphores[] = {m_RenderFinishedSemaphore};
+	VkSemaphore SignalSemaphores[] = {m_FramesData[m_CurrentFrame].RenderSemaphore};
 	SubmitInfo.signalSemaphoreCount = 1;
 	SubmitInfo.pSignalSemaphores = SignalSemaphores;
 
-	VK_CHECK(vkQueueSubmit(m_GraphicsQueue, 1, &SubmitInfo, m_InFlightFence));
+	VK_CHECK(vkQueueSubmit(m_GraphicsQueue, 1, &SubmitInfo, m_FramesData[m_CurrentFrame].RenderFence));
 
 	VkPresentInfoKHR PresentInfo = vkinit::PresentInfo();
 	PresentInfo.waitSemaphoreCount = 1;
@@ -409,4 +418,6 @@ void VulkanModule::RenderFrame()
 	PresentInfo.pImageIndices = &ImageIndex;
 
 	vkQueuePresentKHR(m_GraphicsQueue, &PresentInfo);
+
+	m_CurrentFrame = (m_CurrentFrame + 1) % FRAME_OVERLAP;
 }

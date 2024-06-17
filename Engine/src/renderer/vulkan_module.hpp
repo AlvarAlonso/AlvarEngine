@@ -6,6 +6,8 @@
 #include <deque>
 #include <functional>
 
+constexpr uint32_t FRAME_OVERLAP = 3;
+
 struct sDeletionQueue
 {
 	std::deque<std::function<void()>> Deletors;
@@ -24,6 +26,15 @@ struct sDeletionQueue
 
 		Deletors.clear();
 	}
+};
+
+struct sFrameData
+{
+    VkSemaphore PresentSemaphore;
+    VkSemaphore RenderSemaphore;
+    VkFence RenderFence;
+    VkCommandPool CommandPool;
+    VkCommandBuffer MainCommandBuffer;
 };
 
 class VulkanModule
@@ -50,7 +61,7 @@ private:
     void RecordCommandBuffer(VkCommandBuffer aCommandBuffer, uint32_t aImageIdx);
     void RenderFrame();
 
-    bool m_bIsInitialized = false;
+    bool m_bIsInitialized;
 
     // Vulkan core.
     VkInstance m_VulkanInstance;
@@ -73,7 +84,6 @@ private:
     uint32_t m_GraphicsQueueFamily;
 
     VkCommandPool m_CommandPool;
-    VkCommandBuffer m_CommandBuffer;
     // ------------
 
     // Render passes.
@@ -86,11 +96,8 @@ private:
     VkPipeline m_ForwardPipeline;
     //-------------
 
-    // Synchronization structures.
-    VkSemaphore m_ImageAvailableSemaphore;
-    VkSemaphore m_RenderFinishedSemaphore;
-    VkFence m_InFlightFence;
-    //-------------
+    sFrameData m_FramesData[FRAME_OVERLAP];
+    uint32_t m_CurrentFrame;
 
     VkExtent2D m_WindowExtent = { 800, 600 };
 
