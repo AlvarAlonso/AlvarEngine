@@ -48,8 +48,11 @@ public:
 
     bool Shutdown();
 
+    void HandleWindowResize();
+
 private:
     void InitVulkan(const HINSTANCE aInstanceHandle, const HWND aWindowHandle);
+    void InitSwapchain();
     void InitCommandPools();
     void InitSyncStructures();
     void InitDescriptorSetPool();
@@ -60,6 +63,10 @@ private:
 
     void RecordCommandBuffer(VkCommandBuffer aCommandBuffer, uint32_t aImageIdx);
     void RenderFrame();
+
+    void RecreateSwapchain();
+    // TODO: This will destroy resources that are also destroyed in the main deletion queue.
+    void CleanupSwapchain();
 
     bool m_bIsInitialized;
 
@@ -100,6 +107,8 @@ private:
     uint32_t m_CurrentFrame;
 
     VkExtent2D m_WindowExtent = { 800, 600 };
+
+    bool m_bWasWindowResized;
 
     sDeletionQueue m_MainDeletionQueue;
 };

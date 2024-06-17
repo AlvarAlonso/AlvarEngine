@@ -1,5 +1,6 @@
 #include "vulkan_module.hpp"
 
+#include "engine.hpp"
 #include "core/defines.h"
 #include "core/logger.h"
 #include "vk_types.hpp"
@@ -25,13 +26,16 @@
 VulkanModule::VulkanModule() :
 	m_bIsInitialized(false),
 	m_ImageIdx(0),
-	m_CurrentFrame(0)
+	m_CurrentFrame(0),
+	m_bWasWindowResized(false)
 {
 }
 
 bool VulkanModule::Initialize(const HINSTANCE aInstanceHandle, const HWND aWindowHandle)
 {
 	InitVulkan(aInstanceHandle, aWindowHandle);
+
+	InitSwapchain();
 
 	InitCommandPools();
 
@@ -83,6 +87,11 @@ bool VulkanModule::Shutdown()
     return false;
 }
 
+void VulkanModule::HandleWindowResize()
+{
+	m_bWasWindowResized = true;
+}
+
 void VulkanModule::InitVulkan(const HINSTANCE aInstanceHandle, const HWND aWindowHandle)
 {
 	vkb::InstanceBuilder InstanceBuilder;
@@ -123,6 +132,23 @@ void VulkanModule::InitVulkan(const HINSTANCE aInstanceHandle, const HWND aWindo
 	m_PhysicalDevice = vkbPhysicalDevice.physical_device;
 	m_Device = vkbDevice.device;
 
+	// Get Graphics Queue
+	m_GraphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
+	m_GraphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
+
+	m_MainDeletionQueue.PushFunction([=]()
+	{
+		vkDestroySwapchainKHR(m_Device, m_Swapchain, nullptr);
+	});
+}
+
+void VulkanModule::InitSwapchain()
+{
+	sDimension2D WindowDimensions = Engine::Get()->GetAppWindowDimensions();
+	m_WindowExtent = {WindowDimensions.Width, WindowDimensions.Height};
+
+	SGSINFO("Creating Swapchain. Framebuffer Size: %d, %d.", WindowDimensions.Width, WindowDimensions.Height);
+
 	// TODO: initialize extent according to Window's created window
 	// Swapchain initialization.
 	vkb::SwapchainBuilder SwapchainBuilder{m_PhysicalDevice, m_Device, m_Surface};
@@ -137,10 +163,6 @@ void VulkanModule::InitVulkan(const HINSTANCE aInstanceHandle, const HWND aWindo
 	m_SwapchainImageFormat = vkbSwapchain.image_format;
 	m_SwapchainImages = vkbSwapchain.get_images().value();
 	m_SwapchainImageViews = vkbSwapchain.get_image_views().value();
-
-	// Get Graphics Queue
-	m_GraphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
-	m_GraphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
 
 	m_MainDeletionQueue.PushFunction([=]()
 	{
@@ -387,10 +409,22 @@ void VulkanModule::RecordCommandBuffer(VkCommandBuffer aCommandBuffer, uint32_t 
 void VulkanModule::RenderFrame()
 {
 	vkWaitForFences(m_Device, 1, &m_FramesData[m_CurrentFrame].RenderFence, VK_TRUE, UINT64_MAX);
-	vkResetFences(m_Device, 1, &m_FramesData[m_CurrentFrame].RenderFence);
 
 	uint32_t ImageIndex;
-	vkAcquireNextImageKHR(m_Device, m_Swapchain, UINT64_MAX, m_FramesData[m_CurrentFrame].PresentSemaphore, VK_NULL_HANDLE, &ImageIndex);
+	VkResult Result = vkAcquireNextImageKHR(m_Device, m_Swapchain, UINT64_MAX, m_FramesData[m_CurrentFrame].PresentSemaphore, VK_NULL_HANDLE, &ImageIndex);
+	if (Result == VK_ERROR_OUT_OF_DATE_KHR || Result == VK_SUBOPTIMAL_KHR || m_bWasWindowResized)
+	{
+		m_bWasWindowResized = false;
+		RecreateSwapchain();
+		return;
+	}
+	else if (Result != VK_SUCCESS)
+	{
+		throw std::runtime_error("Failed to acquire swap chain image!");
+	}
+
+	// Delay fence reset to prevent possible deadlock when recreating the swapchain.
+	vkResetFences(m_Device, 1, &m_FramesData[m_CurrentFrame].RenderFence);
 
 	vkResetCommandBuffer(m_FramesData[m_CurrentFrame].MainCommandBuffer, 0);
 	RecordCommandBuffer(m_FramesData[m_CurrentFrame].MainCommandBuffer, ImageIndex);
@@ -421,3 +455,30 @@ void VulkanModule::RenderFrame()
 
 	m_CurrentFrame = (m_CurrentFrame + 1) % FRAME_OVERLAP;
 }
+
+void VulkanModule::RecreateSwapchain()
+{
+	SGSDEBUG("Recreating swapchain...");
+
+	vkDeviceWaitIdle(m_Device);
+
+	CleanupSwapchain();
+
+	InitSwapchain();
+	InitFramebuffers();
+}
+
+ void VulkanModule::CleanupSwapchain()
+ {
+	for (size_t i = 0; i < m_Framebuffers.size(); ++i)
+	{
+		vkDestroyFramebuffer(m_Device, m_Framebuffers[i], nullptr);
+	}
+	
+	for (size_t i = 0; i < m_SwapchainImageViews.size(); ++i)
+	{
+		vkDestroyImageView(m_Device, m_SwapchainImageViews[i], nullptr);
+	}
+
+	vkDestroySwapchainKHR(m_Device, m_Swapchain, nullptr);
+ }

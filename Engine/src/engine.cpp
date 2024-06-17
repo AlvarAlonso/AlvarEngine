@@ -149,6 +149,7 @@ LRESULT CALLBACK Engine::WinProc(HWND aWindowHandle, UINT aMsg, WPARAM aWParam, 
             else
             {
                 // TODO: Handle resizing.
+                m_VulkanModule.HandleWindowResize();
             }
 
             return 0;
@@ -158,11 +159,13 @@ LRESULT CALLBACK Engine::WinProc(HWND aWindowHandle, UINT aMsg, WPARAM aWParam, 
             // TOOD:
             // Pause game
             // Handle resizing
+            m_VulkanModule.HandleWindowResize();
             return 0;
         // Sent when the user releases the resize bars.
         case WM_EXITSIZEMOVE:
             // TODO:
             // Handle resizing.
+            m_VulkanModule.HandleWindowResize();
             return 0;
         // Prevent window from becoming to small.
         case WM_GETMINMAXINFO:
@@ -193,4 +196,17 @@ LRESULT CALLBACK Engine::WinProc(HWND aWindowHandle, UINT aMsg, WPARAM aWParam, 
         default:
             return DefWindowProcA(aWindowHandle, aMsg, aWParam, aLParam);
     }
+}
+
+sDimension2D Engine::GetAppWindowDimensions()
+{
+    sDimension2D ReturnResult{};
+
+    RECT Rect;
+    if (GetClientRect(m_WindowHandle, &Rect)) {
+        ReturnResult.Width = (Rect.right - Rect.left) > 0 ? Rect.right - Rect.left : 0;
+        ReturnResult.Height = (Rect.bottom - Rect.top) > 0 ? Rect.bottom - Rect.top : 0;
+    }
+
+    return ReturnResult;
 }

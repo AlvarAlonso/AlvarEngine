@@ -6,6 +6,12 @@
 
 #include "renderer/vulkan_module.hpp"
 
+struct sDimension2D
+{
+    uint32_t Width = 0;
+    uint32_t Height = 0;
+};
+
 class Engine
 {
 public:
@@ -18,6 +24,9 @@ public:
     void Shutdown();
 
     LRESULT WinProc(HWND aWindowHandle, UINT aMsg, WPARAM aWParam, LPARAM aLParam);
+
+    // TODO: I need a way to export only some functions. I don't want all public functions to be exported to the sandbox.
+    sDimension2D GetAppWindowDimensions();
 
 private:
     Engine();
