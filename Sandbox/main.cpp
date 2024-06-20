@@ -1,5 +1,7 @@
 #include <iostream>
 
+#define VMA_IMPLEMENTATION
+
 #include <core/logger.h>
 #include <engine.hpp>
 

@@ -28,6 +28,10 @@ public:
     // TODO: I need a way to export only some functions. I don't want all public functions to be exported to the sandbox.
     sDimension2D GetAppWindowDimensions();
 
+    // TODO: Show only selected functionalities or find another way to share modules. Engine must have access to initialization and stuff like this
+    // but probably other classes who wants to access a module should not have those kind of functions available.
+    VulkanModule* GetVulkanModule(){ return &m_VulkanModule; }
+
 private:
     Engine();
 

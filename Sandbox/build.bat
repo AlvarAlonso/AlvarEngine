@@ -3,7 +3,7 @@
 echo "building sandbox"
 
 set VULKAN_SDK=C:\VulkanSDK\1.3.250.1
-set include_paths= /I..\Engine\src /I%VULKAN_SDK%\include /I..\ThirdParty\VulkanBootstrap
+set include_paths= /I..\Engine\src /I%VULKAN_SDK%\include /I..\ThirdParty
 set file_paths= ..\Sandbox\main.cpp
 
 pushd ..\bin

@@ -2,7 +2,6 @@
 
 #include "vk_types.hpp"
 
-#include <vector>
 #include <deque>
 #include <functional>
 
@@ -37,6 +36,12 @@ struct sFrameData
     VkCommandBuffer MainCommandBuffer;
 };
 
+struct sUploadContext
+{
+    VkFence m_UploadFence;
+    VkCommandPool m_CommandPool;
+};
+
 class VulkanModule
 {
 public:
@@ -50,7 +55,11 @@ public:
 
     void HandleWindowResize();
 
+    void ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& aFunction);
+
 private:
+    void InitEnabledFeatures();
+
     void InitVulkan(const HINSTANCE aInstanceHandle, const HWND aWindowHandle);
     void InitSwapchain();
     void InitCommandPools();
@@ -65,7 +74,7 @@ private:
     void RenderFrame();
 
     void RecreateSwapchain();
-    // TODO: This will destroy resources that are also destroyed in the main deletion queue.
+    // TODO: This will destroy resources that are also destroyed in the main deletion queue. Do not store resources to be deleted in a queue. Delete them manually.
     void CleanupSwapchain();
 
     bool m_bIsInitialized;
@@ -76,6 +85,12 @@ private:
     VkPhysicalDevice m_PhysicalDevice;
     VkDevice m_Device;
     VkSurfaceKHR m_Surface;
+    VmaAllocator m_Allocator;
+    // ------------
+
+    // pNext features.
+	VkPhysicalDeviceBufferDeviceAddressFeatures m_EnabledBufferDeviceAddressFeatures{};
+    void* m_pDeviceCreatepNextChain = nullptr;
     // ------------
 
     // Swapchain.
@@ -111,4 +126,15 @@ private:
     bool m_bWasWindowResized;
 
     sDeletionQueue m_MainDeletionQueue;
+
+    sUploadContext m_UploadContext;
+
+    const std::vector<sVertex> m_Vertices =  
+    {
+        {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+        {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+        {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+    };
+
+    AllocatedBuffer m_VertexBuffer;
 };

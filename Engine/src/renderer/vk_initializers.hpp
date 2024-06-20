@@ -2,7 +2,6 @@
 
 #include <core/defines.h>
 #include "vk_types.hpp"
-#include <vector>
 
 namespace vkinit
 {

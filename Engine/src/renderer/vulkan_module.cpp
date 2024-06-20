@@ -8,20 +8,38 @@
 #include "vk_utils.hpp"
 
 // TODO: Include path correctly
-#include "../../ThirdParty/VulkanBootstrap/VkBootstrap.h"
+#include <VulkanBootstrap/VkBootstrap.h>
 
 #include <iostream>
 
-#define VK_CHECK(x)                                                 \
-	do                                                              \
-	{                                                               \
-		VkResult err = x;                                           \
-		if (err)                                                    \
-		{                                                           \
-			std::cout <<"Detected Vulkan error: " << err << std::endl; \
-			std::abort();                                                \
-		}                                                           \
-	} while (0)														\
+sVertexInputDescription sVertex::GetVertexDescription()
+{
+	sVertexInputDescription Description{};
+
+	VkVertexInputBindingDescription MainBinding = {};
+	MainBinding.binding = 0;
+	MainBinding.stride = sizeof(sVertex);
+	MainBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+	Description.Bindings.push_back(MainBinding);
+
+	VkVertexInputAttributeDescription PositionAttribute = {};
+	PositionAttribute.binding = 0;
+	PositionAttribute.location = 0;
+	PositionAttribute.format = VK_FORMAT_R32G32B32_SFLOAT;
+	PositionAttribute.offset = offsetof(sVertex, Position);
+
+	VkVertexInputAttributeDescription ColorAttribute = {};
+	ColorAttribute.binding = 0;
+	ColorAttribute.location = 1;
+	ColorAttribute.format = VK_FORMAT_R32G32B32_SFLOAT;
+	ColorAttribute.offset = offsetof(sVertex, Color);
+
+	Description.Attributes.push_back(PositionAttribute);
+	Description.Attributes.push_back(ColorAttribute);
+
+	return Description;
+}
 
 VulkanModule::VulkanModule() :
 	m_bIsInitialized(false),
@@ -46,6 +64,8 @@ bool VulkanModule::Initialize(const HINSTANCE aInstanceHandle, const HWND aWindo
 	InitPipelines();
 
 	InitSyncStructures();
+
+	vkutils::CreateVertexBuffer(m_Allocator, m_Vertices, m_VertexBuffer);
 
     m_bIsInitialized = true;
 
@@ -92,6 +112,40 @@ void VulkanModule::HandleWindowResize()
 	m_bWasWindowResized = true;
 }
 
+void VulkanModule::ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& aFunction)
+{
+	VkCommandBufferAllocateInfo CmdAllocInfo = vkinit::CommandBufferAllocateInfo(m_UploadContext.m_CommandPool, 1);
+
+	VkCommandBuffer Cmd;
+	VK_CHECK(vkAllocateCommandBuffers(m_Device, &CmdAllocInfo, &Cmd));
+
+	VkCommandBufferBeginInfo CmdBeginInfo = vkinit::CommandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+		
+	VK_CHECK(vkBeginCommandBuffer(Cmd, &CmdBeginInfo));
+
+	aFunction(Cmd);
+
+	VK_CHECK(vkEndCommandBuffer(Cmd));
+
+	VkSubmitInfo Submit = vkinit::SubmitInfo(&Cmd);
+
+	VK_CHECK(vkQueueSubmit(m_GraphicsQueue, 1, &Submit, m_UploadContext.m_UploadFence));
+
+	vkWaitForFences(m_Device, 1, &m_UploadContext.m_UploadFence, true, UINT64_MAX);
+	vkResetFences(m_Device, 1, &m_UploadContext.m_UploadFence);
+
+	vkResetCommandPool(m_Device, m_UploadContext.m_CommandPool, 0);
+}
+
+void VulkanModule::InitEnabledFeatures()
+{
+	m_EnabledBufferDeviceAddressFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
+	m_EnabledBufferDeviceAddressFeatures.bufferDeviceAddress = VK_TRUE;
+	m_EnabledBufferDeviceAddressFeatures.pNext = nullptr;
+
+	m_pDeviceCreatepNextChain = &m_EnabledBufferDeviceAddressFeatures;
+}
+
 void VulkanModule::InitVulkan(const HINSTANCE aInstanceHandle, const HWND aWindowHandle)
 {
 	vkb::InstanceBuilder InstanceBuilder;
@@ -113,7 +167,6 @@ void VulkanModule::InitVulkan(const HINSTANCE aInstanceHandle, const HWND aWindo
 	SurfaceCreateInfo.hwnd = aWindowHandle;
 	SurfaceCreateInfo.hinstance = aInstanceHandle;
 
-	// TODO: use VMA
 	VK_CHECK(vkCreateWin32SurfaceKHR(m_VulkanInstance, &SurfaceCreateInfo, nullptr, &m_Surface));
 
 	// Select physical device.
@@ -124,9 +177,13 @@ void VulkanModule::InitVulkan(const HINSTANCE aInstanceHandle, const HWND aWindo
 	.select()
 	.value();
 
+	InitEnabledFeatures();
+
 	// Create logical device.
+	SGSDEBUG("Creating Logical Device...");
 	vkb::DeviceBuilder DeviceBuilder{vkbPhysicalDevice};
-	vkb::Device vkbDevice = DeviceBuilder.build().value();
+	vkb::Device vkbDevice = DeviceBuilder.add_pNext(m_pDeviceCreatepNextChain).build().value();
+	SGSDEBUG("Logical Device Created");
 
 	// initialize device
 	m_PhysicalDevice = vkbPhysicalDevice.physical_device;
@@ -135,6 +192,13 @@ void VulkanModule::InitVulkan(const HINSTANCE aInstanceHandle, const HWND aWindo
 	// Get Graphics Queue
 	m_GraphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
 	m_GraphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
+
+	VmaAllocatorCreateInfo AllocatorInfo = {};
+	AllocatorInfo.physicalDevice = m_PhysicalDevice;
+	AllocatorInfo.device = m_Device;
+	AllocatorInfo.instance = m_VulkanInstance;
+	AllocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+	vmaCreateAllocator(&AllocatorInfo, &m_Allocator);
 
 	m_MainDeletionQueue.PushFunction([=]()
 	{
@@ -182,9 +246,13 @@ void VulkanModule::InitCommandPools()
 		VK_CHECK(vkAllocateCommandBuffers(m_Device, &CmdAllocInfo, &m_FramesData[i].MainCommandBuffer));
 	}
 
+	VkCommandPoolCreateInfo UploadCommandPoolInfo = vkinit::CommandPoolCreateInfo(m_GraphicsQueueFamily);
+	VK_CHECK(vkCreateCommandPool(m_Device, &UploadCommandPoolInfo, nullptr, &m_UploadContext.m_CommandPool));
+
 	m_MainDeletionQueue.PushFunction([=]
 	{
 		vkDestroyCommandPool(m_Device, m_CommandPool, nullptr);
+		vkDestroyCommandPool(m_Device, m_UploadContext.m_CommandPool, nullptr);
 	});
 }
 
@@ -202,6 +270,9 @@ void VulkanModule::InitSyncStructures()
 		VK_CHECK(vkCreateFence(m_Device, &FenceInfo, nullptr, &m_FramesData[i].RenderFence));
 	}
 
+	VkFenceCreateInfo UploadFenceInfo = vkinit::FenceCreateInfo();
+	VK_CHECK(vkCreateFence(m_Device, &UploadFenceInfo, nullptr, &m_UploadContext.m_UploadFence));
+
 	m_MainDeletionQueue.PushFunction([=]
 	{
 		for (int32_t i = 0; i < FRAME_OVERLAP; ++i)
@@ -209,6 +280,7 @@ void VulkanModule::InitSyncStructures()
 			vkDestroySemaphore(m_Device, m_FramesData[i].PresentSemaphore, nullptr);
 			vkDestroySemaphore(m_Device, m_FramesData[i].RenderSemaphore, nullptr);
 			vkDestroyFence(m_Device, m_FramesData[i].RenderFence, nullptr);
+			vkDestroyFence(m_Device, m_UploadContext.m_UploadFence, nullptr);
 		}
 	});
 }
@@ -332,7 +404,13 @@ void VulkanModule::InitPipelines()
 
 	PipelineBuilder.m_DynamicState = vkinit::DynamicStateCreateInfo(DynamicStates);
 
+	sVertexInputDescription VertexDescription = sVertex::GetVertexDescription();
+
 	PipelineBuilder.m_VertexInputInfo = vkinit::VertexInputStateCreateInfo();
+	PipelineBuilder.m_VertexInputInfo.vertexBindingDescriptionCount = VertexDescription.Bindings.size();
+	PipelineBuilder.m_VertexInputInfo.pVertexBindingDescriptions = VertexDescription.Bindings.data();
+	PipelineBuilder.m_VertexInputInfo.vertexAttributeDescriptionCount = VertexDescription.Attributes.size();
+	PipelineBuilder.m_VertexInputInfo.pVertexAttributeDescriptions = VertexDescription.Attributes.data();
 
 	PipelineBuilder.m_InputAssembly = vkinit::InputAssemblyCreateInfo(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 
@@ -383,6 +461,8 @@ void VulkanModule::RecordCommandBuffer(VkCommandBuffer aCommandBuffer, uint32_t 
 	vkCmdBeginRenderPass(aCommandBuffer, &RenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 	vkCmdBindPipeline(aCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ForwardPipeline);
+	VkDeviceSize Offset = 0;
+	vkCmdBindVertexBuffers(aCommandBuffer, 0, 1, &m_VertexBuffer.Buffer, &Offset);
 
 	// TODO: Check if this state is dynamic or not.
 	VkViewport Viewport{};
