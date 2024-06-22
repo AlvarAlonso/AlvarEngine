@@ -92,3 +92,56 @@ void vkutils::CreateVertexBuffer(VmaAllocator aVmaAllocator, const std::vector<s
 
 	vmaDestroyBuffer(aVmaAllocator, StagingBuffer.Buffer, StagingBuffer.Allocation);
 }
+
+void vkutils::CreateIndexBuffer(VmaAllocator aVmaAllocator, const std::vector<uint32_t>& aIndices, AllocatedBuffer& aOutBuffer)
+{
+	const size_t BufferSize = aIndices.size() * sizeof(uint32_t);
+
+	VkBufferCreateInfo StagingBufferInfo = {};
+	StagingBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	StagingBufferInfo.pNext = nullptr;
+	StagingBufferInfo.size = BufferSize;
+	StagingBufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+
+	VmaAllocationCreateInfo VmaAllocInfo = {};
+	VmaAllocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+
+	AllocatedBuffer StagingBuffer;
+
+	VK_CHECK(vmaCreateBuffer(aVmaAllocator, &StagingBufferInfo, &VmaAllocInfo,
+		&StagingBuffer.Buffer, &StagingBuffer.Allocation, nullptr));
+
+	void* Data;
+	vmaMapMemory(aVmaAllocator, StagingBuffer.Allocation, &Data);
+	memcpy(Data, aIndices.data(), BufferSize);
+	vmaUnmapMemory(aVmaAllocator, StagingBuffer.Allocation);
+
+	VkBufferCreateInfo IndexBufferInfo = {};
+    IndexBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    IndexBufferInfo.pNext = nullptr;
+    IndexBufferInfo.size = BufferSize;
+    IndexBufferInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+        VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+
+    VmaAllocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
+	// TODO: Resource Leak. Destroy this buffer somewhere.
+	VK_CHECK(vmaCreateBuffer(aVmaAllocator, &IndexBufferInfo, &VmaAllocInfo,
+		&aOutBuffer.Buffer, &aOutBuffer.Allocation, nullptr));
+
+	// TODO: Prefix classes.
+	VulkanModule* vulkanModule = Engine::Get()->GetVulkanModule();
+	assert(vulkanModule);
+
+	vulkanModule->ImmediateSubmit([=](VkCommandBuffer Cmd)
+	{
+		VkBufferCopy Copy;
+		Copy.dstOffset = 0;
+		Copy.srcOffset = 0;
+		Copy.size = BufferSize;
+
+		vkCmdCopyBuffer(Cmd, StagingBuffer.Buffer, aOutBuffer.Buffer, 1, &Copy);
+	});
+
+	vmaDestroyBuffer(aVmaAllocator, StagingBuffer.Buffer, StagingBuffer.Allocation);
+}

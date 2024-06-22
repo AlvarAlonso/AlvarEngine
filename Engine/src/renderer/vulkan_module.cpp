@@ -66,6 +66,7 @@ bool VulkanModule::Initialize(const HINSTANCE aInstanceHandle, const HWND aWindo
 	InitSyncStructures();
 
 	vkutils::CreateVertexBuffer(m_Allocator, m_Vertices, m_VertexBuffer);
+	vkutils::CreateIndexBuffer(m_Allocator, m_Indices, m_IndexBuffer);
 
     m_bIsInitialized = true;
 
@@ -180,10 +181,8 @@ void VulkanModule::InitVulkan(const HINSTANCE aInstanceHandle, const HWND aWindo
 	InitEnabledFeatures();
 
 	// Create logical device.
-	SGSDEBUG("Creating Logical Device...");
 	vkb::DeviceBuilder DeviceBuilder{vkbPhysicalDevice};
 	vkb::Device vkbDevice = DeviceBuilder.add_pNext(m_pDeviceCreatepNextChain).build().value();
-	SGSDEBUG("Logical Device Created");
 
 	// initialize device
 	m_PhysicalDevice = vkbPhysicalDevice.physical_device;
@@ -463,6 +462,7 @@ void VulkanModule::RecordCommandBuffer(VkCommandBuffer aCommandBuffer, uint32_t 
 	vkCmdBindPipeline(aCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ForwardPipeline);
 	VkDeviceSize Offset = 0;
 	vkCmdBindVertexBuffers(aCommandBuffer, 0, 1, &m_VertexBuffer.Buffer, &Offset);
+	vkCmdBindIndexBuffer(aCommandBuffer, m_IndexBuffer.Buffer, 0, VK_INDEX_TYPE_UINT32);
 
 	// TODO: Check if this state is dynamic or not.
 	VkViewport Viewport{};
@@ -479,7 +479,7 @@ void VulkanModule::RecordCommandBuffer(VkCommandBuffer aCommandBuffer, uint32_t 
 	Scissor.extent = m_WindowExtent;
 	vkCmdSetScissor(aCommandBuffer, 0, 1, &Scissor);
 
-	vkCmdDraw(aCommandBuffer, 3, 1, 0, 0);
+	vkCmdDrawIndexed(aCommandBuffer, static_cast<uint32_t>(m_Indices.size()), 1, 0, 0, 0);
 
 	vkCmdEndRenderPass(aCommandBuffer);
 
