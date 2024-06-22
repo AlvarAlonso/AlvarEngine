@@ -1,5 +1,7 @@
 #include "vulkan_module.hpp"
 
+#define GLM_FORCE_RADIANS
+
 #include "engine.hpp"
 #include "core/defines.h"
 #include "core/logger.h"
@@ -7,10 +9,11 @@
 #include "vk_initializers.hpp"
 #include "vk_utils.hpp"
 
-// TODO: Include path correctly
 #include <VulkanBootstrap/VkBootstrap.h>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include <iostream>
+#include <chrono>
 
 sVertexInputDescription sVertex::GetVertexDescription()
 {
@@ -60,6 +63,12 @@ bool VulkanModule::Initialize(const HINSTANCE aInstanceHandle, const HWND aWindo
 	InitRenderPass();
 
 	InitFramebuffers();
+
+	InitDescriptorSetLayouts();
+
+	InitDescriptorSetPool();
+
+	InitDescriptorSets();
 
 	InitPipelines();
 
@@ -286,12 +295,91 @@ void VulkanModule::InitSyncStructures()
 
 void VulkanModule::InitDescriptorSetPool()
 {
+	VkDescriptorPoolSize PoolSize = {};
+	PoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	PoolSize.descriptorCount = static_cast<uint32_t>(FRAME_OVERLAP);
 
+	VkDescriptorPoolCreateInfo PoolInfo = {};
+	PoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	PoolInfo.poolSizeCount = 1;
+	PoolInfo.pPoolSizes = &PoolSize;
+	PoolInfo.maxSets = static_cast<uint32_t>(FRAME_OVERLAP);
+
+	VK_CHECK(vkCreateDescriptorPool(m_Device, &PoolInfo, nullptr, &m_DescriptorPool));
+
+	m_MainDeletionQueue.PushFunction([=]
+	{
+		vkDestroyDescriptorPool(m_Device, m_DescriptorPool, nullptr);
+	});
+}
+
+void VulkanModule::InitDescriptorSets()
+{
+	VkDescriptorSetAllocateInfo AllocInfo{};
+	AllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	AllocInfo.descriptorPool = m_DescriptorPool;
+	AllocInfo.descriptorSetCount = 1;
+	AllocInfo.pSetLayouts = &m_DescriptorSetLayout;
+
+	for (size_t i = 0; i < FRAME_OVERLAP; ++i)
+	{
+		VK_CHECK(vkAllocateDescriptorSets(m_Device, &AllocInfo, &m_FramesData[i].DescriptorSet));
+	}
+
+	for (size_t i = 0; i < FRAME_OVERLAP; ++i)
+	{
+		VkDescriptorBufferInfo BufferInfo = {};
+		BufferInfo.buffer = m_FramesData[i].UBOBuffer.Buffer;
+		BufferInfo.offset = 0;
+		BufferInfo.range = sizeof(sFrameUBO);
+
+		VkWriteDescriptorSet DescriptorWrite{};
+		DescriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		DescriptorWrite.dstSet =  m_FramesData[i].DescriptorSet;
+		DescriptorWrite.dstBinding = 0;
+		DescriptorWrite.dstArrayElement = 0;
+		DescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		DescriptorWrite.descriptorCount = 1;
+		DescriptorWrite.pBufferInfo = &BufferInfo;
+		DescriptorWrite.pImageInfo = nullptr;
+		DescriptorWrite.pTexelBufferView = nullptr;
+
+		vkUpdateDescriptorSets(m_Device, 1, &DescriptorWrite, 0, nullptr);
+	}
 }
 
 void VulkanModule::InitDescriptorSetLayouts()
 {
+	VkDescriptorSetLayoutBinding FrameUBOLayoutBinding = {};
+	FrameUBOLayoutBinding.binding = 0;
+	FrameUBOLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	FrameUBOLayoutBinding.descriptorCount = 1;
+	FrameUBOLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	FrameUBOLayoutBinding.pImmutableSamplers = nullptr;
 
+	VkDescriptorSetLayoutCreateInfo LayoutInfo = {};
+	LayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	LayoutInfo.bindingCount = 1;
+	LayoutInfo.pBindings = &FrameUBOLayoutBinding;
+
+	VK_CHECK(vkCreateDescriptorSetLayout(m_Device, &LayoutInfo, nullptr, &m_DescriptorSetLayout));
+
+	VkDeviceSize BufferSize = sizeof(sFrameUBO);
+	for (int i = 0; i < FRAME_OVERLAP; ++i)
+	{
+		m_FramesData[i].UBOBuffer = vkutils::CreateBuffer(m_Allocator, BufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+		vmaMapMemory(m_Allocator, m_FramesData[i].UBOBuffer.Allocation, &m_FramesData[i].MappedUBOBuffer);
+	}
+
+	m_MainDeletionQueue.PushFunction([=]
+	{
+		for (size_t i = 0; i < FRAME_OVERLAP; ++i)
+		{
+			vmaDestroyBuffer(m_Allocator, m_FramesData[i].UBOBuffer.Buffer, m_FramesData[i].UBOBuffer.Allocation);
+		}
+
+		vkDestroyDescriptorSetLayout(m_Device, m_DescriptorSetLayout, nullptr);
+	});
 }
 
 void VulkanModule::InitRenderPass()
@@ -390,6 +478,8 @@ void VulkanModule::InitPipelines()
 	}
 
 	VkPipelineLayoutCreateInfo PipelineLayoutInfo = vkinit::PipelineLayoutCreateInfo();
+	PipelineLayoutInfo.setLayoutCount = 1;
+	PipelineLayoutInfo.pSetLayouts = &m_DescriptorSetLayout;
 
 	VK_CHECK(vkCreatePipelineLayout(m_Device, &PipelineLayoutInfo, nullptr, &m_ForwardPipelineLayout));
 
@@ -425,6 +515,8 @@ void VulkanModule::InitPipelines()
 
 	PipelineBuilder.m_DepthStencil = vkinit::DepthStencilCreateInfo(true, true, VK_COMPARE_OP_LESS_OR_EQUAL);
 	PipelineBuilder.m_Rasterizer = vkinit::RasterizationStateCreateInfo(VK_POLYGON_MODE_FILL);
+	PipelineBuilder.m_Rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+	PipelineBuilder.m_Rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	PipelineBuilder.m_Multisampling = vkinit::MultisamplingStateCreateInfo();
 	PipelineBuilder.m_ColorBlendAttachment.push_back(vkinit::ColorBlendAttachmentState());
 
@@ -443,6 +535,25 @@ void VulkanModule::InitPipelines()
 		vkDestroyPipeline(m_Device, m_ForwardPipeline, nullptr);
 		vkDestroyPipelineLayout(m_Device, m_ForwardPipelineLayout, nullptr);
 	});
+}
+
+void VulkanModule::UpdateFrameUBO(uint32_t ImageIdx)
+{
+	assert(ImageIdx >= 0 && ImageIdx < FRAME_OVERLAP);
+
+	static auto StartTime = std::chrono::high_resolution_clock::now();
+
+	const auto CurrentTime = std::chrono::high_resolution_clock::now();
+	const float Time = std::chrono::duration<float, std::chrono::seconds::period>(CurrentTime - StartTime).count();
+
+	sFrameUBO FrameUBO = {};
+	FrameUBO.Model = glm::rotate(glm::mat4(1.0f), Time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	FrameUBO.View = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	FrameUBO.Proj = glm::perspective(glm::radians(45.0f), m_WindowExtent.width / (float) m_WindowExtent.height, 0.1f, 10.0f);
+	FrameUBO.Proj[1][1] *= -1;
+
+
+	memcpy(m_FramesData[ImageIdx].MappedUBOBuffer, &FrameUBO, sizeof(sFrameUBO));
 }
 
 void VulkanModule::RecordCommandBuffer(VkCommandBuffer aCommandBuffer, uint32_t aImageIdx)
@@ -464,7 +575,6 @@ void VulkanModule::RecordCommandBuffer(VkCommandBuffer aCommandBuffer, uint32_t 
 	vkCmdBindVertexBuffers(aCommandBuffer, 0, 1, &m_VertexBuffer.Buffer, &Offset);
 	vkCmdBindIndexBuffer(aCommandBuffer, m_IndexBuffer.Buffer, 0, VK_INDEX_TYPE_UINT32);
 
-	// TODO: Check if this state is dynamic or not.
 	VkViewport Viewport{};
 	Viewport.x = 0.0f;
 	Viewport.y = 0.0f;
@@ -479,6 +589,7 @@ void VulkanModule::RecordCommandBuffer(VkCommandBuffer aCommandBuffer, uint32_t 
 	Scissor.extent = m_WindowExtent;
 	vkCmdSetScissor(aCommandBuffer, 0, 1, &Scissor);
 
+	vkCmdBindDescriptorSets(aCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ForwardPipelineLayout, 0, 1, &m_FramesData[aImageIdx].DescriptorSet, 0, nullptr);
 	vkCmdDrawIndexed(aCommandBuffer, static_cast<uint32_t>(m_Indices.size()), 1, 0, 0, 0);
 
 	vkCmdEndRenderPass(aCommandBuffer);
@@ -502,6 +613,8 @@ void VulkanModule::RenderFrame()
 	{
 		throw std::runtime_error("Failed to acquire swap chain image!");
 	}
+
+	UpdateFrameUBO(m_CurrentFrame);
 
 	// Delay fence reset to prevent possible deadlock when recreating the swapchain.
 	vkResetFences(m_Device, 1, &m_FramesData[m_CurrentFrame].RenderFence);

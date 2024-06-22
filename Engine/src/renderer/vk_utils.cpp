@@ -145,3 +145,26 @@ void vkutils::CreateIndexBuffer(VmaAllocator aVmaAllocator, const std::vector<ui
 
 	vmaDestroyBuffer(aVmaAllocator, StagingBuffer.Buffer, StagingBuffer.Allocation);
 }
+
+AllocatedBuffer vkutils::CreateBuffer(VmaAllocator aVmaAllocator, size_t aAllocSize, VkBufferUsageFlags aUsage, VmaMemoryUsage aMemoryUsage, VmaAllocationCreateFlags aFlags)
+{
+	VkBufferCreateInfo BufferInfo = {};
+	BufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	BufferInfo.pNext = nullptr;
+
+	BufferInfo.size = aAllocSize;
+	BufferInfo.usage = aUsage;
+
+	VmaAllocationCreateInfo VmaAllocInfo = {};
+	VmaAllocInfo.usage = aMemoryUsage;
+	VmaAllocInfo.flags = aFlags;
+
+	AllocatedBuffer NewBuffer;
+
+	VK_CHECK(vmaCreateBuffer(aVmaAllocator, &BufferInfo, &VmaAllocInfo,
+		&NewBuffer.Buffer,
+		&NewBuffer.Allocation,
+		nullptr));
+
+	return NewBuffer;
+}

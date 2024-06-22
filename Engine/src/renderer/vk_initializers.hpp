@@ -24,7 +24,7 @@ namespace vkinit
     VkPipelineMultisampleStateCreateInfo MultisamplingStateCreateInfo();
 
 	VkPipelineColorBlendAttachmentState ColorBlendAttachmentState();
-   	
+
     VkPipelineShaderStageCreateInfo PipelineShaderStageCreateInfo(VkShaderStageFlagBits aStage, VkShaderModule aShaderModule);
 
 	VkCommandBufferBeginInfo CommandBufferBeginInfo(VkCommandBufferUsageFlags aFlags = 0);

@@ -34,12 +34,22 @@ struct sFrameData
     VkFence RenderFence;
     VkCommandPool CommandPool;
     VkCommandBuffer MainCommandBuffer;
+    AllocatedBuffer UBOBuffer;
+    void* MappedUBOBuffer;
+    VkDescriptorSet DescriptorSet;
 };
 
 struct sUploadContext
 {
     VkFence m_UploadFence;
     VkCommandPool m_CommandPool;
+};
+
+struct sFrameUBO
+{
+    glm::mat4 Model;
+    glm::mat4 View;
+    glm::mat4 Proj;
 };
 
 class VulkanModule
@@ -64,12 +74,14 @@ private:
     void InitSwapchain();
     void InitCommandPools();
     void InitSyncStructures();
-    void InitDescriptorSetPool();
     void InitDescriptorSetLayouts();
+    void InitDescriptorSetPool();
+    void InitDescriptorSets();
     void InitRenderPass();
     void InitFramebuffers();
     void InitPipelines();
 
+    void UpdateFrameUBO(uint32_t ImageIdx);
     void RecordCommandBuffer(VkCommandBuffer aCommandBuffer, uint32_t aImageIdx);
     void RenderFrame();
 
@@ -113,7 +125,12 @@ private:
     std::vector<VkFramebuffer> m_Framebuffers;
     // ------------
 
-    // Pipelines.
+    // Descriptors.
+    VkDescriptorPool m_DescriptorPool;
+    VkDescriptorSetLayout m_DescriptorSetLayout;
+    // ------------
+    
+     // Pipelines.
     VkPipelineLayout m_ForwardPipelineLayout;
     VkPipeline m_ForwardPipeline;
     //-------------
