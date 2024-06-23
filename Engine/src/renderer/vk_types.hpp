@@ -19,8 +19,15 @@
         }                                                           \
     } while (0)														\
     
-struct AllocatedBuffer {
-	VkBuffer Buffer = VK_NULL_HANDLE;
+struct AllocatedBuffer 
+{
+	VkBuffer Buffer;
+    VmaAllocation Allocation;
+};
+
+struct AllocatedImage 
+{
+    VkImage Image;
     VmaAllocation Allocation;
 };
 
@@ -34,6 +41,7 @@ struct sVertex
 {
     glm::vec2 Position;
     glm::vec3 Color;
+    glm::vec2 UV;
 
     static sVertexInputDescription GetVertexDescription();
 };

@@ -1,6 +1,11 @@
 #include "vk_utils.hpp"
 
 #include "engine.hpp"
+#include <core/logger.h>
+#include "vk_initializers.hpp"
+
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image/stb_image.h>
 
 #include <iostream>
 #include <fstream>
@@ -167,4 +172,100 @@ AllocatedBuffer vkutils::CreateBuffer(VmaAllocator aVmaAllocator, size_t aAllocS
 		nullptr));
 
 	return NewBuffer;
+}
+
+bool vkutils::LoadImageFromFile(VmaAllocator aVmaAllocator, const std::string& File, AllocatedImage& aOutImage)
+{
+	int32_t TexWidth, TexHeight, TexChannels;
+
+	stbi_uc* Pixels = stbi_load(File.c_str(), &TexWidth, &TexHeight, &TexChannels, STBI_rgb_alpha);
+
+	if (!Pixels)
+	{
+		SGSERROR("Failed to load texture file: %s.", File.c_str());
+		return false;
+	}
+
+	void* Pixel_Ptr = Pixels;
+	VkDeviceSize ImageSize = TexWidth * TexHeight * 4;
+
+	// TODO: Should all images have this format?
+	VkFormat ImageFormat = VK_FORMAT_R8G8B8A8_SRGB;
+
+	AllocatedBuffer StagingBuffer = vkutils::CreateBuffer(aVmaAllocator, ImageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+
+	void* Data;
+	vmaMapMemory(aVmaAllocator, StagingBuffer.Allocation, &Data);
+	memcpy(Data, Pixel_Ptr, static_cast<size_t>(ImageSize));
+	vmaUnmapMemory(aVmaAllocator, StagingBuffer.Allocation);
+
+	stbi_image_free(Pixels);
+
+	VkExtent3D ImageExtent;
+	ImageExtent.width = static_cast<uint32_t>(TexWidth);
+	ImageExtent.height = static_cast<uint32_t>(TexHeight);
+	ImageExtent.depth = 1;
+
+	VkImageCreateInfo ImageInfo = vkinit::ImageCreateInfo(ImageFormat, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, ImageExtent);
+
+	AllocatedImage NewImage;
+
+	VmaAllocationCreateInfo ImageAllocInfo = {};
+	ImageAllocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
+	// TODO: Memory leak. Destroy this image.
+	vmaCreateImage(aVmaAllocator, &ImageInfo, &ImageAllocInfo, &NewImage.Image, &NewImage.Allocation, nullptr);
+
+	// TODO: Prefix classes.
+	VulkanModule* vulkanModule = Engine::Get()->GetVulkanModule();
+	assert(vulkanModule);
+
+	vulkanModule->ImmediateSubmit([&](VkCommandBuffer aCmd)
+	{
+		VkImageSubresourceRange Range;
+		Range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		Range.baseMipLevel = 0;
+		Range.levelCount = 1;
+		Range.baseArrayLayer = 0;
+		Range.layerCount = 1;
+
+		VkImageMemoryBarrier ImageBarrierToTransfer = {};
+		ImageBarrierToTransfer.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		ImageBarrierToTransfer.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		ImageBarrierToTransfer.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		ImageBarrierToTransfer.image = NewImage.Image;
+		ImageBarrierToTransfer.subresourceRange = Range;
+		ImageBarrierToTransfer.srcAccessMask = 0;
+		ImageBarrierToTransfer.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+		vkCmdPipelineBarrier(aCmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+			VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &ImageBarrierToTransfer);
+
+		VkBufferImageCopy CopyRegion = {};
+		CopyRegion.bufferOffset = 0;
+		CopyRegion.bufferRowLength = 0;
+		CopyRegion.bufferImageHeight = 0;
+		CopyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		CopyRegion.imageSubresource.mipLevel = 0;
+		CopyRegion.imageSubresource.baseArrayLayer = 0;
+		CopyRegion.imageSubresource.layerCount = 1;
+		CopyRegion.imageExtent = ImageExtent;
+
+		vkCmdCopyBufferToImage(aCmd, StagingBuffer.Buffer, NewImage.Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &CopyRegion);
+	
+		VkImageMemoryBarrier ImageBarrierToReadable = ImageBarrierToTransfer;
+		ImageBarrierToReadable.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		ImageBarrierToReadable.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		ImageBarrierToReadable.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		ImageBarrierToReadable.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+		vkCmdPipelineBarrier(aCmd, VK_PIPELINE_STAGE_TRANSFER_BIT,
+			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &ImageBarrierToReadable);
+	});
+
+	vmaDestroyBuffer(aVmaAllocator, StagingBuffer.Buffer, StagingBuffer.Allocation);
+
+	aOutImage = NewImage;
+	
+	return true;
 }

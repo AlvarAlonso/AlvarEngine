@@ -74,6 +74,7 @@ private:
     void InitSwapchain();
     void InitCommandPools();
     void InitSyncStructures();
+    void InitTextureSamplers();
     void InitDescriptorSetLayouts();
     void InitDescriptorSetPool();
     void InitDescriptorSets();
@@ -148,10 +149,10 @@ private:
 
     const std::vector<sVertex> m_Vertices =  
     {
-        {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-        {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-        {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-        {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+        {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+        {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+        {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+        {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
     };
 
     const std::vector<uint32_t> m_Indices = {
@@ -160,4 +161,7 @@ private:
 
     AllocatedBuffer m_VertexBuffer;
     AllocatedBuffer m_IndexBuffer;
+    AllocatedImage m_Image;
+    VkImageView m_ImageView;
+    VkSampler m_DefaultSampler;
 };

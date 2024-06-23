@@ -1,6 +1,7 @@
 #pragma once
 
 #include "vk_types.hpp"
+#include <string>
 
 namespace vkutils
 {
@@ -12,4 +13,6 @@ namespace vkutils
     void CreateIndexBuffer(VmaAllocator aVmaAllocator, const std::vector<uint32_t>& aIndices, AllocatedBuffer& aOutBuffer);
 
     AllocatedBuffer CreateBuffer(VmaAllocator aVmaAllocator, size_t aAllocSize, VkBufferUsageFlags aUsage, VmaMemoryUsage aMemoryUsage, VmaAllocationCreateFlags aFlags = 0);
+
+    bool LoadImageFromFile(VmaAllocator aVmaAllocator, const std::string& File, AllocatedImage& aOutImage);
 }

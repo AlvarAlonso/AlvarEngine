@@ -14,6 +14,7 @@
 
 #include <iostream>
 #include <chrono>
+#include <array>
 
 sVertexInputDescription sVertex::GetVertexDescription()
 {
@@ -38,8 +39,15 @@ sVertexInputDescription sVertex::GetVertexDescription()
 	ColorAttribute.format = VK_FORMAT_R32G32B32_SFLOAT;
 	ColorAttribute.offset = offsetof(sVertex, Color);
 
+	VkVertexInputAttributeDescription UVAttribute = {};
+	UVAttribute.binding = 0;
+	UVAttribute.location = 2;
+	UVAttribute.format = VK_FORMAT_R32G32_SFLOAT;
+	UVAttribute.offset = offsetof(sVertex, UV);
+
 	Description.Attributes.push_back(PositionAttribute);
 	Description.Attributes.push_back(ColorAttribute);
+	Description.Attributes.push_back(UVAttribute);
 
 	return Description;
 }
@@ -68,14 +76,22 @@ bool VulkanModule::Initialize(const HINSTANCE aInstanceHandle, const HWND aWindo
 
 	InitDescriptorSetPool();
 
-	InitDescriptorSets();
-
 	InitPipelines();
 
 	InitSyncStructures();
 
+	InitTextureSamplers();
+
 	vkutils::CreateVertexBuffer(m_Allocator, m_Vertices, m_VertexBuffer);
 	vkutils::CreateIndexBuffer(m_Allocator, m_Indices, m_IndexBuffer);
+
+	vkutils::LoadImageFromFile(m_Allocator, "../Resources/Images/DonPatch.jpg", m_Image);
+	
+	// TODO: Placeholder for testing purposes. TO BE REMOVED.
+	VkImageViewCreateInfo ViewInfo = vkinit::ImageViewCreateInfo(VK_FORMAT_R8G8B8A8_SRGB, m_Image.Image, VK_IMAGE_ASPECT_COLOR_BIT);
+	VK_CHECK(vkCreateImageView(m_Device, &ViewInfo, nullptr, &m_ImageView));
+
+	InitDescriptorSets();
 
     m_bIsInitialized = true;
 
@@ -124,6 +140,8 @@ void VulkanModule::HandleWindowResize()
 
 void VulkanModule::ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& aFunction)
 {
+	SGSDEBUG("Immediate Submit");
+
 	VkCommandBufferAllocateInfo CmdAllocInfo = vkinit::CommandBufferAllocateInfo(m_UploadContext.m_CommandPool, 1);
 
 	VkCommandBuffer Cmd;
@@ -178,12 +196,16 @@ void VulkanModule::InitVulkan(const HINSTANCE aInstanceHandle, const HWND aWindo
 	SurfaceCreateInfo.hinstance = aInstanceHandle;
 
 	VK_CHECK(vkCreateWin32SurfaceKHR(m_VulkanInstance, &SurfaceCreateInfo, nullptr, &m_Surface));
-
+	
+	VkPhysicalDeviceFeatures RequiredFeatures;
+	RequiredFeatures.samplerAnisotropy = VK_TRUE;
+	
 	// Select physical device.
 	vkb::PhysicalDeviceSelector PhysicalDeviceSelector {vkbInstance};
 	vkb::PhysicalDevice vkbPhysicalDevice = PhysicalDeviceSelector
 	.set_minimum_version(1, 2)
 	.set_surface(m_Surface)
+	//.set_required_features(RequiredFeatures)
 	.select()
 	.value();
 
@@ -293,16 +315,50 @@ void VulkanModule::InitSyncStructures()
 	});
 }
 
+void VulkanModule::InitTextureSamplers()
+{
+	VkPhysicalDeviceProperties Properties = {};
+	vkGetPhysicalDeviceProperties(m_PhysicalDevice, &Properties);
+
+	VkSamplerCreateInfo SamplerInfo = {};
+	SamplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+	SamplerInfo.magFilter = VK_FILTER_LINEAR;
+	SamplerInfo.minFilter = VK_FILTER_LINEAR;
+	SamplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	SamplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	SamplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	SamplerInfo.anisotropyEnable = VK_FALSE;
+	SamplerInfo.maxAnisotropy = 1.0f; //Properties.limits.maxSamplerAnisotropy;
+	SamplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+	SamplerInfo.unnormalizedCoordinates = VK_FALSE;
+	SamplerInfo.compareEnable = VK_FALSE;
+	SamplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+	SamplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+
+	VK_CHECK(vkCreateSampler(m_Device, &SamplerInfo, nullptr, &m_DefaultSampler));
+
+	m_MainDeletionQueue.PushFunction([=]
+	{
+		vkDestroySampler(m_Device, m_DefaultSampler, nullptr);
+	});
+}
+
 void VulkanModule::InitDescriptorSetPool()
 {
-	VkDescriptorPoolSize PoolSize = {};
-	PoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	PoolSize.descriptorCount = static_cast<uint32_t>(FRAME_OVERLAP);
+	VkDescriptorPoolSize UBOPoolSize = {};
+	UBOPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	UBOPoolSize.descriptorCount = static_cast<uint32_t>(FRAME_OVERLAP);
+
+	VkDescriptorPoolSize SamplerPoolSize = {};
+	SamplerPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	SamplerPoolSize.descriptorCount = static_cast<uint32_t>(FRAME_OVERLAP);
+
+	std::array<VkDescriptorPoolSize, 2> PoolSizes = { UBOPoolSize, SamplerPoolSize };
 
 	VkDescriptorPoolCreateInfo PoolInfo = {};
 	PoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	PoolInfo.poolSizeCount = 1;
-	PoolInfo.pPoolSizes = &PoolSize;
+	PoolInfo.poolSizeCount = static_cast<uint32_t>(PoolSizes.size());
+	PoolInfo.pPoolSizes = PoolSizes.data();;
 	PoolInfo.maxSets = static_cast<uint32_t>(FRAME_OVERLAP);
 
 	VK_CHECK(vkCreateDescriptorPool(m_Device, &PoolInfo, nullptr, &m_DescriptorPool));
@@ -333,18 +389,32 @@ void VulkanModule::InitDescriptorSets()
 		BufferInfo.offset = 0;
 		BufferInfo.range = sizeof(sFrameUBO);
 
-		VkWriteDescriptorSet DescriptorWrite{};
-		DescriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		DescriptorWrite.dstSet =  m_FramesData[i].DescriptorSet;
-		DescriptorWrite.dstBinding = 0;
-		DescriptorWrite.dstArrayElement = 0;
-		DescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		DescriptorWrite.descriptorCount = 1;
-		DescriptorWrite.pBufferInfo = &BufferInfo;
-		DescriptorWrite.pImageInfo = nullptr;
-		DescriptorWrite.pTexelBufferView = nullptr;
+		VkDescriptorImageInfo ImageInfo = {};
+		ImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		ImageInfo.imageView = m_ImageView;
+		ImageInfo.sampler = m_DefaultSampler;
 
-		vkUpdateDescriptorSets(m_Device, 1, &DescriptorWrite, 0, nullptr);
+		std::array<VkWriteDescriptorSet, 2> DescriptorWrites{};
+
+		DescriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		DescriptorWrites[0].dstSet =  m_FramesData[i].DescriptorSet;
+		DescriptorWrites[0].dstBinding = 0;
+		DescriptorWrites[0].dstArrayElement = 0;
+		DescriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		DescriptorWrites[0].descriptorCount = 1;
+		DescriptorWrites[0].pBufferInfo = &BufferInfo;
+		DescriptorWrites[0].pImageInfo = nullptr;
+		DescriptorWrites[0].pTexelBufferView = nullptr;
+
+		DescriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		DescriptorWrites[1].dstSet = m_FramesData[i].DescriptorSet;
+		DescriptorWrites[1].dstBinding = 1;
+		DescriptorWrites[1].dstArrayElement = 0;
+		DescriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		DescriptorWrites[1].descriptorCount = 1;
+		DescriptorWrites[1].pImageInfo = &ImageInfo;
+
+		vkUpdateDescriptorSets(m_Device, static_cast<uint32_t>(DescriptorWrites.size()), DescriptorWrites.data(), 0, nullptr);
 	}
 }
 
@@ -357,10 +427,18 @@ void VulkanModule::InitDescriptorSetLayouts()
 	FrameUBOLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 	FrameUBOLayoutBinding.pImmutableSamplers = nullptr;
 
+	VkDescriptorSetLayoutBinding SamplerLayoutBinding{};
+	SamplerLayoutBinding.binding = 1;
+	SamplerLayoutBinding.descriptorCount = 1;
+	SamplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	SamplerLayoutBinding.pImmutableSamplers = nullptr;
+	SamplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+	std::array<VkDescriptorSetLayoutBinding, 2> Bindings = { FrameUBOLayoutBinding, SamplerLayoutBinding };
 	VkDescriptorSetLayoutCreateInfo LayoutInfo = {};
 	LayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	LayoutInfo.bindingCount = 1;
-	LayoutInfo.pBindings = &FrameUBOLayoutBinding;
+	LayoutInfo.bindingCount = static_cast<uint32_t>(Bindings.size());
+	LayoutInfo.pBindings = Bindings.data();
 
 	VK_CHECK(vkCreateDescriptorSetLayout(m_Device, &LayoutInfo, nullptr, &m_DescriptorSetLayout));
 

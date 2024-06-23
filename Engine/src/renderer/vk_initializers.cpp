@@ -232,6 +232,44 @@ VkPresentInfoKHR vkinit::PresentInfo()
 	return Info;
 }
 
+VkImageCreateInfo vkinit::ImageCreateInfo(VkFormat aFormat, VkImageUsageFlags aUsageFlags, VkExtent3D aExtent)
+{
+	VkImageCreateInfo Info = { };
+	Info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+	Info.pNext = nullptr;
+
+	Info.imageType = VK_IMAGE_TYPE_2D;
+
+	Info.format = aFormat;
+	Info.extent = aExtent;
+
+	Info.mipLevels = 1;
+	Info.arrayLayers = 1;
+	Info.samples = VK_SAMPLE_COUNT_1_BIT;
+	Info.tiling = VK_IMAGE_TILING_OPTIMAL;
+	Info.usage = aUsageFlags;
+
+	return Info;
+}
+
+VkImageViewCreateInfo vkinit::ImageViewCreateInfo(VkFormat aFormat, VkImage aImage, VkImageAspectFlags aAspectFlags)
+{
+	VkImageViewCreateInfo Info = {};
+	Info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+	Info.pNext = nullptr;
+
+	Info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	Info.image = aImage;
+	Info.format = aFormat;
+	Info.subresourceRange.baseMipLevel = 0;
+	Info.subresourceRange.levelCount = 1;
+	Info.subresourceRange.baseArrayLayer = 0;
+	Info.subresourceRange.layerCount = 1;
+	Info.subresourceRange.aspectMask = aAspectFlags;
+
+	return Info;
+}
+
 VkPipeline PipelineBuilder::BuildPipeline(VkDevice aDevice, VkRenderPass aRenderPass)
 {
     VkPipelineViewportStateCreateInfo ViewportState = {};

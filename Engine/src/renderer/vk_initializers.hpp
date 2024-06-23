@@ -38,6 +38,10 @@ namespace vkinit
     VkSubmitInfo SubmitInfo(VkCommandBuffer* aCmd);
 
 	VkPresentInfoKHR PresentInfo();
+
+	VkImageCreateInfo ImageCreateInfo(VkFormat aFormat, VkImageUsageFlags aUsageFlags, VkExtent3D aExtent);
+
+	VkImageViewCreateInfo ImageViewCreateInfo(VkFormat aFormat, VkImage aImage, VkImageAspectFlags aAspectFlags);
 }
 
 // TODO: Make namespaces for everything related to my code.
