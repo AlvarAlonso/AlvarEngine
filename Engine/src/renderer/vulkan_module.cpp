@@ -66,6 +66,8 @@ bool VulkanModule::Initialize(const HINSTANCE aInstanceHandle, const HWND aWindo
 
 	InitSwapchain();
 
+	InitDepthBuffer();
+
 	InitCommandPools();
 
 	InitRenderPass();
@@ -286,6 +288,23 @@ void VulkanModule::InitCommandPools()
 	});
 }
 
+void VulkanModule::InitDepthBuffer()
+{
+	VkFormat DepthFormat = FindDepthFormat();
+
+	VkImageCreateInfo DepthImgInfo = vkinit::ImageCreateInfo(DepthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, {m_WindowExtent.width, m_WindowExtent.height, 1});
+
+	VmaAllocationCreateInfo DepthImgAllocInfo = {};
+	DepthImgAllocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+	DepthImgAllocInfo.requiredFlags = VkMemoryPropertyFlagBits(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+	vmaCreateImage(m_Allocator, &DepthImgInfo, &DepthImgAllocInfo, &m_DepthImage.Image, &m_DepthImage.Allocation, nullptr);
+
+	VkImageViewCreateInfo DepthViewInfo = vkinit::ImageViewCreateInfo(DepthFormat, m_DepthImage.Image, VK_IMAGE_ASPECT_DEPTH_BIT);
+
+	VK_CHECK(vkCreateImageView(m_Device, &DepthViewInfo, nullptr, &m_DepthImageView));
+}
+
 void VulkanModule::InitSyncStructures()
 {
 	VkSemaphoreCreateInfo SemaphoreInfo = vkinit::SemaphoreCreateInfo();
@@ -473,27 +492,43 @@ void VulkanModule::InitRenderPass()
 	ColorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	ColorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
+	VkAttachmentDescription DepthAttachment = {};
+	DepthAttachment.format = FindDepthFormat();
+	DepthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	DepthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	DepthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	DepthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	DepthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	DepthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	DepthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
 	VkAttachmentReference ColorAttachmentRef = {};
 	ColorAttachmentRef.attachment = 0;
 	ColorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+	VkAttachmentReference DepthAttachmentRef = {};
+	DepthAttachmentRef.attachment = 1;
+	DepthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
 	VkSubpassDescription Subpass = {};
 	Subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 	Subpass.colorAttachmentCount = 1;
 	Subpass.pColorAttachments = &ColorAttachmentRef;
+	Subpass.pDepthStencilAttachment = &DepthAttachmentRef;
 
 	VkSubpassDependency Dependency{};
 	Dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
 	Dependency.dstSubpass = 0;
-	Dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	Dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
 	Dependency.srcAccessMask = 0;
-	Dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	Dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	Dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+	Dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
+	std::array<VkAttachmentDescription, 2> Attachments = { ColorAttachment, DepthAttachment };
 	VkRenderPassCreateInfo RenderPassInfo = {};
 	RenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-	RenderPassInfo.attachmentCount = 1;
-	RenderPassInfo.pAttachments = &ColorAttachment;
+	RenderPassInfo.attachmentCount = static_cast<uint32_t>(Attachments.size());
+	RenderPassInfo.pAttachments = Attachments.data();
 	RenderPassInfo.subpassCount = 1;
 	RenderPassInfo.pSubpasses = &Subpass;
 	RenderPassInfo.dependencyCount = 1;
@@ -519,7 +554,10 @@ void VulkanModule::InitFramebuffers()
 
 	for (int32 i = 0; i < SwapchainImageCount; ++i)
 	{
-		FramebufferInfo.pAttachments = &m_SwapchainImageViews[i];
+		std::array<VkImageView, 2> Attachments = { m_SwapchainImageViews[i], m_DepthImageView };
+
+		FramebufferInfo.attachmentCount = static_cast<uint32_t>(Attachments.size());
+		FramebufferInfo.pAttachments = Attachments.data();
 		VK_CHECK(vkCreateFramebuffer(m_Device, &FramebufferInfo, nullptr, &m_Framebuffers[i]));
 	}
 
@@ -591,7 +629,7 @@ void VulkanModule::InitPipelines()
 	PipelineBuilder.m_Scissor.offset = {0, 0};
 	PipelineBuilder.m_Scissor.extent = m_WindowExtent;
 
-	PipelineBuilder.m_DepthStencil = vkinit::DepthStencilCreateInfo(true, true, VK_COMPARE_OP_LESS_OR_EQUAL);
+	PipelineBuilder.m_DepthStencil = vkinit::DepthStencilCreateInfo(true, true, VK_COMPARE_OP_LESS);
 	PipelineBuilder.m_Rasterizer = vkinit::RasterizationStateCreateInfo(VK_POLYGON_MODE_FILL);
 	PipelineBuilder.m_Rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
 	PipelineBuilder.m_Rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
@@ -642,9 +680,12 @@ void VulkanModule::RecordCommandBuffer(VkCommandBuffer aCommandBuffer, uint32_t 
 
 	VkRenderPassBeginInfo RenderPassInfo = vkinit::RenderPassBeginInfo(m_RenderPass, m_WindowExtent, m_Framebuffers[aImageIdx]);
 
-	VkClearValue ClearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
-	RenderPassInfo.clearValueCount = 1;
-	RenderPassInfo.pClearValues = &ClearColor;
+	std::array<VkClearValue, 2> ClearValues = {};
+	ClearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+	ClearValues[1].depthStencil = {1.0f, 0};
+	
+	RenderPassInfo.clearValueCount = static_cast<uint32_t>(ClearValues.size());
+	RenderPassInfo.pClearValues = ClearValues.data();
 
 	vkCmdBeginRenderPass(aCommandBuffer, &RenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -753,3 +794,34 @@ void VulkanModule::RecreateSwapchain()
 
 	vkDestroySwapchainKHR(m_Device, m_Swapchain, nullptr);
  }
+
+VkFormat VulkanModule::FindSupportedFormat (const std::vector<VkFormat>& aCandidates, VkImageTiling aTiling, VkFormatFeatureFlags aFeatures)
+{
+	for (VkFormat Format : aCandidates)
+	{
+		VkFormatProperties Properties;
+		vkGetPhysicalDeviceFormatProperties(m_PhysicalDevice, Format, &Properties);
+
+		if (aTiling == VK_IMAGE_TILING_LINEAR && (Properties.linearTilingFeatures & aFeatures) == aFeatures)
+		{
+			return Format;
+		}
+		else if (aTiling == VK_IMAGE_TILING_OPTIMAL && (Properties.optimalTilingFeatures & aFeatures) == aFeatures)
+		{
+			return Format;
+		}
+	}
+
+	throw std::runtime_error("Failed to find supported format!");
+}
+
+VkFormat VulkanModule::FindDepthFormat()
+{
+	return FindSupportedFormat({VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
+		VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+}
+
+bool VulkanModule::HasStencilComponent(VkFormat aFormat)
+{
+	return aFormat == VK_FORMAT_D32_SFLOAT_S8_UINT || aFormat == VK_FORMAT_D24_UNORM_S8_UINT;
+}

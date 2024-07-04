@@ -39,7 +39,7 @@ struct sVertexInputDescription
 
 struct sVertex
 {
-    glm::vec2 Position;
+    glm::vec3 Position;
     glm::vec3 Color;
     glm::vec2 UV;
 

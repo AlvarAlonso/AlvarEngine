@@ -73,6 +73,7 @@ private:
     void InitVulkan(const HINSTANCE aInstanceHandle, const HWND aWindowHandle);
     void InitSwapchain();
     void InitCommandPools();
+    void InitDepthBuffer();
     void InitSyncStructures();
     void InitTextureSamplers();
     void InitDescriptorSetLayouts();
@@ -89,6 +90,10 @@ private:
     void RecreateSwapchain();
     // TODO: This will destroy resources that are also destroyed in the main deletion queue. Do not store resources to be deleted in a queue. Delete them manually.
     void CleanupSwapchain();
+
+    VkFormat FindSupportedFormat(const std::vector<VkFormat>& aCandidates, VkImageTiling aTiling, VkFormatFeatureFlags aFeatures);
+    VkFormat FindDepthFormat();
+    bool HasStencilComponent(VkFormat aFormat);
 
     bool m_bIsInitialized;
 
@@ -149,14 +154,20 @@ private:
 
     const std::vector<sVertex> m_Vertices =  
     {
-        {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-        {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-        {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-        {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
+        {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+        {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+        {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+        {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
+
+        {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+        {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+        {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+        {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
     };
 
     const std::vector<uint32_t> m_Indices = {
-        0, 1, 2, 2, 3, 0
+        0, 1, 2, 2, 3, 0,
+        4, 5, 6, 6, 7, 4
     };
 
     AllocatedBuffer m_VertexBuffer;
@@ -164,4 +175,7 @@ private:
     AllocatedImage m_Image;
     VkImageView m_ImageView;
     VkSampler m_DefaultSampler;
+
+    AllocatedImage m_DepthImage;
+    VkImageView m_DepthImageView;
 };
