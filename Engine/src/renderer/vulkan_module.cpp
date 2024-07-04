@@ -84,10 +84,12 @@ bool VulkanModule::Initialize(const HINSTANCE aInstanceHandle, const HWND aWindo
 
 	InitTextureSamplers();
 
-	vkutils::CreateVertexBuffer(m_Allocator, m_Vertices, m_VertexBuffer);
-	vkutils::CreateIndexBuffer(m_Allocator, m_Indices, m_IndexBuffer);
+	vkutils::LoadMeshFromFile("../Resources/Meshes/viking_room.obj", m_Mesh);
 
-	vkutils::LoadImageFromFile(m_Allocator, "../Resources/Images/DonPatch.jpg", m_Image);
+	vkutils::CreateVertexBuffer(m_Allocator, m_Mesh.Vertices, m_Mesh.VertexBuffer);
+	vkutils::CreateIndexBuffer(m_Allocator, m_Mesh.Indices, m_Mesh.IndexBuffer);
+
+	vkutils::LoadImageFromFile(m_Allocator, "../Resources/Images/viking_room.png", m_Image);
 	
 	// TODO: Placeholder for testing purposes. TO BE REMOVED.
 	VkImageViewCreateInfo ViewInfo = vkinit::ImageViewCreateInfo(VK_FORMAT_R8G8B8A8_SRGB, m_Image.Image, VK_IMAGE_ASPECT_COLOR_BIT);
@@ -691,8 +693,8 @@ void VulkanModule::RecordCommandBuffer(VkCommandBuffer aCommandBuffer, uint32_t 
 
 	vkCmdBindPipeline(aCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ForwardPipeline);
 	VkDeviceSize Offset = 0;
-	vkCmdBindVertexBuffers(aCommandBuffer, 0, 1, &m_VertexBuffer.Buffer, &Offset);
-	vkCmdBindIndexBuffer(aCommandBuffer, m_IndexBuffer.Buffer, 0, VK_INDEX_TYPE_UINT32);
+	vkCmdBindVertexBuffers(aCommandBuffer, 0, 1, &m_Mesh.VertexBuffer.Buffer, &Offset);
+	vkCmdBindIndexBuffer(aCommandBuffer, m_Mesh.IndexBuffer.Buffer, 0, VK_INDEX_TYPE_UINT32);
 
 	VkViewport Viewport{};
 	Viewport.x = 0.0f;
@@ -709,7 +711,7 @@ void VulkanModule::RecordCommandBuffer(VkCommandBuffer aCommandBuffer, uint32_t 
 	vkCmdSetScissor(aCommandBuffer, 0, 1, &Scissor);
 
 	vkCmdBindDescriptorSets(aCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ForwardPipelineLayout, 0, 1, &m_FramesData[aImageIdx].DescriptorSet, 0, nullptr);
-	vkCmdDrawIndexed(aCommandBuffer, static_cast<uint32_t>(m_Indices.size()), 1, 0, 0, 0);
+	vkCmdDrawIndexed(aCommandBuffer, static_cast<uint32_t>(m_Mesh.Indices.size()), 1, 0, 0, 0);
 
 	vkCmdEndRenderPass(aCommandBuffer);
 

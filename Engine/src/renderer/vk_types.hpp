@@ -5,6 +5,8 @@
 #include <vulkan/vulkan.h>
 #include <vma/vk_mem_alloc.h>
 #include <glm/glm.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/hash.hpp>
 
 #include <vector>
 
@@ -44,4 +46,28 @@ struct sVertex
     glm::vec2 UV;
 
     static sVertexInputDescription GetVertexDescription();
+
+    bool operator==(const sVertex& aOther) const 
+    {
+        return Position == aOther.Position && UV == aOther.UV;
+    }
+};
+
+namespace std {
+	template<> struct hash<sVertex> {
+		size_t operator()(sVertex const& Vertex) const {
+			return ((hash<glm::vec3>()(Vertex.Position) ^
+				(hash<glm::vec3>()(Vertex.Color) << 1)) >> 1) ^
+				(hash<glm::vec2>()(Vertex.UV) << 1);
+		}
+	};
+}
+
+struct sMesh
+{
+    std::vector<sVertex> Vertices;
+    std::vector<uint32_t> Indices;
+
+    AllocatedBuffer VertexBuffer;
+    AllocatedBuffer IndexBuffer;
 };

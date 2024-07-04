@@ -14,5 +14,7 @@ namespace vkutils
 
     AllocatedBuffer CreateBuffer(VmaAllocator aVmaAllocator, size_t aAllocSize, VkBufferUsageFlags aUsage, VmaMemoryUsage aMemoryUsage, VmaAllocationCreateFlags aFlags = 0);
 
-    bool LoadImageFromFile(VmaAllocator aVmaAllocator, const std::string& File, AllocatedImage& aOutImage);
+    bool LoadImageFromFile(VmaAllocator aVmaAllocator, const std::string& aFile, AllocatedImage& aOutImage);
+
+    bool LoadMeshFromFile(const std::string& aFilename, sMesh& aOutMesh);
 }
