@@ -84,11 +84,6 @@ bool CVulkanBackend::Initialize(const HINSTANCE aInstanceHandle, const HWND aWin
 
 	InitTextureSamplers();
 
-	vkutils::LoadMeshFromFile("../Resources/Meshes/viking_room.obj", m_Mesh);
-
-	vkutils::CreateVertexBuffer(this, m_Allocator, m_Mesh.Vertices, m_Mesh.VertexBuffer);
-	vkutils::CreateIndexBuffer(this, m_Allocator, m_Mesh.Indices, m_Mesh.IndexBuffer);
-
 	vkutils::LoadImageFromFile(this, m_Allocator, "../Resources/Images/viking_room.png", m_Image);
 	
 	// TODO: Placeholder for testing purposes. TO BE REMOVED.
@@ -167,6 +162,25 @@ void CVulkanBackend::ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& 
 	vkResetFences(m_Device, 1, &m_UploadContext.m_UploadFence);
 
 	vkResetCommandPool(m_Device, m_UploadContext.m_CommandPool, 0);
+}
+
+void CVulkanBackend::CreateRenderObjectsData(const std::vector<sRenderObject*>& aRenderObjects)
+{
+	for (const auto& RenderObject : aRenderObjects)
+	{
+		sRenderObjectData RenderObjectData;
+		RenderObjectData.ModelMatrix = RenderObject->ModelMatrix;
+		RenderObjectData.pMesh = sMesh::GetMesh(RenderObject->pRenderObjectInfo->MeshPath);
+		m_RenderObjectsData.push_back(RenderObjectData);
+	}
+
+	for (const auto& RenderObjectData : m_RenderObjectsData)
+	{
+		vkutils::CreateVertexBuffer(this, m_Allocator, RenderObjectData.pMesh->Vertices, RenderObjectData.pMesh->VertexBuffer);
+		vkutils::CreateIndexBuffer(this, m_Allocator, RenderObjectData.pMesh->Indices, RenderObjectData.pMesh->IndexBuffer);
+	}
+
+	// TODO: Create object descriptor set.
 }
 
 void CVulkanBackend::InitEnabledFeatures()
@@ -692,9 +706,6 @@ void CVulkanBackend::RecordCommandBuffer(VkCommandBuffer aCommandBuffer, uint32_
 	vkCmdBeginRenderPass(aCommandBuffer, &RenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 	vkCmdBindPipeline(aCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ForwardPipeline);
-	VkDeviceSize Offset = 0;
-	vkCmdBindVertexBuffers(aCommandBuffer, 0, 1, &m_Mesh.VertexBuffer.Buffer, &Offset);
-	vkCmdBindIndexBuffer(aCommandBuffer, m_Mesh.IndexBuffer.Buffer, 0, VK_INDEX_TYPE_UINT32);
 
 	VkViewport Viewport{};
 	Viewport.x = 0.0f;
@@ -711,7 +722,15 @@ void CVulkanBackend::RecordCommandBuffer(VkCommandBuffer aCommandBuffer, uint32_
 	vkCmdSetScissor(aCommandBuffer, 0, 1, &Scissor);
 
 	vkCmdBindDescriptorSets(aCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ForwardPipelineLayout, 0, 1, &m_FramesData[aImageIdx].DescriptorSet, 0, nullptr);
-	vkCmdDrawIndexed(aCommandBuffer, static_cast<uint32_t>(m_Mesh.Indices.size()), 1, 0, 0, 0);
+
+	VkDeviceSize Offset = 0;
+	for (const auto& RenderObject : m_RenderObjectsData)
+	{
+		vkCmdBindVertexBuffers(aCommandBuffer, 0, 1, &RenderObject.pMesh->VertexBuffer.Buffer, &Offset);
+		vkCmdBindIndexBuffer(aCommandBuffer, RenderObject.pMesh->IndexBuffer.Buffer, 0, VK_INDEX_TYPE_UINT32);
+		// TODO: Batch rendering.
+		vkCmdDrawIndexed(aCommandBuffer, static_cast<uint32_t>(RenderObject.pMesh->Indices.size()), 1, 0, 0, 0);
+	}
 
 	vkCmdEndRenderPass(aCommandBuffer);
 

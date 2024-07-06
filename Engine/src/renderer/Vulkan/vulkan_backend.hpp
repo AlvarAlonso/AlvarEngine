@@ -1,6 +1,7 @@
 #pragma once
 
 #include "vk_types.hpp"
+#include "renderer/scene.hpp"
 
 #include <deque>
 #include <functional>
@@ -39,6 +40,12 @@ struct sFrameData
     VkDescriptorSet DescriptorSet;
 };
 
+struct sRenderObjectData
+{
+    glm::mat4 ModelMatrix;
+    sMesh* pMesh;
+};
+
 struct sUploadContext
 {
     VkFence m_UploadFence;
@@ -70,6 +77,8 @@ public:
     void HandleWindowResize();
 
     void ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& aFunction) const;
+
+    void CreateRenderObjectsData(const std::vector<sRenderObject*>& aRenderObjects);
 
 private:
     void InitEnabledFeatures();
@@ -157,7 +166,9 @@ private:
     sUploadContext m_UploadContext;
 
     // TODO: Some way to represent a Scene.
-    sMesh m_Mesh;
+    std::vector<sRenderObjectData> m_RenderObjectsData;
+
+    //sMesh m_Mesh;
     AllocatedImage m_Image;
     VkImageView m_ImageView;
     VkSampler m_DefaultSampler;

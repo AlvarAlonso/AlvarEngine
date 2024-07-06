@@ -8,7 +8,9 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
 
+#include <string>
 #include <vector>
+#include <unordered_map>
 
 #define VK_CHECK(x)                                                 \
     do                                                              \
@@ -65,6 +67,9 @@ namespace std {
 
 struct sMesh
 {
+    static std::unordered_map<std::string, sMesh*> LoadedMeshes;
+    static sMesh* GetMesh(const std::string& aFilename);
+
     std::vector<sVertex> Vertices;
     std::vector<uint32_t> Indices;
 

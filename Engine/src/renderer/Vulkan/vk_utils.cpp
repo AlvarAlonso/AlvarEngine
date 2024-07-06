@@ -265,6 +265,13 @@ bool vkutils::LoadImageFromFile(const CVulkanBackend* const aVulkanBackend, VmaA
 
 bool vkutils::LoadMeshFromFile(const std::string& aFilename, sMesh& aOutMesh)
 {
+	const auto& FoundMesh = sMesh::LoadedMeshes.find(aFilename);
+	if (FoundMesh != sMesh::LoadedMeshes.cend())
+	{
+		SGSINFO("The mesh with path %s has already been loaded. Canceling the loading.", aFilename.c_str());
+		return false;
+	}
+
 	tinyobj::attrib_t Attrib;
 
 	std::vector<tinyobj::shape_t> Shapes;
