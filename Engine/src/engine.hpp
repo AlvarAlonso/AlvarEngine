@@ -4,8 +4,7 @@
 
 #include <windows.h>
 
-#include "renderer/vulkan_module.hpp"
-
+#include "renderer/render_module.hpp"
 struct sDimension2D
 {
     uint32_t Width = 0;
@@ -30,7 +29,7 @@ public:
 
     // TODO: Show only selected functionalities or find another way to share modules. Engine must have access to initialization and stuff like this
     // but probably other classes who wants to access a module should not have those kind of functions available.
-    VulkanModule* GetVulkanModule(){ return &m_VulkanModule; }
+    CRenderModule* GetRenderModule(){ return &m_RenderModule; }
 
 private:
     Engine();
@@ -49,5 +48,5 @@ private:
     uint32 m_ClientWidth = 800;
     uint32 m_ClientHeight = 600;
 
-    VulkanModule m_VulkanModule;
+    CRenderModule m_RenderModule;
 };

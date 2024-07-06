@@ -28,7 +28,7 @@ void Engine::StartUp()
     SGSINFO("StartUp!");
     InitWindowsApp();
     
-    m_VulkanModule.Initialize(m_WindowsInstance, m_WindowHandle);
+    m_RenderModule.Initialize(m_WindowsInstance, m_WindowHandle);
 }
 
 void Engine::Run()
@@ -45,7 +45,7 @@ void Engine::Run()
             DispatchMessage(&msg);
 		}
 
-        m_VulkanModule.Render();
+        m_RenderModule.Render();
     }
 
     return;
@@ -54,7 +54,7 @@ void Engine::Run()
 void Engine::Shutdown()
 {
     SGSINFO("Shutdown!");
-    m_VulkanModule.Shutdown();
+    m_RenderModule.Shutdown();
 }
 
 bool Engine::InitWindowsApp()
@@ -149,7 +149,7 @@ LRESULT CALLBACK Engine::WinProc(HWND aWindowHandle, UINT aMsg, WPARAM aWParam, 
             else
             {
                 // TODO: Handle resizing.
-                m_VulkanModule.HandleWindowResize();
+                m_RenderModule.HandleWindowResize();
             }
 
             return 0;
@@ -159,13 +159,13 @@ LRESULT CALLBACK Engine::WinProc(HWND aWindowHandle, UINT aMsg, WPARAM aWParam, 
             // TOOD:
             // Pause game
             // Handle resizing
-            m_VulkanModule.HandleWindowResize();
+            m_RenderModule.HandleWindowResize();
             return 0;
         // Sent when the user releases the resize bars.
         case WM_EXITSIZEMOVE:
             // TODO:
             // Handle resizing.
-            m_VulkanModule.HandleWindowResize();
+            m_RenderModule.HandleWindowResize();
             return 0;
         // Prevent window from becoming to small.
         case WM_GETMINMAXINFO:

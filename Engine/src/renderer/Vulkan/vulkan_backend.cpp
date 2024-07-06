@@ -1,4 +1,4 @@
-#include "vulkan_module.hpp"
+#include "vulkan_backend.hpp"
 
 #define GLM_FORCE_RADIANS
 
@@ -52,7 +52,7 @@ sVertexInputDescription sVertex::GetVertexDescription()
 	return Description;
 }
 
-VulkanModule::VulkanModule() :
+CVulkanBackend::CVulkanBackend() :
 	m_bIsInitialized(false),
 	m_ImageIdx(0),
 	m_CurrentFrame(0),
@@ -60,7 +60,7 @@ VulkanModule::VulkanModule() :
 {
 }
 
-bool VulkanModule::Initialize(const HINSTANCE aInstanceHandle, const HWND aWindowHandle)
+bool CVulkanBackend::Initialize(const HINSTANCE aInstanceHandle, const HWND aWindowHandle)
 {
 	InitVulkan(aInstanceHandle, aWindowHandle);
 
@@ -86,10 +86,10 @@ bool VulkanModule::Initialize(const HINSTANCE aInstanceHandle, const HWND aWindo
 
 	vkutils::LoadMeshFromFile("../Resources/Meshes/viking_room.obj", m_Mesh);
 
-	vkutils::CreateVertexBuffer(m_Allocator, m_Mesh.Vertices, m_Mesh.VertexBuffer);
-	vkutils::CreateIndexBuffer(m_Allocator, m_Mesh.Indices, m_Mesh.IndexBuffer);
+	vkutils::CreateVertexBuffer(this, m_Allocator, m_Mesh.Vertices, m_Mesh.VertexBuffer);
+	vkutils::CreateIndexBuffer(this, m_Allocator, m_Mesh.Indices, m_Mesh.IndexBuffer);
 
-	vkutils::LoadImageFromFile(m_Allocator, "../Resources/Images/viking_room.png", m_Image);
+	vkutils::LoadImageFromFile(this, m_Allocator, "../Resources/Images/viking_room.png", m_Image);
 	
 	// TODO: Placeholder for testing purposes. TO BE REMOVED.
 	VkImageViewCreateInfo ViewInfo = vkinit::ImageViewCreateInfo(VK_FORMAT_R8G8B8A8_SRGB, m_Image.Image, VK_IMAGE_ASPECT_COLOR_BIT);
@@ -102,14 +102,14 @@ bool VulkanModule::Initialize(const HINSTANCE aInstanceHandle, const HWND aWindo
     return true;
 }
 
-void VulkanModule::Render()
+void CVulkanBackend::Render()
 {
 	assert(m_bIsInitialized);
 
 	RenderFrame();
 }
 
-bool VulkanModule::Shutdown()
+bool CVulkanBackend::Shutdown()
 {
 	if (m_bIsInitialized)
 	{
@@ -137,12 +137,12 @@ bool VulkanModule::Shutdown()
     return false;
 }
 
-void VulkanModule::HandleWindowResize()
+void CVulkanBackend::HandleWindowResize()
 {
 	m_bWasWindowResized = true;
 }
 
-void VulkanModule::ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& aFunction)
+void CVulkanBackend::ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& aFunction) const
 {
 	SGSDEBUG("Immediate Submit");
 
@@ -169,7 +169,7 @@ void VulkanModule::ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& aF
 	vkResetCommandPool(m_Device, m_UploadContext.m_CommandPool, 0);
 }
 
-void VulkanModule::InitEnabledFeatures()
+void CVulkanBackend::InitEnabledFeatures()
 {
 	m_EnabledBufferDeviceAddressFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
 	m_EnabledBufferDeviceAddressFeatures.bufferDeviceAddress = VK_TRUE;
@@ -178,7 +178,7 @@ void VulkanModule::InitEnabledFeatures()
 	m_pDeviceCreatepNextChain = &m_EnabledBufferDeviceAddressFeatures;
 }
 
-void VulkanModule::InitVulkan(const HINSTANCE aInstanceHandle, const HWND aWindowHandle)
+void CVulkanBackend::InitVulkan(const HINSTANCE aInstanceHandle, const HWND aWindowHandle)
 {
 	vkb::InstanceBuilder InstanceBuilder;
 
@@ -240,7 +240,7 @@ void VulkanModule::InitVulkan(const HINSTANCE aInstanceHandle, const HWND aWindo
 	});
 }
 
-void VulkanModule::InitSwapchain()
+void CVulkanBackend::InitSwapchain()
 {
 	sDimension2D WindowDimensions = Engine::Get()->GetAppWindowDimensions();
 	m_WindowExtent = {WindowDimensions.Width, WindowDimensions.Height};
@@ -268,7 +268,7 @@ void VulkanModule::InitSwapchain()
 	});
 }
 
-void VulkanModule::InitCommandPools()
+void CVulkanBackend::InitCommandPools()
 {
 	// Creation of command structures
 	VkCommandPoolCreateInfo CommandPoolInfo = vkinit::CommandPoolCreateInfo(m_GraphicsQueueFamily, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
@@ -290,7 +290,7 @@ void VulkanModule::InitCommandPools()
 	});
 }
 
-void VulkanModule::InitDepthBuffer()
+void CVulkanBackend::InitDepthBuffer()
 {
 	VkFormat DepthFormat = FindDepthFormat();
 
@@ -307,7 +307,7 @@ void VulkanModule::InitDepthBuffer()
 	VK_CHECK(vkCreateImageView(m_Device, &DepthViewInfo, nullptr, &m_DepthImageView));
 }
 
-void VulkanModule::InitSyncStructures()
+void CVulkanBackend::InitSyncStructures()
 {
 	VkSemaphoreCreateInfo SemaphoreInfo = vkinit::SemaphoreCreateInfo();
 
@@ -336,7 +336,7 @@ void VulkanModule::InitSyncStructures()
 	});
 }
 
-void VulkanModule::InitTextureSamplers()
+void CVulkanBackend::InitTextureSamplers()
 {
 	VkPhysicalDeviceProperties Properties = {};
 	vkGetPhysicalDeviceProperties(m_PhysicalDevice, &Properties);
@@ -364,7 +364,7 @@ void VulkanModule::InitTextureSamplers()
 	});
 }
 
-void VulkanModule::InitDescriptorSetPool()
+void CVulkanBackend::InitDescriptorSetPool()
 {
 	VkDescriptorPoolSize UBOPoolSize = {};
 	UBOPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -390,7 +390,7 @@ void VulkanModule::InitDescriptorSetPool()
 	});
 }
 
-void VulkanModule::InitDescriptorSets()
+void CVulkanBackend::InitDescriptorSets()
 {
 	VkDescriptorSetAllocateInfo AllocInfo{};
 	AllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -439,7 +439,7 @@ void VulkanModule::InitDescriptorSets()
 	}
 }
 
-void VulkanModule::InitDescriptorSetLayouts()
+void CVulkanBackend::InitDescriptorSetLayouts()
 {
 	VkDescriptorSetLayoutBinding FrameUBOLayoutBinding = {};
 	FrameUBOLayoutBinding.binding = 0;
@@ -481,7 +481,7 @@ void VulkanModule::InitDescriptorSetLayouts()
 	});
 }
 
-void VulkanModule::InitRenderPass()
+void CVulkanBackend::InitRenderPass()
 {
 	// Render pass creation
 	VkAttachmentDescription ColorAttachment = {};
@@ -539,7 +539,7 @@ void VulkanModule::InitRenderPass()
 	VK_CHECK(vkCreateRenderPass(m_Device, &RenderPassInfo, nullptr, &m_RenderPass));
 }
 
-void VulkanModule::InitFramebuffers()
+void CVulkanBackend::InitFramebuffers()
 {
 	// Framebuffers creation
 	VkFramebufferCreateInfo FramebufferInfo = {};
@@ -572,7 +572,7 @@ void VulkanModule::InitFramebuffers()
 	});
 }
 
-void VulkanModule::InitPipelines()
+void CVulkanBackend::InitPipelines()
 {
 	VkShaderModule VertShader;
 	// TODO: Do not hardcode this.
@@ -655,7 +655,7 @@ void VulkanModule::InitPipelines()
 	});
 }
 
-void VulkanModule::UpdateFrameUBO(uint32_t ImageIdx)
+void CVulkanBackend::UpdateFrameUBO(uint32_t ImageIdx)
 {
 	assert(ImageIdx >= 0 && ImageIdx < FRAME_OVERLAP);
 
@@ -674,7 +674,7 @@ void VulkanModule::UpdateFrameUBO(uint32_t ImageIdx)
 	memcpy(m_FramesData[ImageIdx].MappedUBOBuffer, &FrameUBO, sizeof(sFrameUBO));
 }
 
-void VulkanModule::RecordCommandBuffer(VkCommandBuffer aCommandBuffer, uint32_t aImageIdx)
+void CVulkanBackend::RecordCommandBuffer(VkCommandBuffer aCommandBuffer, uint32_t aImageIdx)
 {
 	VkCommandBufferBeginInfo BeginInfo = vkinit::CommandBufferBeginInfo();
 
@@ -718,7 +718,7 @@ void VulkanModule::RecordCommandBuffer(VkCommandBuffer aCommandBuffer, uint32_t 
 	VK_CHECK(vkEndCommandBuffer(aCommandBuffer));
 }
 
-void VulkanModule::RenderFrame()
+void CVulkanBackend::RenderFrame()
 {
 	vkWaitForFences(m_Device, 1, &m_FramesData[m_CurrentFrame].RenderFence, VK_TRUE, UINT64_MAX);
 
@@ -770,7 +770,7 @@ void VulkanModule::RenderFrame()
 	m_CurrentFrame = (m_CurrentFrame + 1) % FRAME_OVERLAP;
 }
 
-void VulkanModule::RecreateSwapchain()
+void CVulkanBackend::RecreateSwapchain()
 {
 	SGSDEBUG("Recreating swapchain...");
 
@@ -782,7 +782,7 @@ void VulkanModule::RecreateSwapchain()
 	InitFramebuffers();
 }
 
- void VulkanModule::CleanupSwapchain()
+ void CVulkanBackend::CleanupSwapchain()
  {
 	for (size_t i = 0; i < m_Framebuffers.size(); ++i)
 	{
@@ -797,7 +797,7 @@ void VulkanModule::RecreateSwapchain()
 	vkDestroySwapchainKHR(m_Device, m_Swapchain, nullptr);
  }
 
-VkFormat VulkanModule::FindSupportedFormat (const std::vector<VkFormat>& aCandidates, VkImageTiling aTiling, VkFormatFeatureFlags aFeatures)
+VkFormat CVulkanBackend::FindSupportedFormat (const std::vector<VkFormat>& aCandidates, VkImageTiling aTiling, VkFormatFeatureFlags aFeatures)
 {
 	for (VkFormat Format : aCandidates)
 	{
@@ -817,13 +817,13 @@ VkFormat VulkanModule::FindSupportedFormat (const std::vector<VkFormat>& aCandid
 	throw std::runtime_error("Failed to find supported format!");
 }
 
-VkFormat VulkanModule::FindDepthFormat()
+VkFormat CVulkanBackend::FindDepthFormat()
 {
 	return FindSupportedFormat({VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
 		VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 }
 
-bool VulkanModule::HasStencilComponent(VkFormat aFormat)
+bool CVulkanBackend::HasStencilComponent(VkFormat aFormat)
 {
 	return aFormat == VK_FORMAT_D32_SFLOAT_S8_UINT || aFormat == VK_FORMAT_D24_UNORM_S8_UINT;
 }

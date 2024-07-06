@@ -3,6 +3,7 @@
 #include "engine.hpp"
 #include <core/logger.h>
 #include "vk_initializers.hpp"
+#include "vulkan_backend.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image/stb_image.h>
@@ -49,7 +50,7 @@ bool vkutils::LoadShaderModule(VkDevice aDevice, const char* aFilePath, VkShader
 	return true;
 }
 
-void vkutils::CreateVertexBuffer(VmaAllocator aVmaAllocator, const std::vector<sVertex>& aVertices, AllocatedBuffer& aOutBuffer)
+void vkutils::CreateVertexBuffer(const CVulkanBackend* const aVulkanBackend, VmaAllocator aVmaAllocator, const std::vector<sVertex>& aVertices, AllocatedBuffer& aOutBuffer)
 {
 	const size_t BufferSize = aVertices.size() * sizeof(sVertex);
 
@@ -85,11 +86,7 @@ void vkutils::CreateVertexBuffer(VmaAllocator aVmaAllocator, const std::vector<s
 	VK_CHECK(vmaCreateBuffer(aVmaAllocator, &VertexBufferInfo, &VmaAllocInfo,
 		&aOutBuffer.Buffer, &aOutBuffer.Allocation, nullptr));
 
-	// TODO: Prefix classes.
-	VulkanModule* vulkanModule = Engine::Get()->GetVulkanModule();
-	assert(vulkanModule);
-
-	vulkanModule->ImmediateSubmit([=](VkCommandBuffer Cmd)
+	aVulkanBackend->ImmediateSubmit([=](VkCommandBuffer Cmd)
 	{
 		VkBufferCopy Copy;
 		Copy.dstOffset = 0;
@@ -102,7 +99,7 @@ void vkutils::CreateVertexBuffer(VmaAllocator aVmaAllocator, const std::vector<s
 	vmaDestroyBuffer(aVmaAllocator, StagingBuffer.Buffer, StagingBuffer.Allocation);
 }
 
-void vkutils::CreateIndexBuffer(VmaAllocator aVmaAllocator, const std::vector<uint32_t>& aIndices, AllocatedBuffer& aOutBuffer)
+void vkutils::CreateIndexBuffer(const CVulkanBackend* const aVulkanBackend, VmaAllocator aVmaAllocator, const std::vector<uint32_t>& aIndices, AllocatedBuffer& aOutBuffer)
 {
 	const size_t BufferSize = aIndices.size() * sizeof(uint32_t);
 
@@ -138,11 +135,7 @@ void vkutils::CreateIndexBuffer(VmaAllocator aVmaAllocator, const std::vector<ui
 	VK_CHECK(vmaCreateBuffer(aVmaAllocator, &IndexBufferInfo, &VmaAllocInfo,
 		&aOutBuffer.Buffer, &aOutBuffer.Allocation, nullptr));
 
-	// TODO: Prefix classes.
-	VulkanModule* vulkanModule = Engine::Get()->GetVulkanModule();
-	assert(vulkanModule);
-
-	vulkanModule->ImmediateSubmit([=](VkCommandBuffer Cmd)
+	aVulkanBackend->ImmediateSubmit([=](VkCommandBuffer Cmd)
 	{
 		VkBufferCopy Copy;
 		Copy.dstOffset = 0;
@@ -178,7 +171,7 @@ AllocatedBuffer vkutils::CreateBuffer(VmaAllocator aVmaAllocator, size_t aAllocS
 	return NewBuffer;
 }
 
-bool vkutils::LoadImageFromFile(VmaAllocator aVmaAllocator, const std::string& File, AllocatedImage& aOutImage)
+bool vkutils::LoadImageFromFile(const CVulkanBackend* const aVulkanBackend, VmaAllocator aVmaAllocator, const std::string& File, AllocatedImage& aOutImage)
 {
 	int32_t TexWidth, TexHeight, TexChannels;
 
@@ -220,11 +213,7 @@ bool vkutils::LoadImageFromFile(VmaAllocator aVmaAllocator, const std::string& F
 	// TODO: Memory leak. Destroy this image.
 	vmaCreateImage(aVmaAllocator, &ImageInfo, &ImageAllocInfo, &NewImage.Image, &NewImage.Allocation, nullptr);
 
-	// TODO: Prefix classes.
-	VulkanModule* vulkanModule = Engine::Get()->GetVulkanModule();
-	assert(vulkanModule);
-
-	vulkanModule->ImmediateSubmit([&](VkCommandBuffer aCmd)
+	aVulkanBackend->ImmediateSubmit([&](VkCommandBuffer aCmd)
 	{
 		VkImageSubresourceRange Range;
 		Range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;

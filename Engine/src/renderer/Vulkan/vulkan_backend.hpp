@@ -52,11 +52,15 @@ struct sFrameUBO
     glm::mat4 Proj;
 };
 
-class VulkanModule
+/**
+ * @brief Class that manages all Vulkan initialization and resource management. It serves the RenderModule
+ * with all the resources it needs to perform its algorithms, and call the actual commands that will be sent to GPU.
+ */
+class CVulkanBackend
 {
 public:
-    VulkanModule();
-
+    CVulkanBackend();
+    
     bool Initialize(const HINSTANCE aInstanceHandle, const HWND aWindowHandle);
 
     void Render();
@@ -65,7 +69,7 @@ public:
 
     void HandleWindowResize();
 
-    void ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& aFunction);
+    void ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& aFunction) const;
 
 private:
     void InitEnabledFeatures();
