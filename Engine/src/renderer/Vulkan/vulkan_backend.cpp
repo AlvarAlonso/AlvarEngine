@@ -180,7 +180,17 @@ void CVulkanBackend::CreateRenderObjectsData(const std::vector<sRenderObject*>& 
 		vkutils::CreateIndexBuffer(this, m_Allocator, RenderObjectData.pMesh->Indices, RenderObjectData.pMesh->IndexBuffer);
 	}
 
-	// TODO: Create object descriptor set.
+	void* Data;
+	vmaMapMemory(m_Allocator, m_ObjectsDataBuffer.Allocation, &Data);
+
+	sGPURenderObjectData* GPURenderObjectData = static_cast<sGPURenderObjectData*>(Data);
+
+	for (size_t i = 0; i < aRenderObjects.size(); ++i)
+	{
+		GPURenderObjectData[i].ModelMatrix = aRenderObjects[i]->ModelMatrix;
+	}
+
+	vmaUnmapMemory(m_Allocator, m_ObjectsDataBuffer.Allocation);
 }
 
 void CVulkanBackend::InitEnabledFeatures()
@@ -388,13 +398,17 @@ void CVulkanBackend::InitDescriptorSetPool()
 	SamplerPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	SamplerPoolSize.descriptorCount = static_cast<uint32_t>(FRAME_OVERLAP);
 
-	std::array<VkDescriptorPoolSize, 2> PoolSizes = { UBOPoolSize, SamplerPoolSize };
+	VkDescriptorPoolSize ObjectsDataPoolSize = {};
+	ObjectsDataPoolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	ObjectsDataPoolSize.descriptorCount = 1;
+
+	std::array<VkDescriptorPoolSize, 3> PoolSizes = { UBOPoolSize, SamplerPoolSize, ObjectsDataPoolSize };
 
 	VkDescriptorPoolCreateInfo PoolInfo = {};
 	PoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	PoolInfo.poolSizeCount = static_cast<uint32_t>(PoolSizes.size());
 	PoolInfo.pPoolSizes = PoolSizes.data();;
-	PoolInfo.maxSets = static_cast<uint32_t>(FRAME_OVERLAP);
+	PoolInfo.maxSets = static_cast<uint32_t>(FRAME_OVERLAP) + 1; // +1 set for the objects descriptor set.
 
 	VK_CHECK(vkCreateDescriptorPool(m_Device, &PoolInfo, nullptr, &m_DescriptorPool));
 
@@ -451,10 +465,37 @@ void CVulkanBackend::InitDescriptorSets()
 
 		vkUpdateDescriptorSets(m_Device, static_cast<uint32_t>(DescriptorWrites.size()), DescriptorWrites.data(), 0, nullptr);
 	}
+
+	VkDescriptorSetAllocateInfo RenderObjectsAllocInfo{};
+	RenderObjectsAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	RenderObjectsAllocInfo.descriptorPool = m_DescriptorPool;
+	RenderObjectsAllocInfo.descriptorSetCount = 1;
+	RenderObjectsAllocInfo.pSetLayouts = &m_RenderObjectsSetLayout;
+
+	VK_CHECK(vkAllocateDescriptorSets(m_Device, &RenderObjectsAllocInfo, &m_ObjectsDataDescriptorSet));
+
+	VkDescriptorBufferInfo RenderObjectsBufferInfo = {};
+	RenderObjectsBufferInfo.buffer = m_ObjectsDataBuffer.Buffer;
+	RenderObjectsBufferInfo.offset = 0;
+	RenderObjectsBufferInfo.range = sizeof(sGPURenderObjectData) * MAX_RENDER_OBJECTS;
+
+	VkWriteDescriptorSet RenderObjectsDescriptorWrite{};
+	RenderObjectsDescriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	RenderObjectsDescriptorWrite.dstSet = m_ObjectsDataDescriptorSet;
+	RenderObjectsDescriptorWrite.dstBinding = 0;
+	RenderObjectsDescriptorWrite.dstArrayElement = 0;
+	RenderObjectsDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	RenderObjectsDescriptorWrite.descriptorCount = 1;
+	RenderObjectsDescriptorWrite.pBufferInfo = &RenderObjectsBufferInfo;
+	RenderObjectsDescriptorWrite.pImageInfo = nullptr;
+	RenderObjectsDescriptorWrite.pTexelBufferView = nullptr;
+
+	vkUpdateDescriptorSets(m_Device, 1, &RenderObjectsDescriptorWrite, 0, nullptr);
 }
 
 void CVulkanBackend::InitDescriptorSetLayouts()
 {
+	// FRAME DESCRIPTOR LAYOUT CREATION.
 	VkDescriptorSetLayoutBinding FrameUBOLayoutBinding = {};
 	FrameUBOLayoutBinding.binding = 0;
 	FrameUBOLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -484,6 +525,23 @@ void CVulkanBackend::InitDescriptorSetLayouts()
 		vmaMapMemory(m_Allocator, m_FramesData[i].UBOBuffer.Allocation, &m_FramesData[i].MappedUBOBuffer);
 	}
 
+	// RENDER OBJECTS DESCRIPTOR LAYOUT CREATION.
+	VkDescriptorSetLayoutBinding RenderObjectsLayoutBinding = {};
+	RenderObjectsLayoutBinding.binding = 0;
+	RenderObjectsLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	RenderObjectsLayoutBinding.descriptorCount = 1;
+	RenderObjectsLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	RenderObjectsLayoutBinding.pImmutableSamplers = nullptr;
+
+	VkDescriptorSetLayoutCreateInfo RenderObjectsLayoutInfo = {};
+	RenderObjectsLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	RenderObjectsLayoutInfo.bindingCount = 1;
+	RenderObjectsLayoutInfo.pBindings = &RenderObjectsLayoutBinding;
+
+	VK_CHECK(vkCreateDescriptorSetLayout(m_Device, &RenderObjectsLayoutInfo, nullptr, &m_RenderObjectsSetLayout));
+
+	m_ObjectsDataBuffer = vkutils::CreateBuffer(m_Allocator, sizeof(sGPURenderObjectData) * MAX_RENDER_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
 	m_MainDeletionQueue.PushFunction([=]
 	{
 		for (size_t i = 0; i < FRAME_OVERLAP; ++i)
@@ -491,7 +549,10 @@ void CVulkanBackend::InitDescriptorSetLayouts()
 			vmaDestroyBuffer(m_Allocator, m_FramesData[i].UBOBuffer.Buffer, m_FramesData[i].UBOBuffer.Allocation);
 		}
 
+		vmaDestroyBuffer(m_Allocator, m_ObjectsDataBuffer.Buffer, m_ObjectsDataBuffer.Allocation);
+
 		vkDestroyDescriptorSetLayout(m_Device, m_DescriptorSetLayout, nullptr);
+		vkDestroyDescriptorSetLayout(m_Device, m_RenderObjectsSetLayout, nullptr);
 	});
 }
 
@@ -610,8 +671,9 @@ void CVulkanBackend::InitPipelines()
 	}
 
 	VkPipelineLayoutCreateInfo PipelineLayoutInfo = vkinit::PipelineLayoutCreateInfo();
-	PipelineLayoutInfo.setLayoutCount = 1;
-	PipelineLayoutInfo.pSetLayouts = &m_DescriptorSetLayout;
+	std::array<VkDescriptorSetLayout, 2> SetLayouts = { m_DescriptorSetLayout, m_RenderObjectsSetLayout };
+	PipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(SetLayouts.size());
+	PipelineLayoutInfo.pSetLayouts = SetLayouts.data();
 
 	VK_CHECK(vkCreatePipelineLayout(m_Device, &PipelineLayoutInfo, nullptr, &m_ForwardPipelineLayout));
 
@@ -721,15 +783,17 @@ void CVulkanBackend::RecordCommandBuffer(VkCommandBuffer aCommandBuffer, uint32_
 	Scissor.extent = m_WindowExtent;
 	vkCmdSetScissor(aCommandBuffer, 0, 1, &Scissor);
 
-	vkCmdBindDescriptorSets(aCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ForwardPipelineLayout, 0, 1, &m_FramesData[aImageIdx].DescriptorSet, 0, nullptr);
+	const std::array<VkDescriptorSet, 2> DescriptorSets = { m_FramesData[aImageIdx].DescriptorSet, m_ObjectsDataDescriptorSet };
+	vkCmdBindDescriptorSets(aCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ForwardPipelineLayout, 
+		0, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data(), 0, nullptr);
 
 	VkDeviceSize Offset = 0;
-	for (const auto& RenderObject : m_RenderObjectsData)
+	for (size_t i = 0; i < m_RenderObjectsData.size(); ++i)
 	{
-		vkCmdBindVertexBuffers(aCommandBuffer, 0, 1, &RenderObject.pMesh->VertexBuffer.Buffer, &Offset);
-		vkCmdBindIndexBuffer(aCommandBuffer, RenderObject.pMesh->IndexBuffer.Buffer, 0, VK_INDEX_TYPE_UINT32);
+		vkCmdBindVertexBuffers(aCommandBuffer, 0, 1, &m_RenderObjectsData[i].pMesh->VertexBuffer.Buffer, &Offset);
+		vkCmdBindIndexBuffer(aCommandBuffer, m_RenderObjectsData[i].pMesh->IndexBuffer.Buffer, 0, VK_INDEX_TYPE_UINT32);
 		// TODO: Batch rendering.
-		vkCmdDrawIndexed(aCommandBuffer, static_cast<uint32_t>(RenderObject.pMesh->Indices.size()), 1, 0, 0, 0);
+		vkCmdDrawIndexed(aCommandBuffer, static_cast<uint32_t>(m_RenderObjectsData[i].pMesh->Indices.size()), 1, 0, 0, i);
 	}
 
 	vkCmdEndRenderPass(aCommandBuffer);

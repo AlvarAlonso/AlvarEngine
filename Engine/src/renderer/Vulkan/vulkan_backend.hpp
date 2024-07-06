@@ -6,6 +6,7 @@
 #include <deque>
 #include <functional>
 
+constexpr uint32_t MAX_RENDER_OBJECTS = 1024;
 constexpr uint32_t FRAME_OVERLAP = 3;
 
 struct sDeletionQueue
@@ -44,6 +45,11 @@ struct sRenderObjectData
 {
     glm::mat4 ModelMatrix;
     sMesh* pMesh;
+};
+
+struct sGPURenderObjectData
+{
+    glm::mat4 ModelMatrix;
 };
 
 struct sUploadContext
@@ -147,9 +153,10 @@ private:
     // Descriptors.
     VkDescriptorPool m_DescriptorPool;
     VkDescriptorSetLayout m_DescriptorSetLayout;
+    VkDescriptorSetLayout m_RenderObjectsSetLayout;
     // ------------
     
-     // Pipelines.
+    // Pipelines.
     VkPipelineLayout m_ForwardPipelineLayout;
     VkPipeline m_ForwardPipeline;
     //-------------
@@ -167,8 +174,9 @@ private:
 
     // TODO: Some way to represent a Scene.
     std::vector<sRenderObjectData> m_RenderObjectsData;
+    AllocatedBuffer m_ObjectsDataBuffer;
+    VkDescriptorSet m_ObjectsDataDescriptorSet;
 
-    //sMesh m_Mesh;
     AllocatedImage m_Image;
     VkImageView m_ImageView;
     VkSampler m_DefaultSampler;
