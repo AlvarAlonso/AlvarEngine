@@ -8,6 +8,7 @@
 #include "vk_types.hpp"
 #include "vk_initializers.hpp"
 #include "vk_utils.hpp"
+#include "vulkan_device.hpp"
 #include <renderer/core/camera.hpp>
 
 #include <VulkanBootstrap/VkBootstrap.h>
@@ -63,7 +64,8 @@ CVulkanBackend::CVulkanBackend() :
 
 bool CVulkanBackend::Initialize(const HINSTANCE aInstanceHandle, const HWND aWindowHandle)
 {
-	InitVulkan(aInstanceHandle, aWindowHandle);
+	m_VulkanDevice = new CVulkanDevice();
+	m_VulkanDevice->InitVulkanDevice(aInstanceHandle, aWindowHandle);
 
 	InitSwapchain();
 
@@ -85,11 +87,11 @@ bool CVulkanBackend::Initialize(const HINSTANCE aInstanceHandle, const HWND aWin
 
 	InitTextureSamplers();
 
-	vkutils::LoadImageFromFile(this, m_Allocator, "../Resources/Images/viking_room.png", m_Image);
+	vkutils::LoadImageFromFile(m_VulkanDevice, "../Resources/Images/viking_room.png", m_Image);
 	
 	// TODO: Placeholder for testing purposes. TO BE REMOVED.
 	VkImageViewCreateInfo ViewInfo = vkinit::ImageViewCreateInfo(VK_FORMAT_R8G8B8A8_SRGB, m_Image.Image, VK_IMAGE_ASPECT_COLOR_BIT);
-	VK_CHECK(vkCreateImageView(m_Device, &ViewInfo, nullptr, &m_ImageView));
+	VK_CHECK(vkCreateImageView(m_VulkanDevice->m_Device, &ViewInfo, nullptr, &m_ImageView));
 
 	InitDescriptorSets();
 
@@ -111,24 +113,20 @@ bool CVulkanBackend::Shutdown()
 	{
 		SGSINFO("Shutting down Vulkan");
 
-		vkDestroyCommandPool(m_Device, m_CommandPool, nullptr);
+		vkDestroyCommandPool(m_VulkanDevice->m_Device, m_CommandPool, nullptr);
 
-		vkDestroySwapchainKHR(m_Device, m_Swapchain, nullptr);
+		vkDestroySwapchainKHR(m_VulkanDevice->m_Device, m_Swapchain, nullptr);
 
-		vkDestroyRenderPass(m_Device, m_RenderPass, nullptr);
+		vkDestroyRenderPass(m_VulkanDevice->m_Device, m_RenderPass, nullptr);
 
 		for (int32 i = 0; i < m_SwapchainImageViews.size(); ++i)
 		{
-			vkDestroyFramebuffer(m_Device, m_Framebuffers[i], nullptr);
-			vkDestroyImageView(m_Device, m_SwapchainImageViews[i], nullptr);
+			vkDestroyFramebuffer(m_VulkanDevice->m_Device, m_Framebuffers[i], nullptr);
+			vkDestroyImageView(m_VulkanDevice->m_Device, m_SwapchainImageViews[i], nullptr);
 		}
-
-		vkDestroyDevice(m_Device, nullptr);
-		vkDestroySurfaceKHR(m_VulkanInstance, m_Surface, nullptr);
-		vkb::destroy_debug_utils_messenger(m_VulkanInstance, m_DebugMessenger);
-
-		vkDestroyInstance(m_VulkanInstance, nullptr);
 	}
+
+	delete m_VulkanDevice;
 
     return false;
 }
@@ -136,33 +134,6 @@ bool CVulkanBackend::Shutdown()
 void CVulkanBackend::HandleWindowResize()
 {
 	m_bWasWindowResized = true;
-}
-
-void CVulkanBackend::ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& aFunction) const
-{
-	SGSDEBUG("Immediate Submit");
-
-	VkCommandBufferAllocateInfo CmdAllocInfo = vkinit::CommandBufferAllocateInfo(m_UploadContext.m_CommandPool, 1);
-
-	VkCommandBuffer Cmd;
-	VK_CHECK(vkAllocateCommandBuffers(m_Device, &CmdAllocInfo, &Cmd));
-
-	VkCommandBufferBeginInfo CmdBeginInfo = vkinit::CommandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-		
-	VK_CHECK(vkBeginCommandBuffer(Cmd, &CmdBeginInfo));
-
-	aFunction(Cmd);
-
-	VK_CHECK(vkEndCommandBuffer(Cmd));
-
-	VkSubmitInfo Submit = vkinit::SubmitInfo(&Cmd);
-
-	VK_CHECK(vkQueueSubmit(m_GraphicsQueue, 1, &Submit, m_UploadContext.m_UploadFence));
-
-	vkWaitForFences(m_Device, 1, &m_UploadContext.m_UploadFence, true, UINT64_MAX);
-	vkResetFences(m_Device, 1, &m_UploadContext.m_UploadFence);
-
-	vkResetCommandPool(m_Device, m_UploadContext.m_CommandPool, 0);
 }
 
 void CVulkanBackend::CreateRenderObjectsData(const std::vector<sRenderObject*>& aRenderObjects)
@@ -177,12 +148,12 @@ void CVulkanBackend::CreateRenderObjectsData(const std::vector<sRenderObject*>& 
 
 	for (const auto& RenderObjectData : m_RenderObjectsData)
 	{
-		vkutils::CreateVertexBuffer(this, m_Allocator, RenderObjectData.pMesh->Vertices, RenderObjectData.pMesh->VertexBuffer);
-		vkutils::CreateIndexBuffer(this, m_Allocator, RenderObjectData.pMesh->Indices, RenderObjectData.pMesh->IndexBuffer);
+		vkutils::CreateVertexBuffer(m_VulkanDevice, RenderObjectData.pMesh->Vertices, RenderObjectData.pMesh->VertexBuffer);
+		vkutils::CreateIndexBuffer(m_VulkanDevice, RenderObjectData.pMesh->Indices, RenderObjectData.pMesh->IndexBuffer);
 	}
 
 	void* Data;
-	vmaMapMemory(m_Allocator, m_ObjectsDataBuffer.Allocation, &Data);
+	vmaMapMemory(m_VulkanDevice->m_Allocator, m_ObjectsDataBuffer.Allocation, &Data);
 
 	sGPURenderObjectData* GPURenderObjectData = static_cast<sGPURenderObjectData*>(Data);
 
@@ -191,78 +162,7 @@ void CVulkanBackend::CreateRenderObjectsData(const std::vector<sRenderObject*>& 
 		GPURenderObjectData[i].ModelMatrix = aRenderObjects[i]->ModelMatrix;
 	}
 
-	vmaUnmapMemory(m_Allocator, m_ObjectsDataBuffer.Allocation);
-}
-
-void CVulkanBackend::InitEnabledFeatures()
-{
-	m_EnabledBufferDeviceAddressFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
-	m_EnabledBufferDeviceAddressFeatures.bufferDeviceAddress = VK_TRUE;
-	m_EnabledBufferDeviceAddressFeatures.pNext = nullptr;
-
-	m_pDeviceCreatepNextChain = &m_EnabledBufferDeviceAddressFeatures;
-}
-
-void CVulkanBackend::InitVulkan(const HINSTANCE aInstanceHandle, const HWND aWindowHandle)
-{
-	vkb::InstanceBuilder InstanceBuilder;
-
-	auto VulkanInstanceResult = InstanceBuilder.set_app_name("AlvarEngine")
-	.request_validation_layers(true)
-	.require_api_version(1, 2, 0)
-	.use_default_debug_messenger()
-	.build();
-
-	vkb::Instance vkbInstance = VulkanInstanceResult.value();
-
-	m_VulkanInstance = vkbInstance.instance;
-
-	m_DebugMessenger = vkbInstance.debug_messenger;
-
-	VkWin32SurfaceCreateInfoKHR SurfaceCreateInfo{};
-	SurfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-	SurfaceCreateInfo.hwnd = aWindowHandle;
-	SurfaceCreateInfo.hinstance = aInstanceHandle;
-
-	VK_CHECK(vkCreateWin32SurfaceKHR(m_VulkanInstance, &SurfaceCreateInfo, nullptr, &m_Surface));
-	
-	VkPhysicalDeviceFeatures RequiredFeatures;
-	RequiredFeatures.samplerAnisotropy = VK_TRUE;
-	
-	// Select physical device.
-	vkb::PhysicalDeviceSelector PhysicalDeviceSelector {vkbInstance};
-	vkb::PhysicalDevice vkbPhysicalDevice = PhysicalDeviceSelector
-	.set_minimum_version(1, 2)
-	.set_surface(m_Surface)
-	//.set_required_features(RequiredFeatures)
-	.select()
-	.value();
-
-	InitEnabledFeatures();
-
-	// Create logical device.
-	vkb::DeviceBuilder DeviceBuilder{vkbPhysicalDevice};
-	vkb::Device vkbDevice = DeviceBuilder.add_pNext(m_pDeviceCreatepNextChain).build().value();
-
-	// initialize device
-	m_PhysicalDevice = vkbPhysicalDevice.physical_device;
-	m_Device = vkbDevice.device;
-
-	// Get Graphics Queue
-	m_GraphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
-	m_GraphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
-
-	VmaAllocatorCreateInfo AllocatorInfo = {};
-	AllocatorInfo.physicalDevice = m_PhysicalDevice;
-	AllocatorInfo.device = m_Device;
-	AllocatorInfo.instance = m_VulkanInstance;
-	AllocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
-	vmaCreateAllocator(&AllocatorInfo, &m_Allocator);
-
-	m_MainDeletionQueue.PushFunction([=]()
-	{
-		vkDestroySwapchainKHR(m_Device, m_Swapchain, nullptr);
-	});
+	vmaUnmapMemory(m_VulkanDevice->m_Allocator, m_ObjectsDataBuffer.Allocation);
 }
 
 void CVulkanBackend::InitSwapchain()
@@ -274,7 +174,7 @@ void CVulkanBackend::InitSwapchain()
 
 	// TODO: initialize extent according to Window's created window
 	// Swapchain initialization.
-	vkb::SwapchainBuilder SwapchainBuilder{m_PhysicalDevice, m_Device, m_Surface};
+	vkb::SwapchainBuilder SwapchainBuilder{m_VulkanDevice->m_PhysicalDevice, m_VulkanDevice->m_Device, m_VulkanDevice->m_Surface};
 	vkb::Swapchain vkbSwapchain = SwapchainBuilder
 	.use_default_format_selection()
 	.set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
@@ -286,32 +186,29 @@ void CVulkanBackend::InitSwapchain()
 	m_SwapchainImageFormat = vkbSwapchain.image_format;
 	m_SwapchainImages = vkbSwapchain.get_images().value();
 	m_SwapchainImageViews = vkbSwapchain.get_image_views().value();
-
-	m_MainDeletionQueue.PushFunction([=]()
-	{
-		vkDestroySwapchainKHR(m_Device, m_Swapchain, nullptr);
-	});
 }
 
 void CVulkanBackend::InitCommandPools()
 {
+	const VkDevice Device = m_VulkanDevice->m_Device;
 	// Creation of command structures
-	VkCommandPoolCreateInfo CommandPoolInfo = vkinit::CommandPoolCreateInfo(m_GraphicsQueueFamily, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-	VK_CHECK(vkCreateCommandPool(m_Device, &CommandPoolInfo, nullptr, &m_CommandPool));
+	VkCommandPoolCreateInfo CommandPoolInfo = vkinit::CommandPoolCreateInfo(m_VulkanDevice->m_GraphicsQueueFamily, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+	VK_CHECK(vkCreateCommandPool(m_VulkanDevice->m_Device, &CommandPoolInfo, nullptr, &m_CommandPool));
 
 	for (int32_t i = 0; i < FRAME_OVERLAP; ++i)
 	{
 		VkCommandBufferAllocateInfo CmdAllocInfo = vkinit::CommandBufferAllocateInfo(m_CommandPool, 1);
-		VK_CHECK(vkAllocateCommandBuffers(m_Device, &CmdAllocInfo, &m_FramesData[i].MainCommandBuffer));
+		VK_CHECK(vkAllocateCommandBuffers(Device, &CmdAllocInfo, &m_FramesData[i].MainCommandBuffer));
 	}
 
-	VkCommandPoolCreateInfo UploadCommandPoolInfo = vkinit::CommandPoolCreateInfo(m_GraphicsQueueFamily);
-	VK_CHECK(vkCreateCommandPool(m_Device, &UploadCommandPoolInfo, nullptr, &m_UploadContext.m_CommandPool));
+	// TODO: Move to CVulkanDevice.
+	VkCommandPoolCreateInfo UploadCommandPoolInfo = vkinit::CommandPoolCreateInfo(m_VulkanDevice->m_GraphicsQueueFamily);
+	VK_CHECK(vkCreateCommandPool(Device, &UploadCommandPoolInfo, nullptr, &m_VulkanDevice->m_UploadContext.m_CommandPool));
 
-	m_MainDeletionQueue.PushFunction([=]
+	m_VulkanDevice->m_MainDeletionQueue.PushFunction([=]
 	{
-		vkDestroyCommandPool(m_Device, m_CommandPool, nullptr);
-		vkDestroyCommandPool(m_Device, m_UploadContext.m_CommandPool, nullptr);
+		vkDestroyCommandPool(Device, m_CommandPool, nullptr);
+		vkDestroyCommandPool(Device, m_VulkanDevice->m_UploadContext.m_CommandPool, nullptr);
 	});
 }
 
@@ -325,38 +222,41 @@ void CVulkanBackend::InitDepthBuffer()
 	DepthImgAllocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 	DepthImgAllocInfo.requiredFlags = VkMemoryPropertyFlagBits(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-	vmaCreateImage(m_Allocator, &DepthImgInfo, &DepthImgAllocInfo, &m_DepthImage.Image, &m_DepthImage.Allocation, nullptr);
+	vmaCreateImage(m_VulkanDevice->m_Allocator, &DepthImgInfo, &DepthImgAllocInfo, &m_DepthImage.Image, &m_DepthImage.Allocation, nullptr);
 
 	VkImageViewCreateInfo DepthViewInfo = vkinit::ImageViewCreateInfo(DepthFormat, m_DepthImage.Image, VK_IMAGE_ASPECT_DEPTH_BIT);
 
-	VK_CHECK(vkCreateImageView(m_Device, &DepthViewInfo, nullptr, &m_DepthImageView));
+	VK_CHECK(vkCreateImageView(m_VulkanDevice->m_Device, &DepthViewInfo, nullptr, &m_DepthImageView));
 }
 
 void CVulkanBackend::InitSyncStructures()
 {
+	const VkDevice Device = m_VulkanDevice->m_Device;
+
 	VkSemaphoreCreateInfo SemaphoreInfo = vkinit::SemaphoreCreateInfo();
 
 	for (int32_t i = 0; i < FRAME_OVERLAP; ++i)
 	{
-		VK_CHECK(vkCreateSemaphore(m_Device, &SemaphoreInfo, nullptr, &m_FramesData[i].PresentSemaphore));
-		VK_CHECK(vkCreateSemaphore(m_Device, &SemaphoreInfo, nullptr, &m_FramesData[i].RenderSemaphore));
+		VK_CHECK(vkCreateSemaphore(Device, &SemaphoreInfo, nullptr, &m_FramesData[i].PresentSemaphore));
+		VK_CHECK(vkCreateSemaphore(Device, &SemaphoreInfo, nullptr, &m_FramesData[i].RenderSemaphore));
 
 		VkFenceCreateInfo FenceInfo = vkinit::FenceCreateInfo(VK_FENCE_CREATE_SIGNALED_BIT);
 
-		VK_CHECK(vkCreateFence(m_Device, &FenceInfo, nullptr, &m_FramesData[i].RenderFence));
+		VK_CHECK(vkCreateFence(Device, &FenceInfo, nullptr, &m_FramesData[i].RenderFence));
 	}
 
+	// TODO: Move to CVulkanDevice.
 	VkFenceCreateInfo UploadFenceInfo = vkinit::FenceCreateInfo();
-	VK_CHECK(vkCreateFence(m_Device, &UploadFenceInfo, nullptr, &m_UploadContext.m_UploadFence));
+	VK_CHECK(vkCreateFence(Device, &UploadFenceInfo, nullptr, &m_VulkanDevice->m_UploadContext.m_UploadFence));
 
-	m_MainDeletionQueue.PushFunction([=]
+	m_VulkanDevice->m_MainDeletionQueue.PushFunction([=]
 	{
 		for (int32_t i = 0; i < FRAME_OVERLAP; ++i)
 		{
-			vkDestroySemaphore(m_Device, m_FramesData[i].PresentSemaphore, nullptr);
-			vkDestroySemaphore(m_Device, m_FramesData[i].RenderSemaphore, nullptr);
-			vkDestroyFence(m_Device, m_FramesData[i].RenderFence, nullptr);
-			vkDestroyFence(m_Device, m_UploadContext.m_UploadFence, nullptr);
+			vkDestroySemaphore(Device, m_FramesData[i].PresentSemaphore, nullptr);
+			vkDestroySemaphore(Device, m_FramesData[i].RenderSemaphore, nullptr);
+			vkDestroyFence(Device, m_FramesData[i].RenderFence, nullptr);
+			vkDestroyFence(Device, m_VulkanDevice->m_UploadContext.m_UploadFence, nullptr);
 		}
 	});
 }
@@ -364,7 +264,7 @@ void CVulkanBackend::InitSyncStructures()
 void CVulkanBackend::InitTextureSamplers()
 {
 	VkPhysicalDeviceProperties Properties = {};
-	vkGetPhysicalDeviceProperties(m_PhysicalDevice, &Properties);
+	vkGetPhysicalDeviceProperties(m_VulkanDevice->m_PhysicalDevice, &Properties);
 
 	VkSamplerCreateInfo SamplerInfo = {};
 	SamplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -381,11 +281,11 @@ void CVulkanBackend::InitTextureSamplers()
 	SamplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
 	SamplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 
-	VK_CHECK(vkCreateSampler(m_Device, &SamplerInfo, nullptr, &m_DefaultSampler));
+	VK_CHECK(vkCreateSampler(m_VulkanDevice->m_Device, &SamplerInfo, nullptr, &m_DefaultSampler));
 
-	m_MainDeletionQueue.PushFunction([=]
+	m_VulkanDevice->m_MainDeletionQueue.PushFunction([=]
 	{
-		vkDestroySampler(m_Device, m_DefaultSampler, nullptr);
+		vkDestroySampler(m_VulkanDevice->m_Device, m_DefaultSampler, nullptr);
 	});
 }
 
@@ -411,11 +311,11 @@ void CVulkanBackend::InitDescriptorSetPool()
 	PoolInfo.pPoolSizes = PoolSizes.data();;
 	PoolInfo.maxSets = static_cast<uint32_t>(FRAME_OVERLAP) + 1; // +1 set for the objects descriptor set.
 
-	VK_CHECK(vkCreateDescriptorPool(m_Device, &PoolInfo, nullptr, &m_DescriptorPool));
+	VK_CHECK(vkCreateDescriptorPool(m_VulkanDevice->m_Device, &PoolInfo, nullptr, &m_DescriptorPool));
 
-	m_MainDeletionQueue.PushFunction([=]
+	m_VulkanDevice->m_MainDeletionQueue.PushFunction([=]
 	{
-		vkDestroyDescriptorPool(m_Device, m_DescriptorPool, nullptr);
+		vkDestroyDescriptorPool(m_VulkanDevice->m_Device, m_DescriptorPool, nullptr);
 	});
 }
 
@@ -429,7 +329,7 @@ void CVulkanBackend::InitDescriptorSets()
 
 	for (size_t i = 0; i < FRAME_OVERLAP; ++i)
 	{
-		VK_CHECK(vkAllocateDescriptorSets(m_Device, &AllocInfo, &m_FramesData[i].DescriptorSet));
+		VK_CHECK(vkAllocateDescriptorSets(m_VulkanDevice->m_Device, &AllocInfo, &m_FramesData[i].DescriptorSet));
 	}
 
 	for (size_t i = 0; i < FRAME_OVERLAP; ++i)
@@ -464,7 +364,7 @@ void CVulkanBackend::InitDescriptorSets()
 		DescriptorWrites[1].descriptorCount = 1;
 		DescriptorWrites[1].pImageInfo = &ImageInfo;
 
-		vkUpdateDescriptorSets(m_Device, static_cast<uint32_t>(DescriptorWrites.size()), DescriptorWrites.data(), 0, nullptr);
+		vkUpdateDescriptorSets(m_VulkanDevice->m_Device, static_cast<uint32_t>(DescriptorWrites.size()), DescriptorWrites.data(), 0, nullptr);
 	}
 
 	VkDescriptorSetAllocateInfo RenderObjectsAllocInfo{};
@@ -473,7 +373,7 @@ void CVulkanBackend::InitDescriptorSets()
 	RenderObjectsAllocInfo.descriptorSetCount = 1;
 	RenderObjectsAllocInfo.pSetLayouts = &m_RenderObjectsSetLayout;
 
-	VK_CHECK(vkAllocateDescriptorSets(m_Device, &RenderObjectsAllocInfo, &m_ObjectsDataDescriptorSet));
+	VK_CHECK(vkAllocateDescriptorSets(m_VulkanDevice->m_Device, &RenderObjectsAllocInfo, &m_ObjectsDataDescriptorSet));
 
 	VkDescriptorBufferInfo RenderObjectsBufferInfo = {};
 	RenderObjectsBufferInfo.buffer = m_ObjectsDataBuffer.Buffer;
@@ -491,7 +391,7 @@ void CVulkanBackend::InitDescriptorSets()
 	RenderObjectsDescriptorWrite.pImageInfo = nullptr;
 	RenderObjectsDescriptorWrite.pTexelBufferView = nullptr;
 
-	vkUpdateDescriptorSets(m_Device, 1, &RenderObjectsDescriptorWrite, 0, nullptr);
+	vkUpdateDescriptorSets(m_VulkanDevice->m_Device, 1, &RenderObjectsDescriptorWrite, 0, nullptr);
 }
 
 void CVulkanBackend::InitDescriptorSetLayouts()
@@ -517,13 +417,13 @@ void CVulkanBackend::InitDescriptorSetLayouts()
 	LayoutInfo.bindingCount = static_cast<uint32_t>(Bindings.size());
 	LayoutInfo.pBindings = Bindings.data();
 
-	VK_CHECK(vkCreateDescriptorSetLayout(m_Device, &LayoutInfo, nullptr, &m_DescriptorSetLayout));
+	VK_CHECK(vkCreateDescriptorSetLayout(m_VulkanDevice->m_Device, &LayoutInfo, nullptr, &m_DescriptorSetLayout));
 
 	VkDeviceSize BufferSize = sizeof(sFrameUBO);
 	for (int i = 0; i < FRAME_OVERLAP; ++i)
 	{
-		m_FramesData[i].UBOBuffer = vkutils::CreateBuffer(m_Allocator, BufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-		vmaMapMemory(m_Allocator, m_FramesData[i].UBOBuffer.Allocation, &m_FramesData[i].MappedUBOBuffer);
+		m_FramesData[i].UBOBuffer = vkutils::CreateBuffer(m_VulkanDevice, BufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+		vmaMapMemory(m_VulkanDevice->m_Allocator, m_FramesData[i].UBOBuffer.Allocation, &m_FramesData[i].MappedUBOBuffer);
 	}
 
 	// RENDER OBJECTS DESCRIPTOR LAYOUT CREATION.
@@ -539,21 +439,21 @@ void CVulkanBackend::InitDescriptorSetLayouts()
 	RenderObjectsLayoutInfo.bindingCount = 1;
 	RenderObjectsLayoutInfo.pBindings = &RenderObjectsLayoutBinding;
 
-	VK_CHECK(vkCreateDescriptorSetLayout(m_Device, &RenderObjectsLayoutInfo, nullptr, &m_RenderObjectsSetLayout));
+	VK_CHECK(vkCreateDescriptorSetLayout(m_VulkanDevice->m_Device, &RenderObjectsLayoutInfo, nullptr, &m_RenderObjectsSetLayout));
 
-	m_ObjectsDataBuffer = vkutils::CreateBuffer(m_Allocator, sizeof(sGPURenderObjectData) * MAX_RENDER_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+	m_ObjectsDataBuffer = vkutils::CreateBuffer(m_VulkanDevice, sizeof(sGPURenderObjectData) * MAX_RENDER_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
-	m_MainDeletionQueue.PushFunction([=]
+	m_VulkanDevice->m_MainDeletionQueue.PushFunction([=]
 	{
 		for (size_t i = 0; i < FRAME_OVERLAP; ++i)
 		{
-			vmaDestroyBuffer(m_Allocator, m_FramesData[i].UBOBuffer.Buffer, m_FramesData[i].UBOBuffer.Allocation);
+			vmaDestroyBuffer(m_VulkanDevice->m_Allocator, m_FramesData[i].UBOBuffer.Buffer, m_FramesData[i].UBOBuffer.Allocation);
 		}
 
-		vmaDestroyBuffer(m_Allocator, m_ObjectsDataBuffer.Buffer, m_ObjectsDataBuffer.Allocation);
+		vmaDestroyBuffer(m_VulkanDevice->m_Allocator, m_ObjectsDataBuffer.Buffer, m_ObjectsDataBuffer.Allocation);
 
-		vkDestroyDescriptorSetLayout(m_Device, m_DescriptorSetLayout, nullptr);
-		vkDestroyDescriptorSetLayout(m_Device, m_RenderObjectsSetLayout, nullptr);
+		vkDestroyDescriptorSetLayout(m_VulkanDevice->m_Device, m_DescriptorSetLayout, nullptr);
+		vkDestroyDescriptorSetLayout(m_VulkanDevice->m_Device, m_RenderObjectsSetLayout, nullptr);
 	});
 }
 
@@ -612,7 +512,7 @@ void CVulkanBackend::InitRenderPass()
 	RenderPassInfo.dependencyCount = 1;
 	RenderPassInfo.pDependencies = &Dependency;
 
-	VK_CHECK(vkCreateRenderPass(m_Device, &RenderPassInfo, nullptr, &m_RenderPass));
+	VK_CHECK(vkCreateRenderPass(m_VulkanDevice->m_Device, &RenderPassInfo, nullptr, &m_RenderPass));
 }
 
 void CVulkanBackend::InitFramebuffers()
@@ -636,14 +536,14 @@ void CVulkanBackend::InitFramebuffers()
 
 		FramebufferInfo.attachmentCount = static_cast<uint32_t>(Attachments.size());
 		FramebufferInfo.pAttachments = Attachments.data();
-		VK_CHECK(vkCreateFramebuffer(m_Device, &FramebufferInfo, nullptr, &m_Framebuffers[i]));
+		VK_CHECK(vkCreateFramebuffer(m_VulkanDevice->m_Device, &FramebufferInfo, nullptr, &m_Framebuffers[i]));
 	}
 
-	m_MainDeletionQueue.PushFunction([=]
+	m_VulkanDevice->m_MainDeletionQueue.PushFunction([=]
 	{
 		for (auto Framebuffer : m_Framebuffers)
 		{
-			vkDestroyFramebuffer(m_Device, Framebuffer, nullptr);
+			vkDestroyFramebuffer(m_VulkanDevice->m_Device, Framebuffer, nullptr);
 		}
 	});
 }
@@ -652,7 +552,7 @@ void CVulkanBackend::InitPipelines()
 {
 	VkShaderModule VertShader;
 	// TODO: Do not hardcode this.
-	if (!vkutils::LoadShaderModule(m_Device, "../Engine/shaders/vert.spv", &VertShader))
+	if (!vkutils::LoadShaderModule(m_VulkanDevice->m_Device, "../Engine/shaders/vert.spv", &VertShader))
 	{
 		std::cout << "Error when building the vertex shader module" << std::endl;
 	}
@@ -662,7 +562,7 @@ void CVulkanBackend::InitPipelines()
 	}
 
 	VkShaderModule FragShader;
-	if (!vkutils::LoadShaderModule(m_Device, "../Engine/shaders/frag.spv", &FragShader))
+	if (!vkutils::LoadShaderModule(m_VulkanDevice->m_Device, "../Engine/shaders/frag.spv", &FragShader))
 	{
 		std::cout << "Error when building the fragment shader module" << std::endl;
 	}
@@ -676,7 +576,7 @@ void CVulkanBackend::InitPipelines()
 	PipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(SetLayouts.size());
 	PipelineLayoutInfo.pSetLayouts = SetLayouts.data();
 
-	VK_CHECK(vkCreatePipelineLayout(m_Device, &PipelineLayoutInfo, nullptr, &m_ForwardPipelineLayout));
+	VK_CHECK(vkCreatePipelineLayout(m_VulkanDevice->m_Device, &PipelineLayoutInfo, nullptr, &m_ForwardPipelineLayout));
 
 	PipelineBuilder PipelineBuilder;
 
@@ -720,15 +620,15 @@ void CVulkanBackend::InitPipelines()
 
 	PipelineBuilder.m_PipelineLayout = m_ForwardPipelineLayout;
 
-	m_ForwardPipeline = PipelineBuilder.BuildPipeline(m_Device, m_RenderPass);
+	m_ForwardPipeline = PipelineBuilder.BuildPipeline(m_VulkanDevice->m_Device, m_RenderPass);
 
-	vkDestroyShaderModule(m_Device, VertShader, nullptr);
-	vkDestroyShaderModule(m_Device, FragShader, nullptr);
+	vkDestroyShaderModule(m_VulkanDevice->m_Device, VertShader, nullptr);
+	vkDestroyShaderModule(m_VulkanDevice->m_Device, FragShader, nullptr);
 
-	m_MainDeletionQueue.PushFunction([=]()
+	m_VulkanDevice->m_MainDeletionQueue.PushFunction([=]()
 	{
-		vkDestroyPipeline(m_Device, m_ForwardPipeline, nullptr);
-		vkDestroyPipelineLayout(m_Device, m_ForwardPipelineLayout, nullptr);
+		vkDestroyPipeline(m_VulkanDevice->m_Device, m_ForwardPipeline, nullptr);
+		vkDestroyPipelineLayout(m_VulkanDevice->m_Device, m_ForwardPipelineLayout, nullptr);
 	});
 }
 
@@ -800,10 +700,10 @@ void CVulkanBackend::RecordCommandBuffer(VkCommandBuffer aCommandBuffer, uint32_
 
 void CVulkanBackend::RenderFrame(const CCamera* const aCamera)
 {
-	vkWaitForFences(m_Device, 1, &m_FramesData[m_CurrentFrame].RenderFence, VK_TRUE, UINT64_MAX);
+	vkWaitForFences(m_VulkanDevice->m_Device, 1, &m_FramesData[m_CurrentFrame].RenderFence, VK_TRUE, UINT64_MAX);
 
 	uint32_t ImageIndex;
-	VkResult Result = vkAcquireNextImageKHR(m_Device, m_Swapchain, UINT64_MAX, m_FramesData[m_CurrentFrame].PresentSemaphore, VK_NULL_HANDLE, &ImageIndex);
+	VkResult Result = vkAcquireNextImageKHR(m_VulkanDevice->m_Device, m_Swapchain, UINT64_MAX, m_FramesData[m_CurrentFrame].PresentSemaphore, VK_NULL_HANDLE, &ImageIndex);
 	if (Result == VK_ERROR_OUT_OF_DATE_KHR || Result == VK_SUBOPTIMAL_KHR || m_bWasWindowResized)
 	{
 		m_bWasWindowResized = false;
@@ -818,7 +718,7 @@ void CVulkanBackend::RenderFrame(const CCamera* const aCamera)
 	UpdateFrameUBO(aCamera, m_CurrentFrame);
 
 	// Delay fence reset to prevent possible deadlock when recreating the swapchain.
-	vkResetFences(m_Device, 1, &m_FramesData[m_CurrentFrame].RenderFence);
+	vkResetFences(m_VulkanDevice->m_Device, 1, &m_FramesData[m_CurrentFrame].RenderFence);
 
 	vkResetCommandBuffer(m_FramesData[m_CurrentFrame].MainCommandBuffer, 0);
 	RecordCommandBuffer(m_FramesData[m_CurrentFrame].MainCommandBuffer, ImageIndex);
@@ -835,7 +735,7 @@ void CVulkanBackend::RenderFrame(const CCamera* const aCamera)
 	SubmitInfo.signalSemaphoreCount = 1;
 	SubmitInfo.pSignalSemaphores = SignalSemaphores;
 
-	VK_CHECK(vkQueueSubmit(m_GraphicsQueue, 1, &SubmitInfo, m_FramesData[m_CurrentFrame].RenderFence));
+	VK_CHECK(vkQueueSubmit(m_VulkanDevice->m_GraphicsQueue, 1, &SubmitInfo, m_FramesData[m_CurrentFrame].RenderFence));
 
 	VkPresentInfoKHR PresentInfo = vkinit::PresentInfo();
 	PresentInfo.waitSemaphoreCount = 1;
@@ -845,7 +745,7 @@ void CVulkanBackend::RenderFrame(const CCamera* const aCamera)
 	PresentInfo.pSwapchains = SwapChains;
 	PresentInfo.pImageIndices = &ImageIndex;
 
-	vkQueuePresentKHR(m_GraphicsQueue, &PresentInfo);
+	vkQueuePresentKHR(m_VulkanDevice->m_GraphicsQueue, &PresentInfo);
 
 	m_CurrentFrame = (m_CurrentFrame + 1) % FRAME_OVERLAP;
 }
@@ -854,7 +754,7 @@ void CVulkanBackend::RecreateSwapchain()
 {
 	SGSDEBUG("Recreating swapchain...");
 
-	vkDeviceWaitIdle(m_Device);
+	vkDeviceWaitIdle(m_VulkanDevice->m_Device);
 
 	CleanupSwapchain();
 
@@ -866,15 +766,15 @@ void CVulkanBackend::RecreateSwapchain()
  {
 	for (size_t i = 0; i < m_Framebuffers.size(); ++i)
 	{
-		vkDestroyFramebuffer(m_Device, m_Framebuffers[i], nullptr);
+		vkDestroyFramebuffer(m_VulkanDevice->m_Device, m_Framebuffers[i], nullptr);
 	}
 	
 	for (size_t i = 0; i < m_SwapchainImageViews.size(); ++i)
 	{
-		vkDestroyImageView(m_Device, m_SwapchainImageViews[i], nullptr);
+		vkDestroyImageView(m_VulkanDevice->m_Device, m_SwapchainImageViews[i], nullptr);
 	}
 
-	vkDestroySwapchainKHR(m_Device, m_Swapchain, nullptr);
+	vkDestroySwapchainKHR(m_VulkanDevice->m_Device, m_Swapchain, nullptr);
  }
 
 VkFormat CVulkanBackend::FindSupportedFormat (const std::vector<VkFormat>& aCandidates, VkImageTiling aTiling, VkFormatFeatureFlags aFeatures)
@@ -882,7 +782,7 @@ VkFormat CVulkanBackend::FindSupportedFormat (const std::vector<VkFormat>& aCand
 	for (VkFormat Format : aCandidates)
 	{
 		VkFormatProperties Properties;
-		vkGetPhysicalDeviceFormatProperties(m_PhysicalDevice, Format, &Properties);
+		vkGetPhysicalDeviceFormatProperties(m_VulkanDevice->m_PhysicalDevice, Format, &Properties);
 
 		if (aTiling == VK_IMAGE_TILING_LINEAR && (Properties.linearTilingFeatures & aFeatures) == aFeatures)
 		{

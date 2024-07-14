@@ -3,7 +3,7 @@
 #include "engine.hpp"
 #include <core/logger.h>
 #include "vk_initializers.hpp"
-#include "vulkan_backend.hpp"
+#include "vulkan_device.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image/stb_image.h>
@@ -50,7 +50,7 @@ bool vkutils::LoadShaderModule(VkDevice aDevice, const char* aFilePath, VkShader
 	return true;
 }
 
-void vkutils::CreateVertexBuffer(const CVulkanBackend* const aVulkanBackend, VmaAllocator aVmaAllocator, const std::vector<sVertex>& aVertices, AllocatedBuffer& aOutBuffer)
+void vkutils::CreateVertexBuffer(const CVulkanDevice* const aVulkanDevice, const std::vector<sVertex>& aVertices, AllocatedBuffer& aOutBuffer)
 {
 	const size_t BufferSize = aVertices.size() * sizeof(sVertex);
 
@@ -65,13 +65,15 @@ void vkutils::CreateVertexBuffer(const CVulkanBackend* const aVulkanBackend, Vma
 
 	AllocatedBuffer StagingBuffer;
 
-	VK_CHECK(vmaCreateBuffer(aVmaAllocator, &StagingBufferInfo, &VmaAllocInfo, 
+	VmaAllocator Allocator = aVulkanDevice->m_Allocator;
+
+	VK_CHECK(vmaCreateBuffer(Allocator, &StagingBufferInfo, &VmaAllocInfo, 
 		&StagingBuffer.Buffer, &StagingBuffer.Allocation, nullptr));
 
 	void* Data;
-	vmaMapMemory(aVmaAllocator, StagingBuffer.Allocation, &Data);
+	vmaMapMemory(Allocator, StagingBuffer.Allocation, &Data);
 	memcpy(Data, aVertices.data(), BufferSize);
-	vmaUnmapMemory(aVmaAllocator, StagingBuffer.Allocation);
+	vmaUnmapMemory(Allocator, StagingBuffer.Allocation);
 
 	VkBufferCreateInfo VertexBufferInfo = {};
 	VertexBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -83,10 +85,10 @@ void vkutils::CreateVertexBuffer(const CVulkanBackend* const aVulkanBackend, Vma
 	VmaAllocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
 	// TODO: Resource Leak. Destroy this buffer somewhere.
-	VK_CHECK(vmaCreateBuffer(aVmaAllocator, &VertexBufferInfo, &VmaAllocInfo,
+	VK_CHECK(vmaCreateBuffer(Allocator, &VertexBufferInfo, &VmaAllocInfo,
 		&aOutBuffer.Buffer, &aOutBuffer.Allocation, nullptr));
 
-	aVulkanBackend->ImmediateSubmit([=](VkCommandBuffer Cmd)
+	aVulkanDevice->ImmediateSubmit([=](VkCommandBuffer Cmd)
 	{
 		VkBufferCopy Copy;
 		Copy.dstOffset = 0;
@@ -96,10 +98,10 @@ void vkutils::CreateVertexBuffer(const CVulkanBackend* const aVulkanBackend, Vma
 		vkCmdCopyBuffer(Cmd, StagingBuffer.Buffer, aOutBuffer.Buffer, 1, &Copy);
 	});
 
-	vmaDestroyBuffer(aVmaAllocator, StagingBuffer.Buffer, StagingBuffer.Allocation);
+	vmaDestroyBuffer(Allocator, StagingBuffer.Buffer, StagingBuffer.Allocation);
 }
 
-void vkutils::CreateIndexBuffer(const CVulkanBackend* const aVulkanBackend, VmaAllocator aVmaAllocator, const std::vector<uint32_t>& aIndices, AllocatedBuffer& aOutBuffer)
+void vkutils::CreateIndexBuffer(const CVulkanDevice* const aVulkanDevice, const std::vector<uint32_t>& aIndices, AllocatedBuffer& aOutBuffer)
 {
 	const size_t BufferSize = aIndices.size() * sizeof(uint32_t);
 
@@ -114,13 +116,15 @@ void vkutils::CreateIndexBuffer(const CVulkanBackend* const aVulkanBackend, VmaA
 
 	AllocatedBuffer StagingBuffer;
 
-	VK_CHECK(vmaCreateBuffer(aVmaAllocator, &StagingBufferInfo, &VmaAllocInfo,
+	VmaAllocator Allocator = aVulkanDevice->m_Allocator;
+
+	VK_CHECK(vmaCreateBuffer(Allocator, &StagingBufferInfo, &VmaAllocInfo,
 		&StagingBuffer.Buffer, &StagingBuffer.Allocation, nullptr));
 
 	void* Data;
-	vmaMapMemory(aVmaAllocator, StagingBuffer.Allocation, &Data);
+	vmaMapMemory(Allocator, StagingBuffer.Allocation, &Data);
 	memcpy(Data, aIndices.data(), BufferSize);
-	vmaUnmapMemory(aVmaAllocator, StagingBuffer.Allocation);
+	vmaUnmapMemory(Allocator, StagingBuffer.Allocation);
 
 	VkBufferCreateInfo IndexBufferInfo = {};
     IndexBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -132,10 +136,10 @@ void vkutils::CreateIndexBuffer(const CVulkanBackend* const aVulkanBackend, VmaA
     VmaAllocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
 	// TODO: Resource Leak. Destroy this buffer somewhere.
-	VK_CHECK(vmaCreateBuffer(aVmaAllocator, &IndexBufferInfo, &VmaAllocInfo,
+	VK_CHECK(vmaCreateBuffer(Allocator, &IndexBufferInfo, &VmaAllocInfo,
 		&aOutBuffer.Buffer, &aOutBuffer.Allocation, nullptr));
 
-	aVulkanBackend->ImmediateSubmit([=](VkCommandBuffer Cmd)
+	aVulkanDevice->ImmediateSubmit([=](VkCommandBuffer Cmd)
 	{
 		VkBufferCopy Copy;
 		Copy.dstOffset = 0;
@@ -145,10 +149,10 @@ void vkutils::CreateIndexBuffer(const CVulkanBackend* const aVulkanBackend, VmaA
 		vkCmdCopyBuffer(Cmd, StagingBuffer.Buffer, aOutBuffer.Buffer, 1, &Copy);
 	});
 
-	vmaDestroyBuffer(aVmaAllocator, StagingBuffer.Buffer, StagingBuffer.Allocation);
+	vmaDestroyBuffer(Allocator, StagingBuffer.Buffer, StagingBuffer.Allocation);
 }
 
-AllocatedBuffer vkutils::CreateBuffer(VmaAllocator aVmaAllocator, size_t aAllocSize, VkBufferUsageFlags aUsage, VmaMemoryUsage aMemoryUsage, VmaAllocationCreateFlags aFlags)
+AllocatedBuffer vkutils::CreateBuffer(const CVulkanDevice* const aVulkanDevice, size_t aAllocSize, VkBufferUsageFlags aUsage, VmaMemoryUsage aMemoryUsage, VmaAllocationCreateFlags aFlags)
 {
 	VkBufferCreateInfo BufferInfo = {};
 	BufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -163,7 +167,7 @@ AllocatedBuffer vkutils::CreateBuffer(VmaAllocator aVmaAllocator, size_t aAllocS
 
 	AllocatedBuffer NewBuffer;
 
-	VK_CHECK(vmaCreateBuffer(aVmaAllocator, &BufferInfo, &VmaAllocInfo,
+	VK_CHECK(vmaCreateBuffer(aVulkanDevice->m_Allocator, &BufferInfo, &VmaAllocInfo,
 		&NewBuffer.Buffer,
 		&NewBuffer.Allocation,
 		nullptr));
@@ -171,7 +175,7 @@ AllocatedBuffer vkutils::CreateBuffer(VmaAllocator aVmaAllocator, size_t aAllocS
 	return NewBuffer;
 }
 
-bool vkutils::LoadImageFromFile(const CVulkanBackend* const aVulkanBackend, VmaAllocator aVmaAllocator, const std::string& File, AllocatedImage& aOutImage)
+bool vkutils::LoadImageFromFile(const CVulkanDevice* const aVulkanDevice, const std::string& File, AllocatedImage& aOutImage)
 {
 	int32_t TexWidth, TexHeight, TexChannels;
 
@@ -189,12 +193,14 @@ bool vkutils::LoadImageFromFile(const CVulkanBackend* const aVulkanBackend, VmaA
 	// TODO: Should all images have this format?
 	VkFormat ImageFormat = VK_FORMAT_R8G8B8A8_SRGB;
 
-	AllocatedBuffer StagingBuffer = vkutils::CreateBuffer(aVmaAllocator, ImageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+	VmaAllocator Allocator = aVulkanDevice->m_Allocator;
+
+	AllocatedBuffer StagingBuffer = vkutils::CreateBuffer(aVulkanDevice, ImageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 
 	void* Data;
-	vmaMapMemory(aVmaAllocator, StagingBuffer.Allocation, &Data);
+	vmaMapMemory(Allocator, StagingBuffer.Allocation, &Data);
 	memcpy(Data, Pixel_Ptr, static_cast<size_t>(ImageSize));
-	vmaUnmapMemory(aVmaAllocator, StagingBuffer.Allocation);
+	vmaUnmapMemory(Allocator, StagingBuffer.Allocation);
 
 	stbi_image_free(Pixels);
 
@@ -211,9 +217,9 @@ bool vkutils::LoadImageFromFile(const CVulkanBackend* const aVulkanBackend, VmaA
 	ImageAllocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
 	// TODO: Memory leak. Destroy this image.
-	vmaCreateImage(aVmaAllocator, &ImageInfo, &ImageAllocInfo, &NewImage.Image, &NewImage.Allocation, nullptr);
+	vmaCreateImage(Allocator, &ImageInfo, &ImageAllocInfo, &NewImage.Image, &NewImage.Allocation, nullptr);
 
-	aVulkanBackend->ImmediateSubmit([&](VkCommandBuffer aCmd)
+	aVulkanDevice->ImmediateSubmit([&](VkCommandBuffer aCmd)
 	{
 		VkImageSubresourceRange Range;
 		Range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -256,7 +262,7 @@ bool vkutils::LoadImageFromFile(const CVulkanBackend* const aVulkanBackend, VmaA
 			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &ImageBarrierToReadable);
 	});
 
-	vmaDestroyBuffer(aVmaAllocator, StagingBuffer.Buffer, StagingBuffer.Allocation);
+	vmaDestroyBuffer(Allocator, StagingBuffer.Buffer, StagingBuffer.Allocation);
 
 	aOutImage = NewImage;
 	

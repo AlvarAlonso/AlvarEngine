@@ -3,33 +3,11 @@
 #include "vk_types.hpp"
 #include "renderer/scene.hpp"
 
-#include <deque>
-#include <functional>
-
+class CVulkanDevice;
 class CCamera;
 
 constexpr uint32_t MAX_RENDER_OBJECTS = 1024;
 constexpr uint32_t FRAME_OVERLAP = 3;
-
-struct sDeletionQueue
-{
-	std::deque<std::function<void()>> Deletors;
-
-	void PushFunction(std::function<void()>&& function)
-	{
-		Deletors.push_back(function);
-	}
-
-	void Flush()
-	{
-		for (auto it = Deletors.rbegin(); it != Deletors.rend(); it++)
-		{
-			(*it)();
-		}
-
-		Deletors.clear();
-	}
-};
 
 struct sFrameData
 {
@@ -52,12 +30,6 @@ struct sRenderObjectData
 struct sGPURenderObjectData
 {
     glm::mat4 ModelMatrix;
-};
-
-struct sUploadContext
-{
-    VkFence m_UploadFence;
-    VkCommandPool m_CommandPool;
 };
 
 struct sFrameUBO
@@ -84,14 +56,9 @@ public:
 
     void HandleWindowResize();
 
-    void ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& aFunction) const;
-
     void CreateRenderObjectsData(const std::vector<sRenderObject*>& aRenderObjects);
 
 private:
-    void InitEnabledFeatures();
-
-    void InitVulkan(const HINSTANCE aInstanceHandle, const HWND aWindowHandle);
     void InitSwapchain();
     void InitCommandPools();
     void InitDepthBuffer();
@@ -118,19 +85,7 @@ private:
 
     bool m_bIsInitialized;
 
-    // Vulkan core.
-    VkInstance m_VulkanInstance;
-    VkDebugUtilsMessengerEXT m_DebugMessenger;
-    VkPhysicalDevice m_PhysicalDevice;
-    VkDevice m_Device;
-    VkSurfaceKHR m_Surface;
-    VmaAllocator m_Allocator;
-    // ------------
-
-    // pNext features.
-	VkPhysicalDeviceBufferDeviceAddressFeatures m_EnabledBufferDeviceAddressFeatures{};
-    void* m_pDeviceCreatepNextChain = nullptr;
-    // ------------
+    CVulkanDevice* m_VulkanDevice;
 
     // Swapchain.
     VkSwapchainKHR m_Swapchain;
@@ -139,10 +94,6 @@ private:
     std::vector<VkImageView> m_SwapchainImageViews;
     uint32_t m_ImageIdx;
     // ------------
-
-    // Vulkan Commands.
-    VkQueue m_GraphicsQueue;
-    uint32_t m_GraphicsQueueFamily;
 
     VkCommandPool m_CommandPool;
     // ------------
@@ -169,10 +120,6 @@ private:
     VkExtent2D m_WindowExtent = { 800, 600 };
 
     bool m_bWasWindowResized;
-
-    sDeletionQueue m_MainDeletionQueue;
-
-    sUploadContext m_UploadContext;
 
     // TODO: Some way to represent a Scene.
     std::vector<sRenderObjectData> m_RenderObjectsData;
