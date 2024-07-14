@@ -40,7 +40,10 @@ public:
     void InitVulkanDevice(const HINSTANCE aInstanceHandle, const HWND aWindowHandle);
 
     void ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& aFunction) const;
-
+    
+    VkFormat FindDepthFormat();
+    VkFormat FindSupportedFormat(const std::vector<VkFormat>& aCandidates, VkImageTiling aTiling, VkFormatFeatureFlags aFeatures);
+    
     // Vulkan Core.
     VkInstance m_VulkanInstance;
     VkPhysicalDevice m_PhysicalDevice;

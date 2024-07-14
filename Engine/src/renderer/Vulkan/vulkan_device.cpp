@@ -104,6 +104,32 @@ void CVulkanDevice::ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& a
 	vkResetCommandPool(m_Device, m_UploadContext.m_CommandPool, 0);
 }
 
+VkFormat CVulkanDevice::FindDepthFormat()
+{
+    return FindSupportedFormat({VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
+    VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+}
+
+VkFormat CVulkanDevice::FindSupportedFormat(const std::vector<VkFormat>& aCandidates, VkImageTiling aTiling, VkFormatFeatureFlags aFeatures)
+{
+	for (VkFormat Format : aCandidates)
+	{
+		VkFormatProperties Properties;
+		vkGetPhysicalDeviceFormatProperties(m_PhysicalDevice, Format, &Properties);
+
+		if (aTiling == VK_IMAGE_TILING_LINEAR && (Properties.linearTilingFeatures & aFeatures) == aFeatures)
+		{
+			return Format;
+		}
+		else if (aTiling == VK_IMAGE_TILING_OPTIMAL && (Properties.optimalTilingFeatures & aFeatures) == aFeatures)
+		{
+			return Format;
+		}
+	}
+
+	throw std::runtime_error("Failed to find supported format!");
+}
+
 void CVulkanDevice::InitEnabledFeatures()
 {
 	m_EnabledBufferDeviceAddressFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
