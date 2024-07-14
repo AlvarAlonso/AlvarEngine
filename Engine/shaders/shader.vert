@@ -1,9 +1,9 @@
-#version 450
+#version 460
 
 layout(set = 0, binding = 0) uniform UniformBufferObject {
-    mat4 model;
     mat4 view;
     mat4 proj;
+    mat4 viewproj;
 } ubo;
 
 struct ObjectData {
@@ -23,7 +23,7 @@ layout(location = 1) out vec2 fragTexCoord;
 
 void main() {
     mat4 modelMatrix = objectBuffer.objects[gl_BaseInstance].model;
-    gl_Position = ubo.proj * ubo.view * modelMatrix * vec4(inPosition, 1.0);
+    gl_Position = ubo.viewproj * modelMatrix * vec4(inPosition, 1.0);
     fragColor = inColor;
     fragTexCoord = inTexCoord;
 }

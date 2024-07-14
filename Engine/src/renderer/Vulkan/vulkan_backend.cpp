@@ -8,6 +8,7 @@
 #include "vk_types.hpp"
 #include "vk_initializers.hpp"
 #include "vk_utils.hpp"
+#include <renderer/core/camera.hpp>
 
 #include <VulkanBootstrap/VkBootstrap.h>
 #include <glm/gtc/matrix_transform.hpp>
@@ -97,11 +98,11 @@ bool CVulkanBackend::Initialize(const HINSTANCE aInstanceHandle, const HWND aWin
     return true;
 }
 
-void CVulkanBackend::Render()
+void CVulkanBackend::Render(const CCamera* const aCamera)
 {
 	assert(m_bIsInitialized);
 
-	RenderFrame();
+	RenderFrame(aCamera);
 }
 
 bool CVulkanBackend::Shutdown()
@@ -731,21 +732,17 @@ void CVulkanBackend::InitPipelines()
 	});
 }
 
-void CVulkanBackend::UpdateFrameUBO(uint32_t ImageIdx)
+void CVulkanBackend::UpdateFrameUBO(const CCamera* const aCamera, uint32_t ImageIdx)
 {
 	assert(ImageIdx >= 0 && ImageIdx < FRAME_OVERLAP);
 
-	static auto StartTime = std::chrono::high_resolution_clock::now();
-
-	const auto CurrentTime = std::chrono::high_resolution_clock::now();
-	const float Time = std::chrono::duration<float, std::chrono::seconds::period>(CurrentTime - StartTime).count();
-
 	sFrameUBO FrameUBO = {};
-	FrameUBO.Model = glm::rotate(glm::mat4(1.0f), Time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-	FrameUBO.View = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-	FrameUBO.Proj = glm::perspective(glm::radians(45.0f), m_WindowExtent.width / (float) m_WindowExtent.height, 0.1f, 10.0f);
+	//FrameUBO.View = aCamera->GetView();
+	glm::vec3 Position = aCamera->GetPosition();
+	FrameUBO.View = glm::lookAt(Position, Position + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	FrameUBO.Proj = glm::perspective(glm::radians(70.0f), m_WindowExtent.width / (float)m_WindowExtent.height, 0.1f, 200.0f);
 	FrameUBO.Proj[1][1] *= -1;
-
+	FrameUBO.ViewProj = FrameUBO.Proj * FrameUBO.View;
 
 	memcpy(m_FramesData[ImageIdx].MappedUBOBuffer, &FrameUBO, sizeof(sFrameUBO));
 }
@@ -801,7 +798,7 @@ void CVulkanBackend::RecordCommandBuffer(VkCommandBuffer aCommandBuffer, uint32_
 	VK_CHECK(vkEndCommandBuffer(aCommandBuffer));
 }
 
-void CVulkanBackend::RenderFrame()
+void CVulkanBackend::RenderFrame(const CCamera* const aCamera)
 {
 	vkWaitForFences(m_Device, 1, &m_FramesData[m_CurrentFrame].RenderFence, VK_TRUE, UINT64_MAX);
 
@@ -818,7 +815,7 @@ void CVulkanBackend::RenderFrame()
 		throw std::runtime_error("Failed to acquire swap chain image!");
 	}
 
-	UpdateFrameUBO(m_CurrentFrame);
+	UpdateFrameUBO(aCamera, m_CurrentFrame);
 
 	// Delay fence reset to prevent possible deadlock when recreating the swapchain.
 	vkResetFences(m_Device, 1, &m_FramesData[m_CurrentFrame].RenderFence);

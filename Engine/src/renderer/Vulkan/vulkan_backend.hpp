@@ -6,6 +6,8 @@
 #include <deque>
 #include <functional>
 
+class CCamera;
+
 constexpr uint32_t MAX_RENDER_OBJECTS = 1024;
 constexpr uint32_t FRAME_OVERLAP = 3;
 
@@ -60,9 +62,9 @@ struct sUploadContext
 
 struct sFrameUBO
 {
-    glm::mat4 Model;
     glm::mat4 View;
     glm::mat4 Proj;
+    glm::mat4 ViewProj;
 };
 
 /**
@@ -76,7 +78,7 @@ public:
     
     bool Initialize(const HINSTANCE aInstanceHandle, const HWND aWindowHandle);
 
-    void Render();
+    void Render(const CCamera* const aCamera);
 
     bool Shutdown();
 
@@ -102,9 +104,9 @@ private:
     void InitFramebuffers();
     void InitPipelines();
 
-    void UpdateFrameUBO(uint32_t ImageIdx);
+    void UpdateFrameUBO(const CCamera* const aCamera, uint32_t ImageIdx);
     void RecordCommandBuffer(VkCommandBuffer aCommandBuffer, uint32_t aImageIdx);
-    void RenderFrame();
+    void RenderFrame(const CCamera* const aCamera);
 
     void RecreateSwapchain();
     // TODO: This will destroy resources that are also destroyed in the main deletion queue. Do not store resources to be deleted in a queue. Delete them manually.

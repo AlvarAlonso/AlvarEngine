@@ -1,4 +1,7 @@
 #include "render_module.hpp"
+#include "core/logger.h"
+
+#include <glm/gtx/transform.hpp>
 
 #include <stdexcept>
 
@@ -10,6 +13,8 @@ CRenderModule::CRenderModule() :
 
 bool CRenderModule::Initialize(const HINSTANCE aInstanceHandle, const HWND aWindowHandle)
 {
+    m_pMainCamera = new CCamera();
+
     CreateDefaultScene();
 
     m_pVulkanBackend = std::make_unique<CVulkanBackend>();
@@ -27,11 +32,12 @@ bool CRenderModule::Initialize(const HINSTANCE aInstanceHandle, const HWND aWind
 void CRenderModule::Render()
 {
     // TODO: Should this pointer be checked?
-    m_pVulkanBackend->Render();
+    m_pVulkanBackend->Render(m_pMainCamera);
 }
 
 bool CRenderModule::Shutdown()
 {
+    delete m_pMainCamera;
     delete m_pDefaultScene;
     return m_pVulkanBackend->Shutdown();
 }
@@ -39,6 +45,15 @@ bool CRenderModule::Shutdown()
 void CRenderModule::HandleWindowResize()
 {
     m_pVulkanBackend->HandleWindowResize();
+}
+
+void CRenderModule::HandleInput(WPARAM aInput)
+{
+    if (m_pMainCamera)
+    {
+        SGSDEBUG("pMainCamera Input");
+        m_pMainCamera->HandleInput(aInput);
+    }
 }
 
 std::unordered_map<std::string, sRenderObjectInfo> CRenderModule::m_RenderObjectInfos{};
@@ -51,9 +66,15 @@ void CRenderModule::CreateDefaultScene()
     m_pDefaultScene = new CScene();
 
     glm::mat4 ModelMatrix(0);
+    ModelMatrix = glm::translate(glm::vec3{0.0f, 0.0f, 0.0f});
     sRenderObject* RenderObject = new sRenderObject();
     RenderObject->ModelMatrix = ModelMatrix;
     RenderObject->pRenderObjectInfo = &m_RenderObjectInfos.at("VikingRoom");
 
+    sRenderObject* RenderObject2 = new sRenderObject();
+    RenderObject2->ModelMatrix = glm::translate(glm::vec3{10.0f, 0.0f, 10.0f});
+    RenderObject2->pRenderObjectInfo = &m_RenderObjectInfos.at("VikingRoom");
+
     m_pDefaultScene->AddRenderObject(RenderObject);
+    m_pDefaultScene->AddRenderObject(RenderObject2);
 }

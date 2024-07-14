@@ -70,6 +70,8 @@ struct sMesh
     static std::unordered_map<std::string, sMesh*> LoadedMeshes;
     static sMesh* GetMesh(const std::string& aFilename);
 
+    // TODO: Vulkan should only know about buffers. Once the buffers are loaded, the Vertices and Indices vectors are useless.
+    // Maybe this variables should be deleted and have a vulkan representation of the mesh and a resource representation of the mesh.
     std::vector<sVertex> Vertices;
     std::vector<uint32_t> Indices;
 

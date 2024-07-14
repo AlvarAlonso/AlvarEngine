@@ -193,6 +193,9 @@ LRESULT CALLBACK Engine::WinProc(HWND aWindowHandle, UINT aMsg, WPARAM aWParam, 
             }
 
             return 0;
+        case WM_KEYDOWN:
+            m_RenderModule.HandleInput(aWParam);
+            return 0;
         default:
             return DefWindowProcA(aWindowHandle, aMsg, aWParam, aLParam);
     }

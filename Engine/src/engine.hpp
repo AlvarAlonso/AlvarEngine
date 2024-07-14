@@ -5,6 +5,7 @@
 #include <windows.h>
 
 #include "renderer/render_module.hpp"
+
 struct sDimension2D
 {
     uint32_t Width = 0;

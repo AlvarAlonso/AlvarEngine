@@ -13,6 +13,6 @@ popd
 mkdir ..\bin
 
 pushd ..\bin
-cl /EHsc /WX /Zi %include_paths% /DDEBUG /c ..\Engine\src\*.cpp ..\Engine\src\core\*cpp ..\Engine\src\renderer\*cpp ..\Engine\src\renderer\Vulkan\*cpp ..\ThirdParty\VulkanBootstrap\*cpp
+cl /EHsc /WX /Zi %include_paths% /DDEBUG /c ..\Engine\src\*.cpp ..\Engine\src\core\*cpp ..\Engine\src\renderer\*cpp ..\Engine\src\renderer\core\*cpp ..\Engine\src\renderer\Vulkan\*cpp ..\ThirdParty\VulkanBootstrap\*cpp
 lib /out:engine.lib *.obj
 popd
