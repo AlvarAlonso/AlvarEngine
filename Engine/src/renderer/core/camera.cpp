@@ -14,8 +14,6 @@ CCamera::CCamera(glm::vec3 aPosition, glm::vec3 aUp, float aYaw, float aPitch) :
 
 glm::mat4 CCamera::GetView() const
 {
-    // SGSINFO("Camera Position: %f, %f, %f", m_Position.x, m_Position.y, m_Position.z);
-    // SGSINFO("Camera Rotation: Yaw %f, Pitch %f", m_Yaw, m_Pitch);
     return GetViewMatrix();
 }
 

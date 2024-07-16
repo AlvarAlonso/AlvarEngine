@@ -492,9 +492,9 @@ void CVulkanBackend::UpdateFrameUBO(const CCamera* const aCamera, uint32_t Image
 	assert(ImageIdx >= 0 && ImageIdx < FRAME_OVERLAP);
 
 	sFrameUBO FrameUBO = {};
-	//FrameUBO.View = aCamera->GetView();
-	glm::vec3 Position = aCamera->GetPosition();
-	FrameUBO.View = glm::lookAt(Position, Position + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	FrameUBO.View = aCamera->GetView();
+	// glm::vec3 Position = aCamera->GetPosition();
+	// FrameUBO.View = glm::lookAt(Position, Position + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 	FrameUBO.Proj = glm::perspective(glm::radians(70.0f), m_VulkanSwapchain->m_WindowExtent.width / (float)m_VulkanSwapchain->m_WindowExtent.height, 0.1f, 200.0f);
 	FrameUBO.Proj[1][1] *= -1;
 	FrameUBO.ViewProj = FrameUBO.Proj * FrameUBO.View;
