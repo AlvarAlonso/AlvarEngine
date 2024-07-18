@@ -11,6 +11,7 @@
 #include "vulkan_device.hpp"
 #include "vulkan_swapchain.hpp"
 #include <renderer/core/camera.hpp>
+#include <renderer/core/render_types.hpp>
 
 #include <VulkanBootstrap/VkBootstrap.h>
 #include <glm/gtc/matrix_transform.hpp>
@@ -18,42 +19,6 @@
 #include <iostream>
 #include <chrono>
 #include <array>
-
-sVertexInputDescription sVertex::GetVertexDescription()
-{
-	sVertexInputDescription Description{};
-
-	VkVertexInputBindingDescription MainBinding = {};
-	MainBinding.binding = 0;
-	MainBinding.stride = sizeof(sVertex);
-	MainBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-	Description.Bindings.push_back(MainBinding);
-
-	VkVertexInputAttributeDescription PositionAttribute = {};
-	PositionAttribute.binding = 0;
-	PositionAttribute.location = 0;
-	PositionAttribute.format = VK_FORMAT_R32G32B32_SFLOAT;
-	PositionAttribute.offset = offsetof(sVertex, Position);
-
-	VkVertexInputAttributeDescription ColorAttribute = {};
-	ColorAttribute.binding = 0;
-	ColorAttribute.location = 1;
-	ColorAttribute.format = VK_FORMAT_R32G32B32_SFLOAT;
-	ColorAttribute.offset = offsetof(sVertex, Color);
-
-	VkVertexInputAttributeDescription UVAttribute = {};
-	UVAttribute.binding = 0;
-	UVAttribute.location = 2;
-	UVAttribute.format = VK_FORMAT_R32G32_SFLOAT;
-	UVAttribute.offset = offsetof(sVertex, UV);
-
-	Description.Attributes.push_back(PositionAttribute);
-	Description.Attributes.push_back(ColorAttribute);
-	Description.Attributes.push_back(UVAttribute);
-
-	return Description;
-}
 
 CVulkanBackend::CVulkanBackend() :
 	m_bIsInitialized(false),
@@ -128,14 +93,25 @@ void CVulkanBackend::CreateRenderObjectsData(const std::vector<sRenderObject*>& 
 	{
 		sRenderObjectData RenderObjectData;
 		RenderObjectData.ModelMatrix = RenderObject->ModelMatrix;
-		RenderObjectData.pMesh = sMesh::GetMesh(RenderObject->pRenderObjectInfo->MeshPath);
-		m_RenderObjectsData.push_back(RenderObjectData);
-	}
+		const sMeshData* MeshData = sMeshData::GetMeshData(RenderObject->pRenderObjectInfo->MeshPath);
+		if (MeshData)
+		{
+			// If there is already a Vulkan representation of that mesh, use it instead of creating a copy of the same data.
+			// If not, create a new mesh with its Vertex and Index buffer.
+			if(sMesh::HasMesh(MeshData->ID))
+			{
+				RenderObjectData.pMesh = sMesh::GetMesh(MeshData->ID);
+			}
+			else
+			{
+				RenderObjectData.pMesh = new sMesh(MeshData->ID);
+				RenderObjectData.pMesh->NumIndices = static_cast<uint32_t>(MeshData->Indices32.size());
+				vkutils::CreateVertexBuffer(m_VulkanDevice, MeshData->Vertices, RenderObjectData.pMesh->VertexBuffer);
+				vkutils::CreateIndexBuffer(m_VulkanDevice, MeshData->Indices32, RenderObjectData.pMesh->IndexBuffer);
+			}
+		}
 
-	for (const auto& RenderObjectData : m_RenderObjectsData)
-	{
-		vkutils::CreateVertexBuffer(m_VulkanDevice, RenderObjectData.pMesh->Vertices, RenderObjectData.pMesh->VertexBuffer);
-		vkutils::CreateIndexBuffer(m_VulkanDevice, RenderObjectData.pMesh->Indices, RenderObjectData.pMesh->IndexBuffer);
+		m_RenderObjectsData.push_back(RenderObjectData);
 	}
 
 	void* Data;
@@ -443,7 +419,7 @@ void CVulkanBackend::InitPipelines()
 
 	PipelineBuilder.m_DynamicState = vkinit::DynamicStateCreateInfo(DynamicStates);
 
-	sVertexInputDescription VertexDescription = sVertex::GetVertexDescription();
+	sVertexInputDescription VertexDescription = GetVertexDescription();
 
 	PipelineBuilder.m_VertexInputInfo = vkinit::VertexInputStateCreateInfo();
 	PipelineBuilder.m_VertexInputInfo.vertexBindingDescriptionCount = VertexDescription.Bindings.size();
@@ -493,8 +469,6 @@ void CVulkanBackend::UpdateFrameUBO(const CCamera* const aCamera, uint32_t Image
 
 	sFrameUBO FrameUBO = {};
 	FrameUBO.View = aCamera->GetView();
-	// glm::vec3 Position = aCamera->GetPosition();
-	// FrameUBO.View = glm::lookAt(Position, Position + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 	FrameUBO.Proj = glm::perspective(glm::radians(70.0f), m_VulkanSwapchain->m_WindowExtent.width / (float)m_VulkanSwapchain->m_WindowExtent.height, 0.1f, 200.0f);
 	FrameUBO.Proj[1][1] *= -1;
 	FrameUBO.ViewProj = FrameUBO.Proj * FrameUBO.View;
@@ -545,7 +519,7 @@ void CVulkanBackend::RecordCommandBuffer(VkCommandBuffer aCommandBuffer, uint32_
 		vkCmdBindVertexBuffers(aCommandBuffer, 0, 1, &m_RenderObjectsData[i].pMesh->VertexBuffer.Buffer, &Offset);
 		vkCmdBindIndexBuffer(aCommandBuffer, m_RenderObjectsData[i].pMesh->IndexBuffer.Buffer, 0, VK_INDEX_TYPE_UINT32);
 		// TODO: Batch rendering.
-		vkCmdDrawIndexed(aCommandBuffer, static_cast<uint32_t>(m_RenderObjectsData[i].pMesh->Indices.size()), 1, 0, 0, i);
+		vkCmdDrawIndexed(aCommandBuffer, m_RenderObjectsData[i].pMesh->NumIndices, 1, 0, 0, i);
 	}
 
 	vkCmdEndRenderPass(aCommandBuffer);

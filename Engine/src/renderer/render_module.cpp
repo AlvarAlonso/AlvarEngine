@@ -63,18 +63,26 @@ void CRenderModule::CreateDefaultScene()
     sRenderObjectInfo RenderObjectInfo("../Resources/Meshes/viking_room.obj", "../Resources/Images/viking_room.png");    
     m_RenderObjectInfos["VikingRoom"] = RenderObjectInfo;
 
+    sRenderObjectInfo RenderObjectInfo2("sphere", "");
+    m_RenderObjectInfos["Sphere"] = RenderObjectInfo2;
+
     m_pDefaultScene = new CScene();
 
-    glm::mat4 ModelMatrix(0);
-    ModelMatrix = glm::translate(glm::vec3{0.0f, 0.0f, 0.0f});
-    sRenderObject* RenderObject = new sRenderObject();
-    RenderObject->ModelMatrix = ModelMatrix;
-    RenderObject->pRenderObjectInfo = &m_RenderObjectInfos.at("VikingRoom");
+    // glm::mat4 ModelMatrix(0);
+    // ModelMatrix = glm::translate(glm::vec3{0.0f, 0.0f, 0.0f});
+    // sRenderObject* RenderObject = new sRenderObject();
+    // RenderObject->ModelMatrix = ModelMatrix;
+    // RenderObject->pRenderObjectInfo = &m_RenderObjectInfos.at("VikingRoom");
 
-    sRenderObject* RenderObject2 = new sRenderObject();
-    RenderObject2->ModelMatrix = glm::translate(glm::vec3{10.0f, 0.0f, 10.0f});
-    RenderObject2->pRenderObjectInfo = &m_RenderObjectInfos.at("VikingRoom");
+    // sRenderObject* RenderObject2 = new sRenderObject();
+    // RenderObject2->ModelMatrix = glm::translate(glm::vec3{10.0f, 0.0f, 10.0f});
+    // RenderObject2->pRenderObjectInfo = &m_RenderObjectInfos.at("VikingRoom");
 
-    m_pDefaultScene->AddRenderObject(RenderObject);
-    m_pDefaultScene->AddRenderObject(RenderObject2);
+    sRenderObject* RenderObject3 = new sRenderObject();
+    RenderObject3->ModelMatrix = glm::translate(glm::vec3(0.0f, 0.0f, 0.0f));
+    RenderObject3->pRenderObjectInfo = &m_RenderObjectInfos.at("Sphere");
+
+    // m_pDefaultScene->AddRenderObject(RenderObject);
+    // m_pDefaultScene->AddRenderObject(RenderObject2);
+    m_pDefaultScene->AddRenderObject(RenderObject3);
 }

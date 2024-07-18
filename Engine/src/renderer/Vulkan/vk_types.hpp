@@ -7,10 +7,9 @@
 #include <glm/glm.hpp>
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
+#include <renderer/core/render_types.hpp>
 
-#include <string>
 #include <vector>
-#include <unordered_map>
 
 #define VK_CHECK(x)                                                 \
     do                                                              \
@@ -23,7 +22,7 @@
         }                                                           \
     } while (0)														\
     
-struct AllocatedBuffer 
+struct AllocatedBuffer
 {
 	VkBuffer Buffer;
     VmaAllocation Allocation;
@@ -41,40 +40,22 @@ struct sVertexInputDescription
     std::vector<VkVertexInputAttributeDescription> Attributes;
 };
 
-struct sVertex
-{
-    glm::vec3 Position;
-    glm::vec3 Color;
-    glm::vec2 UV;
-
-    static sVertexInputDescription GetVertexDescription();
-
-    bool operator==(const sVertex& aOther) const 
-    {
-        return Position == aOther.Position && UV == aOther.UV;
-    }
-};
-
-namespace std {
-	template<> struct hash<sVertex> {
-		size_t operator()(sVertex const& Vertex) const {
-			return ((hash<glm::vec3>()(Vertex.Position) ^
-				(hash<glm::vec3>()(Vertex.Color) << 1)) >> 1) ^
-				(hash<glm::vec2>()(Vertex.UV) << 1);
-		}
-	};
-}
+sVertexInputDescription GetVertexDescription();
 
 struct sMesh
-{
-    static std::unordered_map<std::string, sMesh*> LoadedMeshes;
-    static sMesh* GetMesh(const std::string& aFilename);
+{ 
+public:
+    static sMesh* GetMesh(const std::string& aID);
+    static bool HasMesh(const std::string& aID);
 
-    // TODO: Vulkan should only know about buffers. Once the buffers are loaded, the Vertices and Indices vectors are useless.
-    // Maybe this variables should be deleted and have a vulkan representation of the mesh and a resource representation of the mesh.
-    std::vector<sVertex> Vertices;
-    std::vector<uint32_t> Indices;
+    sMesh(const std::string& aID);
 
+    std::string ID;
     AllocatedBuffer VertexBuffer;
     AllocatedBuffer IndexBuffer;
+    uint32_t NumIndices;
+
+private:
+    static std::unordered_map<std::string, sMesh*> LoadedMeshes;
+
 };

@@ -18,5 +18,4 @@ namespace vkutils
 
     bool LoadImageFromFile(const CVulkanDevice* const aVulkanDevice, const std::string& aFile, AllocatedImage& aOutImage);
 
-    bool LoadMeshFromFile(const std::string& aFilename, sMesh& aOutMesh);
 }
