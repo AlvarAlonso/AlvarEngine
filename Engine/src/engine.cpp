@@ -3,13 +3,16 @@
 
 #include <GLFW/glfw3.h>
 
+#include <chrono>
+
 CEngine* CEngine::m_pInstance = nullptr;
 
-CEngine::CEngine() : m_bFramebufferResized(false), m_pWindow(nullptr)
+CEngine::CEngine() : m_bFramebufferResized(false), m_pWindow(nullptr), m_DeltaTime(0.0f)
 {
     SGSINFO("Engine object created!");
 }
 
+// TODO: Game Engine Architecture book describes a cleaner way to do that.
 CEngine *CEngine::Get()
 {
     if (m_pInstance == nullptr)
@@ -44,11 +47,15 @@ void CEngine::Run()
 {
     while (!glfwWindowShouldClose(m_pWindow))
     {
+        auto Start = std::chrono::system_clock::now();
+
         glfwPollEvents();
         m_RenderModule.Update();
+    
+        auto End = std::chrono::system_clock::now();
+        auto Elapsed = std::chrono::duration_cast<std::chrono::microseconds>(End - Start);
+        m_DeltaTime = Elapsed.count() / 1000.f;
     }
-
-    return;
 }
 
 void CEngine::Shutdown()
@@ -63,4 +70,9 @@ void CEngine::Shutdown()
 GLFWwindow* CEngine::GetWindow()
 {
     return  m_pWindow;
+}
+
+float CEngine::GetDeltaTime()
+{
+    return m_DeltaTime;
 }

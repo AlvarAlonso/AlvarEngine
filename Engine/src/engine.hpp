@@ -23,6 +23,8 @@ public:
     // but probably other classes who wants to access a module should not have those kind of functions available.
     CRenderModule* GetRenderModule(){ return &m_RenderModule; }
 
+    float GetDeltaTime();
+
     bool m_bFramebufferResized;
 
 private:
@@ -38,6 +40,9 @@ private:
 
     uint32 m_ClientWidth = 800;
     uint32 m_ClientHeight = 600;
+
+    // TODO: Move time related stuff to a Time manager.
+    float m_DeltaTime;
 
     CRenderModule m_RenderModule;
 };

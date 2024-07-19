@@ -7,9 +7,8 @@
 #include <glm/gtx/quaternion.hpp>
 #include <GLFW/glfw3.h>
 
-CCamera::CCamera(glm::vec3 aPosition, glm::vec3 aUp, float aYaw, float aPitch) :
-    m_Position(aPosition), m_Direction(glm::vec3(0.0f, 0.0f, -1.0f)), m_Up(aUp), m_Right(), 
-    m_Yaw(aYaw), m_Pitch(aPitch), m_Speed(DEFAULT_CAMERA_SPEED), m_Sensitivity(DEFAULT_CAMERA_SENSITIVITY)
+CCamera::CCamera(glm::vec3 aPosition, float aYaw, float aPitch, float aSpeed) :
+    m_Position(aPosition), m_Yaw(aYaw), m_Pitch(aPitch), m_Speed(aSpeed), m_Sensitivity(DEFAULT_CAMERA_SENSITIVITY)
 {
 }
 
@@ -42,13 +41,11 @@ void CCamera::Update()
         Rotate(-1.0f * 0.005f, 0.0f);
     }
 
-    const glm::mat4 CameraRotation = GetRotationMatrix();
-    m_Position += glm::vec3(CameraRotation * glm::vec4(Velocity * 0.005f, 0.f));
-}
+    glm::normalize(Velocity);
+    Velocity *= m_Speed * CEngine::Get()->GetDeltaTime();
 
-glm::mat4 CCamera::GetView() const
-{
-    return GetViewMatrix();
+    const glm::mat4 CameraRotation = GetRotationMatrix();
+    m_Position += glm::vec3(CameraRotation * glm::vec4(Velocity, 0.f));
 }
 
 glm::mat4 CCamera::GetViewMatrix() const
