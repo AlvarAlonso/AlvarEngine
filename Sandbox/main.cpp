@@ -7,7 +7,7 @@
 
 int main()
 {
-    Engine* App = Engine::Get();
+    CEngine* App = CEngine::Get();
 
     App->StartUp();
 

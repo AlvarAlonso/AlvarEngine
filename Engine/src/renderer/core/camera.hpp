@@ -3,8 +3,6 @@
 #include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
 
-#include <windows.h>
-
 const float DEFAULT_CAMERA_YAW = 0.0f;
 const float DEFAULT_CAMERA_PITCH = 0.0f;
 const float DEFAULT_CAMERA_SPEED = 0.1f;
@@ -28,8 +26,6 @@ public:
     glm::vec3 GetPosition() const { return m_Position; }
     glm::mat4 GetView() const;
     glm::mat4 GetProjection() const;
-
-    void HandleInput(WPARAM aInput);
 
 private:
     glm::mat4 GetViewMatrix() const;

@@ -1,9 +1,12 @@
 #include "vulkan_swapchain.hpp"
 #include "vulkan_device.hpp"
 #include "vk_initializers.hpp"
-#include <VulkanBootstrap/VkBootstrap.h>
 #include "engine.hpp"
 #include "core/logger.h"
+
+#include <VulkanBootstrap/VkBootstrap.h>
+#define GLFW_INCLUDE_VULKAN
+#include <GLFW/glfw3.h>
 
 #include <iostream>
 #include <array>
@@ -30,10 +33,14 @@ void CVulkanSwapchain::InitVulkanSwapchain()
 
 void CVulkanSwapchain::InitSwapchain()
 {
-	sDimension2D WindowDimensions = Engine::Get()->GetAppWindowDimensions();
-	m_WindowExtent = {WindowDimensions.Width, WindowDimensions.Height};
+	int Width = 0;
+	int Height = 0;
+	glfwGetFramebufferSize(CEngine::Get()->GetWindow(), &Width, &Height);
 
-	SGSINFO("Creating Swapchain. Framebuffer Size: %d, %d.", WindowDimensions.Width, WindowDimensions.Height);
+	m_WindowExtent.width = static_cast<uint32_t>(Width);
+	m_WindowExtent.height = static_cast<uint32_t>(Height);
+
+	SGSINFO("Creating Swapchain. Framebuffer Size: %d, %d.", m_WindowExtent.width, m_WindowExtent.height);
 
 	// TODO: initialize extent according to Window's created window
 	// Swapchain initialization.
@@ -162,6 +169,15 @@ void CVulkanSwapchain::InitDepthBuffer()
 void CVulkanSwapchain::RecreateSwapchain()
 {
 	SGSDEBUG("Recreating swapchain...");
+    
+	int Width = 0;
+	int Height = 0;
+	glfwGetFramebufferSize(CEngine::Get()->GetWindow(), &Width, &Height);
+	while (Width == 0 || Height == 0) 
+	{
+		glfwGetFramebufferSize(CEngine::Get()->GetWindow(), &Width, &Height);
+		glfwWaitEvents();
+	}
 
 	vkDeviceWaitIdle(m_VulkanDevice->m_Device);
 

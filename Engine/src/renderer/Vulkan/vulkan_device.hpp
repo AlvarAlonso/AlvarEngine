@@ -37,7 +37,7 @@ public:
     CVulkanDevice();
     ~CVulkanDevice();
 
-    void InitVulkanDevice(const HINSTANCE aInstanceHandle, const HWND aWindowHandle);
+    void InitVulkanDevice();
 
     void ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& aFunction) const;
     

@@ -7,5 +7,5 @@ set include_paths= /I..\Engine\src /I%VULKAN_SDK%\include /I..\ThirdParty
 set file_paths= ..\Sandbox\main.cpp
 
 pushd ..\bin
-cl /EHsc /WX /Zi %include_paths% /DDEBUG %file_paths% /link engine.lib user32.lib Gdi32.lib C:\VulkanSDK\1.3.250.1\Lib\vulkan-1.lib
+cl /EHsc /WX /Zi %include_paths% /DDEBUG %file_paths% /link engine.lib user32.lib Gdi32.lib shell32.lib C:\VulkanSDK\1.3.250.1\Lib\vulkan-1.lib ..\ThirdParty\glfw\lib-vc2022\glfw3_mt.lib
 popd

@@ -11,7 +11,7 @@ CRenderModule::CRenderModule() :
 {
 }
 
-bool CRenderModule::Initialize(const HINSTANCE aInstanceHandle, const HWND aWindowHandle)
+bool CRenderModule::Initialize()
 {
     m_pMainCamera = new CCamera();
 
@@ -23,7 +23,7 @@ bool CRenderModule::Initialize(const HINSTANCE aInstanceHandle, const HWND aWind
         throw std::runtime_error("Failed to create the Vulkan Backend!");
     }
 
-    m_pVulkanBackend->Initialize(aInstanceHandle, aWindowHandle);
+    m_pVulkanBackend->Initialize();
     m_pVulkanBackend->CreateRenderObjectsData(m_pDefaultScene->GetRenderObjects());
 
     return true;
@@ -45,15 +45,6 @@ bool CRenderModule::Shutdown()
 void CRenderModule::HandleWindowResize()
 {
     m_pVulkanBackend->HandleWindowResize();
-}
-
-void CRenderModule::HandleInput(WPARAM aInput)
-{
-    if (m_pMainCamera)
-    {
-        SGSDEBUG("pMainCamera Input");
-        m_pMainCamera->HandleInput(aInput);
-    }
 }
 
 std::unordered_map<std::string, sRenderObjectInfo> CRenderModule::m_RenderObjectInfos{};
@@ -79,7 +70,7 @@ void CRenderModule::CreateDefaultScene()
     // RenderObject2->pRenderObjectInfo = &m_RenderObjectInfos.at("VikingRoom");
 
     sRenderObject* RenderObject3 = new sRenderObject();
-    RenderObject3->ModelMatrix = glm::translate(glm::vec3(0.0f, 0.0f, 0.0f));
+    RenderObject3->ModelMatrix = glm::translate(glm::vec3(1.0f, 1.0f, -3.0f));
     RenderObject3->pRenderObjectInfo = &m_RenderObjectInfos.at("Sphere");
 
     // m_pDefaultScene->AddRenderObject(RenderObject);

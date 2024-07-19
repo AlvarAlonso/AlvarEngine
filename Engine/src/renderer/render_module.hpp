@@ -5,7 +5,6 @@
 #include "core/camera.hpp"
 
 // TODO: There should be no windows code in here.
-#include <windows.h> 
 #include <memory>
 #include <unordered_map>
 
@@ -19,13 +18,12 @@ public:
     CRenderModule();
     CRenderModule(const CRenderModule&) = delete;
 
-    bool Initialize(const HINSTANCE aInstanceHandle, const HWND aWindowHandle);
+    bool Initialize();
     void Render();
     bool Shutdown();
     void HandleWindowResize();
     // TODO: Design a generic way to handle input. Use layers (if an input is consumed in a top layer, do not go to the next layer) and my own
     // enum to represent keys.
-    void HandleInput(WPARAM aInput);
 
 private:
     void CreateDefaultScene();

@@ -27,10 +27,10 @@ CVulkanBackend::CVulkanBackend() :
 {
 }
 
-bool CVulkanBackend::Initialize(const HINSTANCE aInstanceHandle, const HWND aWindowHandle)
+bool CVulkanBackend::Initialize()
 {
 	m_VulkanDevice = new CVulkanDevice();
-	m_VulkanDevice->InitVulkanDevice(aInstanceHandle, aWindowHandle);
+	m_VulkanDevice->InitVulkanDevice();
 
 	m_VulkanSwapchain = new CVulkanSwapchain(m_VulkanDevice);
 	m_VulkanSwapchain->InitVulkanSwapchain();

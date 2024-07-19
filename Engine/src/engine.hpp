@@ -2,20 +2,14 @@
 
 #include "core/defines.h"
 
-#include <windows.h>
-
 #include "renderer/render_module.hpp"
 
-struct sDimension2D
-{
-    uint32_t Width = 0;
-    uint32_t Height = 0;
-};
+struct GLFWwindow;
 
-class Engine
+class CEngine
 {
 public:
-    static Engine* Get();
+    static CEngine* Get();
 
     void StartUp();
 
@@ -23,28 +17,24 @@ public:
 
     void Shutdown();
 
-    LRESULT WinProc(HWND aWindowHandle, UINT aMsg, WPARAM aWParam, LPARAM aLParam);
-
-    // TODO: I need a way to export only some functions. I don't want all public functions to be exported to the sandbox.
-    sDimension2D GetAppWindowDimensions();
+    GLFWwindow* GetWindow();
 
     // TODO: Show only selected functionalities or find another way to share modules. Engine must have access to initialization and stuff like this
     // but probably other classes who wants to access a module should not have those kind of functions available.
     CRenderModule* GetRenderModule(){ return &m_RenderModule; }
 
-private:
-    Engine();
-
-    Engine(const Engine& aEngine) = delete;
-    bool operator== (const Engine& aEngine) = delete;
-
-    bool InitWindowsApp();
+    bool m_bFramebufferResized;
 
 private:
-    static Engine* m_pInstance;
+    CEngine();
 
-    HINSTANCE m_WindowsInstance = 0;
-    HWND m_WindowHandle = 0;
+    CEngine(const CEngine& aEngine) = delete;
+    bool operator== (const CEngine& aEngine) = delete;
+
+private:
+    static CEngine* m_pInstance;
+
+    GLFWwindow* m_pWindow;
 
     uint32 m_ClientWidth = 800;
     uint32 m_ClientHeight = 600;

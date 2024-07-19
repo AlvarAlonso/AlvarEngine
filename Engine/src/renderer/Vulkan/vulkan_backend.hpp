@@ -49,7 +49,7 @@ class CVulkanBackend
 public:
     CVulkanBackend();
     
-    bool Initialize(const HINSTANCE aInstanceHandle, const HWND aWindowHandle);
+    bool Initialize();
 
     void Render(const CCamera* const aCamera);
 

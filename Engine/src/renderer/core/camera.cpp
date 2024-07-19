@@ -38,47 +38,6 @@ glm::mat4 CCamera::GetProjection() const
     return glm::mat4(1);
 }
 
-void CCamera::HandleInput(WPARAM aInput)
-{
-    glm::mat4 cameraRotation = GetRotationMatrix();
-    glm::vec3 velocity;
-
-    if (aInput == VK_LEFT)
-    {
-        velocity.y = -1.0f;
-    }
-    else if (aInput == VK_RIGHT)
-    {
-        velocity.y = 1.0f;
-    }
-    else if (aInput == VK_UP)
-    {
-        velocity.z = 1.0f;
-    }
-    else if (aInput == VK_DOWN)
-    {
-        velocity.z = -1.0f;
-    }
-    else if (aInput == 'W')
-    {
-        velocity.x = -1.0f;
-    }
-    else if (aInput == 'S')
-    {
-        velocity.x = 1.0f;
-    }
-    else if (aInput == 'Q')
-    {
-        Rotate(-1.0f, 0.0f);
-    }
-    else if (aInput == 'E')
-    {
-        Rotate(1.0f, 0.0f);
-    }
-
-    m_Position += glm::vec3(cameraRotation * glm::vec4(velocity * 0.5f, 0.f));
-}
-
 void CCamera::UpdateCameraVectors()
 {
     // glm::vec3 Front;

@@ -1,7 +1,9 @@
 #include "vulkan_device.hpp"
 #include "vk_initializers.hpp"
+#include <engine.hpp>
 
 #include <VulkanBootstrap/VkBootstrap.h>
+#include <GLFW/glfw3.h>
 
 #include "core/logger.h"
 #include <iostream>
@@ -20,7 +22,7 @@ CVulkanDevice::~CVulkanDevice()
     vkDestroyInstance(m_VulkanInstance, nullptr);
 }
 
-void CVulkanDevice::InitVulkanDevice(const HINSTANCE aInstanceHandle, const HWND aWindowHandle)
+void CVulkanDevice::InitVulkanDevice()
 {
 	vkb::InstanceBuilder InstanceBuilder;
 
@@ -36,12 +38,10 @@ void CVulkanDevice::InitVulkanDevice(const HINSTANCE aInstanceHandle, const HWND
 
 	m_DebugMessenger = vkbInstance.debug_messenger;
 
-	VkWin32SurfaceCreateInfoKHR SurfaceCreateInfo{};
-	SurfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-	SurfaceCreateInfo.hwnd = aWindowHandle;
-	SurfaceCreateInfo.hinstance = aInstanceHandle;
-
-	VK_CHECK(vkCreateWin32SurfaceKHR(m_VulkanInstance, &SurfaceCreateInfo, nullptr, &m_Surface));
+	if (glfwCreateWindowSurface(m_VulkanInstance, CEngine::Get()->GetWindow(), nullptr, &m_Surface))
+	{
+		throw std::runtime_error("Failed to create window surface!");
+	}
 	
 	VkPhysicalDeviceFeatures RequiredFeatures;
 	RequiredFeatures.samplerAnisotropy = VK_TRUE;
