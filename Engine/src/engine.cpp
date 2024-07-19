@@ -45,7 +45,7 @@ void CEngine::Run()
     while (!glfwWindowShouldClose(m_pWindow))
     {
         glfwPollEvents();
-        m_RenderModule.Render();
+        m_RenderModule.Update();
     }
 
     return;

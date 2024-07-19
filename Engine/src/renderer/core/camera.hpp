@@ -27,9 +27,10 @@ public:
     glm::mat4 GetView() const;
     glm::mat4 GetProjection() const;
 
+    void Update();
+
 private:
     glm::mat4 GetViewMatrix() const;
     glm::mat4 GetRotationMatrix() const;
-    void UpdateCameraVectors();
     void Rotate(float aXOfsset, float aYOffset, bool abConstraintPitch = true);
 };

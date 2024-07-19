@@ -3,6 +3,7 @@
 #include "Vulkan/vulkan_backend.hpp"
 #include "scene.hpp"
 #include "core/camera.hpp"
+#include <IModule.hpp>
 
 // TODO: There should be no windows code in here.
 #include <memory>
@@ -12,20 +13,24 @@
  * @brief Class that manages the rendering of scenes and all the associated 
  * rendering algorithms and data structures.
  */
-class CRenderModule
+class CRenderModule : public IModule
 {
 public:
     CRenderModule();
     CRenderModule(const CRenderModule&) = delete;
 
-    bool Initialize();
-    void Render();
-    bool Shutdown();
+    virtual bool Initialize() override;
+    virtual void Update() override;
+    virtual bool Shutdown() override;
+
     void HandleWindowResize();
+    
     // TODO: Design a generic way to handle input. Use layers (if an input is consumed in a top layer, do not go to the next layer) and my own
     // enum to represent keys.
 
 private:
+    void Render();
+
     void CreateDefaultScene();
 
     CCamera* m_pMainCamera;

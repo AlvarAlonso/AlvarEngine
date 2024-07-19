@@ -2,6 +2,7 @@
 #include "core/logger.h"
 
 #include <glm/gtx/transform.hpp>
+#include <GLFW/glfw3.h>
 
 #include <stdexcept>
 
@@ -29,10 +30,11 @@ bool CRenderModule::Initialize()
     return true;
 }
 
-void CRenderModule::Render()
+void CRenderModule::Update()
 {
-    // TODO: Should this pointer be checked?
-    m_pVulkanBackend->Render(m_pMainCamera);
+    m_pMainCamera->Update();
+
+    Render();
 }
 
 bool CRenderModule::Shutdown()
@@ -45,6 +47,12 @@ bool CRenderModule::Shutdown()
 void CRenderModule::HandleWindowResize()
 {
     m_pVulkanBackend->HandleWindowResize();
+}
+
+void CRenderModule::Render()
+{
+    // TODO: Should this pointer be checked?
+    m_pVulkanBackend->Render(m_pMainCamera);
 }
 
 std::unordered_map<std::string, sRenderObjectInfo> CRenderModule::m_RenderObjectInfos{};

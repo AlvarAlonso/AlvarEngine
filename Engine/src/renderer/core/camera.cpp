@@ -1,15 +1,49 @@
 #include "camera.hpp"
 #include "core/logger.h"
+#include <engine.hpp>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/quaternion.hpp>
+#include <GLFW/glfw3.h>
 
 CCamera::CCamera(glm::vec3 aPosition, glm::vec3 aUp, float aYaw, float aPitch) :
     m_Position(aPosition), m_Direction(glm::vec3(0.0f, 0.0f, -1.0f)), m_Up(aUp), m_Right(), 
     m_Yaw(aYaw), m_Pitch(aPitch), m_Speed(DEFAULT_CAMERA_SPEED), m_Sensitivity(DEFAULT_CAMERA_SENSITIVITY)
 {
-    UpdateCameraVectors();
+}
+
+void CCamera::Update()
+{
+    glm::vec3 Velocity = glm::vec3(0.0f);
+
+    if (glfwGetKey(CEngine::Get()->GetWindow(), GLFW_KEY_UP))
+    {
+        Velocity.z = -1.0f;
+    }
+    if (glfwGetKey(CEngine::Get()->GetWindow(), GLFW_KEY_DOWN))
+    {
+        Velocity.z = 1.0f;
+    }
+    if (glfwGetKey(CEngine::Get()->GetWindow(), GLFW_KEY_LEFT))
+    {
+        Velocity.x = -1.0f;
+    }
+    if (glfwGetKey(CEngine::Get()->GetWindow(), GLFW_KEY_RIGHT))
+    {
+        Velocity.x = 1.0f;
+    }
+    if (glfwGetKey(CEngine::Get()->GetWindow(), GLFW_KEY_E))
+    {
+        Rotate(1.0f * 0.005f, 0.0f);
+    }
+    if (glfwGetKey(CEngine::Get()->GetWindow(), GLFW_KEY_Q))
+    {
+        Rotate(-1.0f * 0.005f, 0.0f);
+    }
+
+    const glm::mat4 CameraRotation = GetRotationMatrix();
+    m_Position += glm::vec3(CameraRotation * glm::vec4(Velocity * 0.005f, 0.f));
 }
 
 glm::mat4 CCamera::GetView() const
@@ -38,24 +72,6 @@ glm::mat4 CCamera::GetProjection() const
     return glm::mat4(1);
 }
 
-void CCamera::UpdateCameraVectors()
-{
-    // glm::vec3 Front;
-    // Front.x = cos(glm::radians(m_Yaw)) * cos(glm::radians(m_Pitch));
-    // Front.y = sin(glm::radians(m_Pitch));
-    // Front.z = sin(glm::radians(m_Yaw)) * cos(glm::radians(m_Pitch));
-
-    // SGSINFO("Front: %f, %f, %f.", Front.x, Front.y, Front.z);
-
-    // m_Up = glm::vec3(0.0f, 0.0f, 1.0f);
-    // m_Direction = glm::normalize(Front);
-    // m_Right = glm::normalize(glm::cross(m_Direction, m_Up));
-    // //m_Right = glm::normalize(glm::cross(m_Direction, glm::vec3(0, 0, 1)));
-    // SGSINFO("m_Right: %f, %f, %f.", m_Right.x, m_Right.y, m_Right.z);
-    // //m_Up = glm::normalize(glm::cross(m_Right, m_Direction));
-    // SGSINFO("m_Up: %f, %f, %f.", m_Up.x, m_Up.y, m_Up.z);
-}
-
 void CCamera::Rotate(float aXOfsset, float aYOffset, bool abConstraintPitch)
 {
     aXOfsset *= m_Sensitivity;
@@ -70,6 +86,4 @@ void CCamera::Rotate(float aXOfsset, float aYOffset, bool abConstraintPitch)
         if (m_Pitch < -89.0f)
             m_Pitch = -89.9f;
     }
-
-    UpdateCameraVectors();
 }
