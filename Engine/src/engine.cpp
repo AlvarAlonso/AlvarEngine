@@ -23,11 +23,6 @@ CEngine *CEngine::Get()
     return m_pInstance;
 }
 
-static void FramebufferResizeCallback(GLFWwindow* window, int width, int height) {
-    auto app = reinterpret_cast<CEngine*>(glfwGetWindowUserPointer(window));
-    app->m_bFramebufferResized = true;
-}
-
 void CEngine::StartUp()
 {
     SGSINFO("StartUp!");
@@ -38,7 +33,11 @@ void CEngine::StartUp()
     
     m_pWindow = glfwCreateWindow(m_ClientWidth, m_ClientHeight, "AlvarEngine", nullptr, nullptr);
     glfwSetWindowUserPointer(m_pWindow, this);
-    glfwSetFramebufferSizeCallback(m_pWindow, FramebufferResizeCallback);
+    glfwSetFramebufferSizeCallback(m_pWindow, [](GLFWwindow* aWindow, int aWidth, int aHeight)
+    {
+        auto App = reinterpret_cast<CEngine*>(glfwGetWindowUserPointer(aWindow));
+        App->GetRenderModule()->HandleWindowResize();
+    });
 
     m_RenderModule.Initialize();
 }
