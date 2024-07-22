@@ -67,3 +67,10 @@ private:
 
     std::vector<uint16_t> Indices16;
 };
+
+enum class eRenderPath : uint8_t
+{
+    FORWARD = 0,
+    DEFERRED,
+    NUM
+};

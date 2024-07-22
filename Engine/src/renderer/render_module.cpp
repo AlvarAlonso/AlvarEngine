@@ -34,6 +34,15 @@ void CRenderModule::Update()
 {
     m_pMainCamera->Update();
 
+    if (m_bWasRenderPathChanged)
+    {
+        m_bWasRenderPathChanged = false;
+
+        // TODO: Release old render path resources.
+        // Initialize new render path resources.
+        // If something went wrong, initialize render module again.
+    }
+
     Render();
 }
 
@@ -47,6 +56,12 @@ bool CRenderModule::Shutdown()
 void CRenderModule::HandleWindowResize()
 {
     m_pVulkanBackend->HandleWindowResize();
+}
+
+void CRenderModule::SetRenderPath(eRenderPath aRenderPath)
+{
+    m_CurrentRenderPath = aRenderPath;
+    m_bWasRenderPathChanged = true;
 }
 
 void CRenderModule::Render()

@@ -1,29 +1,7 @@
 #pragma once
 
 #include "vk_types.hpp"
-
-#include <deque>
-#include <functional>
-
-struct sDeletionQueue
-{
-	std::deque<std::function<void()>> Deletors;
-
-	void PushFunction(std::function<void()>&& function)
-	{
-		Deletors.push_back(function);
-	}
-
-	void Flush()
-	{
-		for (auto it = Deletors.rbegin(); it != Deletors.rend(); it++)
-		{
-			(*it)();
-		}
-
-		Deletors.clear();
-	}
-};
+#include <core/types.hpp>
 
 struct sUploadContext
 {

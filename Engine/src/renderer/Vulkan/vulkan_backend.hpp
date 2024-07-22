@@ -6,6 +6,8 @@
 class CVulkanDevice;
 class CVulkanSwapchain;
 class CCamera;
+class CVulkanForwardRenderPath;
+class CVulkanDeferredRenderPath;
 
 constexpr uint32_t MAX_RENDER_OBJECTS = 1024;
 constexpr uint32_t FRAME_OVERLAP = 3;
@@ -66,32 +68,29 @@ private:
     void InitDescriptorSetLayouts();
     void InitDescriptorSetPool();
     void InitDescriptorSets();
-    void InitPipelines();
 
     void UpdateFrameUBO(const CCamera* const aCamera, uint32_t ImageIdx);
-    void RecordCommandBuffer(VkCommandBuffer aCommandBuffer, uint32_t aImageIdx);
-    void RenderFrame(const CCamera* const aCamera);
     
     bool HasStencilComponent(VkFormat aFormat);
 
+    friend class CVulkanDeferredRenderPath;
+    friend class CVulkanForwardRenderPath;
+
     bool m_bIsInitialized;
 
-    CVulkanDevice* m_VulkanDevice;
-    CVulkanSwapchain* m_VulkanSwapchain;
+    CVulkanDevice* m_pVulkanDevice;
+    CVulkanSwapchain* m_pVulkanSwapchain;
 
-    VkCommandPool m_CommandPool;
-    // ------------
+    CVulkanForwardRenderPath* m_pForwardRenderPath;
+    CVulkanDeferredRenderPath* m_pDeferredRenderPath;
 
-    // Descriptors.
-    VkDescriptorPool m_DescriptorPool;
     VkDescriptorSetLayout m_DescriptorSetLayout;
     VkDescriptorSetLayout m_RenderObjectsSetLayout;
-    // ------------
-    
-    // Pipelines.
-    VkPipelineLayout m_ForwardPipelineLayout;
-    VkPipeline m_ForwardPipeline;
-    //-------------
+    VkSampler m_DefaultSampler;
+
+    VkCommandPool m_CommandPool;
+
+    VkDescriptorPool m_DescriptorPool;
 
     sFrameData m_FramesData[FRAME_OVERLAP];
     uint32_t m_CurrentFrame;
@@ -104,6 +103,5 @@ private:
     VkDescriptorSet m_ObjectsDataDescriptorSet;
 
     VkImageView m_ImageView;
-    VkSampler m_DefaultSampler;
     AllocatedImage m_Image;
 };

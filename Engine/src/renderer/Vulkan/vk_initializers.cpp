@@ -23,6 +23,48 @@ VkCommandBufferAllocateInfo vkinit::CommandBufferAllocateInfo(VkCommandPool aCom
 
     return CreateInfo;
 }
+	
+VkDescriptorSetLayoutBinding vkinit::DescriptorLayoutBinding(VkDescriptorType aType, VkShaderStageFlags aStageFlags, uint32_t aBinding)
+{
+	VkDescriptorSetLayoutBinding SetBind = {};
+	SetBind.binding = aBinding;
+	SetBind.descriptorCount = 1;
+	SetBind.descriptorType = aType;
+	SetBind.pImmutableSamplers = nullptr;
+	SetBind.stageFlags = aStageFlags;
+
+	return SetBind;
+}
+
+VkWriteDescriptorSet vkinit::WriteDescriptorBuffer(VkDescriptorType aType, VkDescriptorSet aDstSet, VkDescriptorBufferInfo* aBufferInfo, uint32_t aBinding, uint32_t aCount)
+{
+	VkWriteDescriptorSet Write = {};
+	Write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	Write.pNext = nullptr;
+
+	Write.dstBinding = aBinding;
+	Write.dstSet = aDstSet;
+	Write.descriptorCount = aCount;
+	Write.descriptorType = aType;
+	Write.pBufferInfo = aBufferInfo;
+
+	return Write;
+}
+
+VkWriteDescriptorSet vkinit::WriteDescriptorImage(VkDescriptorType aType, VkDescriptorSet aDstSet, VkDescriptorImageInfo* aImageInfo, uint32_t aBinding)
+{
+	VkWriteDescriptorSet Write = {};
+	Write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	Write.pNext = nullptr;
+
+	Write.dstBinding = aBinding;
+	Write.dstSet = aDstSet;
+	Write.descriptorCount = 1;
+	Write.descriptorType = aType;
+	Write.pImageInfo = aImageInfo;
+
+	return Write;
+}
 
 VkPipelineLayoutCreateInfo vkinit::PipelineLayoutCreateInfo()
 {

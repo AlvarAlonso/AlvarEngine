@@ -9,6 +9,12 @@ namespace vkinit
 
     VkCommandBufferAllocateInfo CommandBufferAllocateInfo(VkCommandPool aCommandPool, uint32 aCount = 1, VkCommandBufferLevel aLevel = VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
+	VkDescriptorSetLayoutBinding DescriptorLayoutBinding(VkDescriptorType aType, VkShaderStageFlags aStageFlags, uint32_t aBinding);
+	
+	VkWriteDescriptorSet WriteDescriptorBuffer(VkDescriptorType aType, VkDescriptorSet aDstSet, VkDescriptorBufferInfo* aBufferInfo, uint32_t aBinding, uint32_t aCount = 1);
+
+	VkWriteDescriptorSet WriteDescriptorImage(VkDescriptorType aType, VkDescriptorSet aDstSet, VkDescriptorImageInfo* aImageInfo, uint32_t aBinding);
+
 	VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo();
 
     VkPipelineDynamicStateCreateInfo DynamicStateCreateInfo(const std::vector<VkDynamicState>& aDynamicStates);
