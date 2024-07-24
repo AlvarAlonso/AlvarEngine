@@ -5,7 +5,6 @@
 #include "core/camera.hpp"
 #include <core/IModule.hpp>
 
-// TODO: There should be no windows code in here.
 #include <memory>
 #include <unordered_map>
 
@@ -27,18 +26,21 @@ public:
     // TODO: Design a generic way to handle input. Use layers (if an input is consumed in a top layer, do not go to the next layer) and my own
     // enum to represent keys.
 
+    eRenderPath GetRenderPath();
     void SetRenderPath(eRenderPath aRenderPath);
+    inline CCamera* GetCamera() const { return m_pMainCamera; };
 
 private:
     void Render();
 
     void CreateDefaultScene();
 
+    static std::unordered_map<std::string, sRenderObjectInfo> m_RenderObjectInfos;
+
     CCamera* m_pMainCamera;
 
     // TODO: An scene is fed to the renderer but should not be part of it. What should be part of it, is a processed scene (for scene graph use purposes for example).
     CScene* m_pDefaultScene;
-    static std::unordered_map<std::string, sRenderObjectInfo> m_RenderObjectInfos;
 
     // TODO: This backend in the future, could be other graphics API.
     std::unique_ptr<CVulkanBackend> m_pVulkanBackend;

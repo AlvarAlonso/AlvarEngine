@@ -12,40 +12,40 @@ sMeshData CGeometryGenerator::CreateBox(float aWidth, float aHeight, float aDept
     float d2 = 0.5f * aDepth;
     
     // Fill in the front face vertex data.
-    Vertices[0] = sVertex(glm::vec3(-w2, -h2, -d2), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 1.0f));
-    Vertices[1] = sVertex(glm::vec3(-w2, +h2, -d2), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 0.0f));
-    Vertices[2] = sVertex(glm::vec3(+w2, +h2, -d2), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 0.0f));
-    Vertices[3] = sVertex(glm::vec3(+w2, -h2, -d2), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 1.0f));
+    Vertices[0] = sVertex(glm::vec3(-w2, -h2, -d2), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 1.0f));
+    Vertices[1] = sVertex(glm::vec3(-w2, +h2, -d2), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 0.0f));
+    Vertices[2] = sVertex(glm::vec3(+w2, +h2, -d2), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 0.0f));
+    Vertices[3] = sVertex(glm::vec3(+w2, -h2, -d2), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 1.0f));
 
     // Fill in the back face vertex data.
-    Vertices[4] = sVertex(glm::vec3(-w2, -h2, +d2), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 1.0f));
-    Vertices[5] = sVertex(glm::vec3(+w2, -h2, +d2), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 1.0f));
-    Vertices[6] = sVertex(glm::vec3(+w2, +h2, +d2), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 0.0f));
-    Vertices[7] = sVertex(glm::vec3(-w2, +h2, +d2), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 0.0f));
+    Vertices[4] = sVertex(glm::vec3(-w2, -h2, +d2), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 1.0f));
+    Vertices[5] = sVertex(glm::vec3(+w2, -h2, +d2), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 1.0f));
+    Vertices[6] = sVertex(glm::vec3(+w2, +h2, +d2), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 0.0f));
+    Vertices[7] = sVertex(glm::vec3(-w2, +h2, +d2), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 0.0f));
 
     // Fill in the top face vertex data.
-    Vertices[8]  = sVertex(glm::vec3(-w2, +h2, -d2), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 1.0f));
-    Vertices[9]  = sVertex(glm::vec3(-w2, +h2, +d2), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 0.0f));
-    Vertices[10] = sVertex(glm::vec3(+w2, +h2, +d2), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 0.0f));
-    Vertices[11] = sVertex(glm::vec3(+w2, +h2, -d2), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 1.0f));
+    Vertices[8]  = sVertex(glm::vec3(-w2, +h2, -d2), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 1.0f));
+    Vertices[9]  = sVertex(glm::vec3(-w2, +h2, +d2), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 0.0f));
+    Vertices[10] = sVertex(glm::vec3(+w2, +h2, +d2), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 0.0f));
+    Vertices[11] = sVertex(glm::vec3(+w2, +h2, -d2), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 1.0f));
 
     // Fill in the bottom face vertex data.
-    Vertices[12] = sVertex(glm::vec3(-w2, -h2, -d2), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 1.0f));
-    Vertices[13] = sVertex(glm::vec3(+w2, -h2, -d2), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 1.0f));
-    Vertices[14] = sVertex(glm::vec3(+w2, -h2, +d2), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 0.0f));
-    Vertices[15] = sVertex(glm::vec3(-w2, -h2, +d2), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 0.0f));
+    Vertices[12] = sVertex(glm::vec3(-w2, -h2, -d2), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 1.0f));
+    Vertices[13] = sVertex(glm::vec3(+w2, -h2, -d2), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 1.0f));
+    Vertices[14] = sVertex(glm::vec3(+w2, -h2, +d2), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 0.0f));
+    Vertices[15] = sVertex(glm::vec3(-w2, -h2, +d2), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 0.0f));
 
     // Fill in the left face vertex data.
-    Vertices[16] = sVertex(glm::vec3(-w2, -h2, +d2), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 1.0f));
-    Vertices[17] = sVertex(glm::vec3(-w2, +h2, +d2), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 0.0f));
-    Vertices[18] = sVertex(glm::vec3(-w2, +h2, -d2), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 0.0f));
-    Vertices[19] = sVertex(glm::vec3(-w2, -h2, -d2), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 1.0f));
+    Vertices[16] = sVertex(glm::vec3(-w2, -h2, +d2), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 1.0f));
+    Vertices[17] = sVertex(glm::vec3(-w2, +h2, +d2), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 0.0f));
+    Vertices[18] = sVertex(glm::vec3(-w2, +h2, -d2), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 0.0f));
+    Vertices[19] = sVertex(glm::vec3(-w2, -h2, -d2), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 1.0f));
 
     // Fill in the right face vertex data.
-    Vertices[20] = sVertex(glm::vec3(+w2, -h2, -d2), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 1.0f));
-    Vertices[21] = sVertex(glm::vec3(+w2, +h2, -d2), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 0.0f));
-    Vertices[22] = sVertex(glm::vec3(+w2, +h2, +d2), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 0.0f));
-    Vertices[23] = sVertex(glm::vec3(+w2, -h2, +d2), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 1.0f));
+    Vertices[20] = sVertex(glm::vec3(+w2, -h2, -d2), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 1.0f));
+    Vertices[21] = sVertex(glm::vec3(+w2, +h2, -d2), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 0.0f));
+    Vertices[22] = sVertex(glm::vec3(+w2, +h2, +d2), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 0.0f));
+    Vertices[23] = sVertex(glm::vec3(+w2, -h2, +d2), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 1.0f));
 
     MeshData.Vertices.assign(&Vertices[0], &Vertices[24]);
 
@@ -103,8 +103,8 @@ sMeshData CGeometryGenerator::CreateSphere(float aRadius, uint32_t aSliceCount, 
 	// Poles: note that there will be texture coordinate distortion as there is
 	// not a unique point on the texture map to assign to the pole when mapping
 	// a rectangular texture onto a sphere.
-	sVertex TopVertex(glm::vec3(0.0f, +aRadius, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 0.0f));
-	sVertex BottomVertex(glm::vec3(0.0f, -aRadius, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 1.0f));
+	sVertex TopVertex(glm::vec3(0.0f, +aRadius, 0.0f), glm::vec3(0.0f, +1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 0.0f));
+	sVertex BottomVertex(glm::vec3(0.0f, -aRadius, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 1.0f));
 
 	MeshData.Vertices.push_back(TopVertex);
 
@@ -127,6 +127,8 @@ sMeshData CGeometryGenerator::CreateSphere(float aRadius, uint32_t aSliceCount, 
 			Vertex.Position.x = aRadius*sinf(phi)*cosf(Theta);
 			Vertex.Position.y = aRadius*cosf(phi);
 			Vertex.Position.z = aRadius*sinf(phi)*sinf(Theta);
+
+			Vertex.Normal = glm::vec3(glm::normalize(Vertex.Position));
 
 			Vertex.UV.x = Theta / glm::pi<float>() * 2.0f;
 			Vertex.UV.y = phi / glm::pi<float>();
@@ -221,6 +223,7 @@ sMeshData CGeometryGenerator::CreateGrid(float aWidth, float aDepth, uint32_t aR
 			float x = -HalfWidth + j * dx;
 
 			MeshData.Vertices[i * aCols + j].Position = glm::vec3(x, 0.0f, z);
+			MeshData.Vertices[i * aCols + j].Normal = glm::vec3(0.0f, 1.0f, 0.0f);
 
 			// Stretch texture over grid.
 			MeshData.Vertices[i * aCols + j].UV.x = j * du;
@@ -265,21 +268,25 @@ sMeshData CGeometryGenerator::CreateQuad(float x, float y, float w, float h, flo
 	// Position coordinates specified in NDC space.
 	MeshData.Vertices[0] = sVertex(
         glm::vec3(x, y - h, aDepth),
+		glm::vec3(0.0f, 0.0f, -1.0f),
 		glm::vec3(1.0f, 1.0f, 1.0f),
 		glm::vec2(0.0f, 1.0f));
 
 	MeshData.Vertices[1] = sVertex(
 		glm::vec3(x, y, aDepth),
+		glm::vec3(0.0f, 0.0f, -1.0f),
 		glm::vec3(1.0f, 1.0f, 1.0f),
 		glm::vec2(0.0f, 0.0f));
 
 	MeshData.Vertices[2] = sVertex(
 		glm::vec3(x+w, y, aDepth),
+		glm::vec3(0.0f, 0.0f, -1.0f),
 		glm::vec3(1.0f, 1.0f, 1.0f),
 		glm::vec2(1.0f, 0.0f));
 
 	MeshData.Vertices[3] = sVertex(
 		glm::vec3(x+w, y-h, aDepth),
+		glm::vec3(0.0f, 0.0f, -1.0f),
 		glm::vec3(1.0f, 1.0f, 1.0f),
 		glm::vec2(1.0f, 1.0f));
 

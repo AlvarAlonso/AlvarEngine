@@ -12,9 +12,10 @@ struct sVertex
 {
     sVertex();
 
-    sVertex(const glm::vec3& aPosition, const glm::vec3& aColor, const glm::vec2& aUV);
+    sVertex(const glm::vec3& aPosition, const glm::vec3& aNormal, const glm::vec3& aColor, const glm::vec2& aUV);
 
     glm::vec3 Position;
+    glm::vec3 Normal;
     glm::vec3 Color;
     glm::vec2 UV;
 
@@ -28,7 +29,7 @@ namespace std {
 	template<> struct hash<sVertex> {
 		size_t operator()(sVertex const& Vertex) const {
 			return ((hash<glm::vec3>()(Vertex.Position) ^
-				(hash<glm::vec3>()(Vertex.Color) << 1)) >> 1) ^
+				(hash<glm::vec3>()(Vertex.Normal) << 1)) >> 1) ^
 				(hash<glm::vec2>()(Vertex.UV) << 1);
 		}
 	};

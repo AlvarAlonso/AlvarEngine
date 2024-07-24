@@ -22,12 +22,12 @@ static std::unordered_map<std::string, eGEOMETRY_PRIMITIVE> GeometryPrimitiveNam
     {"quad", eGEOMETRY_PRIMITIVE::QUAD} };
 
 sVertex::sVertex() :
-    Position(0.0f, 0.0f, 0.0f), Color(1.0f, 1.0f, 1.0f), UV(0.0f, 0.0f)
+    Position(0.0f, 0.0f, 0.0f), Normal(0.0f, 1.0f, 0.0f), Color(1.0f, 1.0f, 1.0f), UV(0.0f, 0.0f)
 {
 }
 
-sVertex::sVertex(const glm::vec3& aPosition, const glm::vec3& aColor, const glm::vec2& aUV) :
-    Position(std::move(aPosition)), Color(std::move(aColor)), UV(std::move(aUV))
+sVertex::sVertex(const glm::vec3& aPosition, const glm::vec3& aNormal, const glm::vec3& aColor, const glm::vec2& aUV) :
+    Position(std::move(aPosition)), Normal(std::move(aNormal)), Color(std::move(aColor)), UV(std::move(aUV))
 {
 }
 

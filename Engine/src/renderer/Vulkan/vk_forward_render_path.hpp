@@ -15,9 +15,12 @@ public:
     virtual void CreateResources() override;
     virtual void DestroyResources() override;
     virtual void Render(const CCamera* const aCamera) override;
+    virtual void UpdateBuffers() override {};
+    virtual void HandleSceneChanged() override;
 
     VkPipeline m_ForwardPipeline;
     VkPipelineLayout m_ForwardPipelineLayout;
+    
 private:
     void CreateForwardPipeline();
     void RecordCommands(VkCommandBuffer aCommandBuffer, uint32_t aImageIdx);

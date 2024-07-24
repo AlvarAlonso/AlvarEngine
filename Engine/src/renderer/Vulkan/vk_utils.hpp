@@ -17,5 +17,6 @@ namespace vkutils
     AllocatedBuffer CreateBuffer(const CVulkanDevice* const aVulkanDevice, size_t aAllocSize, VkBufferUsageFlags aUsage, VmaMemoryUsage aMemoryUsage, VmaAllocationCreateFlags aFlags = 0);
 
     bool LoadImageFromFile(const CVulkanDevice* const aVulkanDevice, const std::string& aFile, AllocatedImage& aOutImage);
-
+    
+    size_t GetAlignedSize(size_t aOriginalSize, size_t aAlignment);
 }

@@ -8,6 +8,10 @@ set include_paths= /I..\Engine\src /I%VULKAN_SDK%\include /I..\ThirdParty /I..\T
 pushd .\shaders
 %VULKAN_SDK%/Bin/glslc.exe shader.frag -o frag.spv
 %VULKAN_SDK%/Bin/glslc.exe shader.vert -o vert.spv
+%VULKAN_SDK%/Bin/glslc.exe deferred.frag -o deferred_frag.spv
+%VULKAN_SDK%/Bin/glslc.exe deferred.vert -o deferred_vert.spv
+%VULKAN_SDK%/Bin/glslc.exe light.frag -o light_frag.spv
+%VULKAN_SDK%/Bin/glslc.exe light.vert -o light_vert.spv
 popd
 
 mkdir ..\bin

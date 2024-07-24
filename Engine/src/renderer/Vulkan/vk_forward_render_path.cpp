@@ -78,7 +78,7 @@ void CVulkanForwardRenderPath::Render(const CCamera* const aCamera)
 {
     // TODO: Probably there is a chunk of this code that can go to CVulkanBackend.
 
-	vkWaitForFences(m_pVulkanDevice->m_Device, 1, &m_pVulkanBackend->m_FramesData[m_pVulkanBackend->m_CurrentFrame].RenderFence, VK_TRUE, UINT64_MAX);
+	VK_CHECK(vkWaitForFences(m_pVulkanDevice->m_Device, 1, &m_pVulkanBackend->m_FramesData[m_pVulkanBackend->m_CurrentFrame].RenderFence, VK_TRUE, UINT64_MAX));
 
 	uint32_t ImageIndex;
 	VkResult Result = vkAcquireNextImageKHR(m_pVulkanDevice->m_Device, m_pVulkanSwapchain->m_Swapchain, UINT64_MAX, m_pVulkanBackend->m_FramesData[m_pVulkanBackend->m_CurrentFrame].PresentSemaphore, VK_NULL_HANDLE, &ImageIndex);
@@ -96,7 +96,7 @@ void CVulkanForwardRenderPath::Render(const CCamera* const aCamera)
 	m_pVulkanBackend->UpdateFrameUBO(aCamera, m_pVulkanBackend->m_CurrentFrame);
 
 	// Delay fence reset to prevent possible deadlock when recreating the swapchain.
-	vkResetFences(m_pVulkanDevice->m_Device, 1, &m_pVulkanBackend->m_FramesData[m_pVulkanBackend->m_CurrentFrame].RenderFence);
+	VK_CHECK(vkResetFences(m_pVulkanDevice->m_Device, 1, &m_pVulkanBackend->m_FramesData[m_pVulkanBackend->m_CurrentFrame].RenderFence));
 
 	vkResetCommandBuffer(m_pVulkanBackend->m_FramesData[m_pVulkanBackend->m_CurrentFrame].MainCommandBuffer, 0);
 	RecordCommands(m_pVulkanBackend->m_FramesData[m_pVulkanBackend->m_CurrentFrame].MainCommandBuffer, ImageIndex);
@@ -126,6 +126,10 @@ void CVulkanForwardRenderPath::Render(const CCamera* const aCamera)
 	vkQueuePresentKHR(m_pVulkanDevice->m_GraphicsQueue, &PresentInfo);
 
 	m_pVulkanBackend->m_CurrentFrame = (m_pVulkanBackend->m_CurrentFrame + 1) % FRAME_OVERLAP;
+}
+
+void CVulkanForwardRenderPath::HandleSceneChanged()
+{
 }
 
 void CVulkanForwardRenderPath::CreateForwardPipeline()

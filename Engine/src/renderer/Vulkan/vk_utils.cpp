@@ -265,3 +265,14 @@ bool vkutils::LoadImageFromFile(const CVulkanDevice* const aVulkanDevice, const 
 	
 	return true;
 }
+
+size_t vkutils::GetAlignedSize(size_t aOriginalSize, size_t aAlignment)
+{
+	size_t AlignedSize = aOriginalSize;
+	if (aAlignment > 0)
+	{
+		AlignedSize = (AlignedSize + aAlignment - 1) & ~(aAlignment - 1);
+	}
+
+	return AlignedSize;
+}

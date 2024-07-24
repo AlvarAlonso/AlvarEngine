@@ -50,6 +50,13 @@ bool renderutils::LoadMeshFromFile(const std::string& aFilename, sMeshData& aOut
 				Attrib.vertices[3 * Index.vertex_index + 2]
 			};
 
+			Vertex.Normal = 
+			{
+                Attrib.normals[3 * Index.normal_index + 0],
+                Attrib.normals[3 * Index.normal_index + 1],
+                Attrib.normals[3 * Index.normal_index + 2]
+            };
+
 			Vertex.UV = 
 			{
 				Attrib.texcoords[2 * Index.texcoord_index + 0],

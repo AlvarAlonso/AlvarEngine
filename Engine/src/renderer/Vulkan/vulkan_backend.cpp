@@ -24,6 +24,9 @@
 
 CVulkanBackend::CVulkanBackend() :
 	m_bIsInitialized(false),
+	m_pVulkanDevice(nullptr),
+	m_pVulkanSwapchain(nullptr),
+	m_pCurrentRenderPath(nullptr),
 	m_CurrentFrame(0),
 	m_bWasWindowResized(false)
 {
@@ -47,8 +50,8 @@ bool CVulkanBackend::Initialize()
 
 	InitTextureSamplers();
 
-	m_pForwardRenderPath = new CVulkanForwardRenderPath(this, m_pVulkanDevice, m_pVulkanSwapchain);
-	m_pForwardRenderPath->CreateResources();
+	// m_pForwardRenderPath = new CVulkanForwardRenderPath(this, m_pVulkanDevice, m_pVulkanSwapchain);
+	// m_pForwardRenderPath->CreateResources();
 
 	vkutils::LoadImageFromFile(m_pVulkanDevice, "../Resources/Images/viking_room.png", m_Image);
 	
@@ -57,6 +60,8 @@ bool CVulkanBackend::Initialize()
 	VK_CHECK(vkCreateImageView(m_pVulkanDevice->m_Device, &ViewInfo, nullptr, &m_ImageView));
 
 	InitDescriptorSets();
+
+	m_pCurrentRenderPath = CreateRenderPath();
 
     m_bIsInitialized = true;
 
@@ -67,15 +72,22 @@ void CVulkanBackend::Render(const CCamera* const aCamera)
 {
 	assert(m_bIsInitialized);
 
-	if (m_pForwardRenderPath)
+	// if (m_pForwardRenderPath)
+	// {
+	// 	m_pForwardRenderPath->Render(aCamera);
+	// }
+
+	if (m_pCurrentRenderPath)
 	{
-		m_pForwardRenderPath->Render(aCamera);
+		m_pCurrentRenderPath->UpdateBuffers();
+		m_pCurrentRenderPath->Render(aCamera);
 	}
 }
 
 bool CVulkanBackend::Shutdown()
 {
-	m_pForwardRenderPath->DestroyResources();
+	m_pCurrentRenderPath->DestroyResources();
+	delete m_pCurrentRenderPath;
 
 	if (m_bIsInitialized)
 	{
@@ -112,6 +124,7 @@ void CVulkanBackend::CreateRenderObjectsData(const std::vector<sRenderObject*>& 
 			}
 			else
 			{
+				// TODO: This is not being added to the meshes map?
 				RenderObjectData.pMesh = new sMesh(MeshData->ID);
 				RenderObjectData.pMesh->NumIndices = static_cast<uint32_t>(MeshData->Indices32.size());
 				vkutils::CreateVertexBuffer(m_pVulkanDevice, MeshData->Vertices, RenderObjectData.pMesh->VertexBuffer);
@@ -133,6 +146,11 @@ void CVulkanBackend::CreateRenderObjectsData(const std::vector<sRenderObject*>& 
 	}
 
 	vmaUnmapMemory(m_pVulkanDevice->m_Allocator, m_ObjectsDataBuffer.Allocation);
+
+	if (m_pCurrentRenderPath)
+	{
+		m_pCurrentRenderPath->HandleSceneChanged();
+	}
 }
 
 void CVulkanBackend::InitCommandPools()
@@ -376,6 +394,52 @@ void CVulkanBackend::InitDescriptorSetLayouts()
 		vkDestroyDescriptorSetLayout(m_pVulkanDevice->m_Device, m_DescriptorSetLayout, nullptr);
 		vkDestroyDescriptorSetLayout(m_pVulkanDevice->m_Device, m_RenderObjectsSetLayout, nullptr);
 	});
+}
+
+IRenderPath* CVulkanBackend::CreateRenderPath()
+{
+	// TODO: I need a module getter.
+	const eRenderPath RenderPath = CEngine::Get()->GetRenderModule()->GetRenderPath();
+	IRenderPath* NewRenderPath = nullptr;
+	switch (RenderPath)
+	{
+		case eRenderPath::FORWARD:
+		{
+			NewRenderPath = new CVulkanForwardRenderPath(this, m_pVulkanDevice, m_pVulkanSwapchain);
+		}
+		break;
+		
+		case eRenderPath::DEFERRED:
+		{
+			NewRenderPath = new CVulkanDeferredRenderPath(this, m_pVulkanDevice, m_pVulkanSwapchain);
+		}
+		break;
+
+		default:
+			SGSERROR("No IRenderPath created!");
+			break;
+	}
+
+	InitRenderPath(NewRenderPath);
+
+	return NewRenderPath;
+}
+
+void CVulkanBackend::InitRenderPath(IRenderPath* aRenderPath)
+{
+	if (aRenderPath == nullptr)
+		return;
+
+	if (m_pCurrentRenderPath)
+	{
+		m_pCurrentRenderPath->DestroyResources();
+		delete m_pCurrentRenderPath;
+		m_pCurrentRenderPath = nullptr;
+	}
+
+	m_pCurrentRenderPath = aRenderPath;
+	m_pCurrentRenderPath->CreateResources();
+	m_pCurrentRenderPath->HandleSceneChanged();
 }
 
 void CVulkanBackend::UpdateFrameUBO(const CCamera* const aCamera, uint32_t ImageIdx)

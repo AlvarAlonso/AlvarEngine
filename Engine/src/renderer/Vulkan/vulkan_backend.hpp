@@ -6,8 +6,7 @@
 class CVulkanDevice;
 class CVulkanSwapchain;
 class CCamera;
-class CVulkanForwardRenderPath;
-class CVulkanDeferredRenderPath;
+class IRenderPath;
 
 constexpr uint32_t MAX_RENDER_OBJECTS = 1024;
 constexpr uint32_t FRAME_OVERLAP = 3;
@@ -69,6 +68,9 @@ private:
     void InitDescriptorSetPool();
     void InitDescriptorSets();
 
+    IRenderPath* CreateRenderPath();
+    void InitRenderPath(IRenderPath* aRenderPath);
+
     void UpdateFrameUBO(const CCamera* const aCamera, uint32_t ImageIdx);
     
     bool HasStencilComponent(VkFormat aFormat);
@@ -81,8 +83,7 @@ private:
     CVulkanDevice* m_pVulkanDevice;
     CVulkanSwapchain* m_pVulkanSwapchain;
 
-    CVulkanForwardRenderPath* m_pForwardRenderPath;
-    CVulkanDeferredRenderPath* m_pDeferredRenderPath;
+    IRenderPath* m_pCurrentRenderPath;
 
     VkDescriptorSetLayout m_DescriptorSetLayout;
     VkDescriptorSetLayout m_RenderObjectsSetLayout;

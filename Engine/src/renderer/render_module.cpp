@@ -7,8 +7,11 @@
 #include <stdexcept>
 
 CRenderModule::CRenderModule() :
+    m_pMainCamera(nullptr),
     m_pDefaultScene(nullptr),
-    m_pVulkanBackend(nullptr)
+    m_pVulkanBackend(nullptr),
+    m_CurrentRenderPath(eRenderPath::FORWARD),
+    m_bWasRenderPathChanged(false)
 {
 }
 
@@ -56,6 +59,11 @@ bool CRenderModule::Shutdown()
 void CRenderModule::HandleWindowResize()
 {
     m_pVulkanBackend->HandleWindowResize();
+}
+
+eRenderPath CRenderModule::GetRenderPath()
+{
+    return m_CurrentRenderPath;
 }
 
 void CRenderModule::SetRenderPath(eRenderPath aRenderPath)

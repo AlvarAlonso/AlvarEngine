@@ -18,19 +18,26 @@ sVertexInputDescription GetVertexDescription()
 	PositionAttribute.format = VK_FORMAT_R32G32B32_SFLOAT;
 	PositionAttribute.offset = offsetof(sVertex, Position);
 
+	VkVertexInputAttributeDescription NormalAttribute = {};
+    NormalAttribute.binding = 0;
+    NormalAttribute.location = 1;
+    NormalAttribute.format = VK_FORMAT_R32G32B32_SFLOAT;
+    NormalAttribute.offset = offsetof(sVertex, Normal);
+
 	VkVertexInputAttributeDescription ColorAttribute = {};
 	ColorAttribute.binding = 0;
-	ColorAttribute.location = 1;
+	ColorAttribute.location = 2;
 	ColorAttribute.format = VK_FORMAT_R32G32B32_SFLOAT;
 	ColorAttribute.offset = offsetof(sVertex, Color);
 
 	VkVertexInputAttributeDescription UVAttribute = {};
 	UVAttribute.binding = 0;
-	UVAttribute.location = 2;
+	UVAttribute.location = 3;
 	UVAttribute.format = VK_FORMAT_R32G32_SFLOAT;
 	UVAttribute.offset = offsetof(sVertex, UV);
 
 	Description.Attributes.push_back(PositionAttribute);
+	Description.Attributes.push_back(NormalAttribute);
 	Description.Attributes.push_back(ColorAttribute);
 	Description.Attributes.push_back(UVAttribute);
 
