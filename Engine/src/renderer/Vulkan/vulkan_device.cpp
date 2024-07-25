@@ -15,6 +15,9 @@ CVulkanDevice::CVulkanDevice()
 
 CVulkanDevice::~CVulkanDevice()
 {
+	vkDestroyFence(m_Device, m_UploadContext.m_UploadFence, nullptr);
+	vkDestroyCommandPool(m_Device, m_UploadContext.m_CommandPool, nullptr);
+	vmaDestroyAllocator(m_Allocator);
     vkDestroyDevice(m_Device, nullptr);
     vkDestroySurfaceKHR(m_VulkanInstance, m_Surface, nullptr);
     vkb::destroy_debug_utils_messenger(m_VulkanInstance, m_DebugMessenger);
@@ -75,6 +78,12 @@ void CVulkanDevice::InitVulkanDevice()
 	AllocatorInfo.instance = m_VulkanInstance;
 	AllocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
 	vmaCreateAllocator(&AllocatorInfo, &m_Allocator);
+
+	VkCommandPoolCreateInfo UploadCommandPoolInfo = vkinit::CommandPoolCreateInfo(m_GraphicsQueueFamily);
+	VK_CHECK(vkCreateCommandPool(m_Device, &UploadCommandPoolInfo, nullptr, &m_UploadContext.m_CommandPool));
+
+	VkFenceCreateInfo UploadFenceInfo = vkinit::FenceCreateInfo();
+	VK_CHECK(vkCreateFence(m_Device, &UploadFenceInfo, nullptr, &m_UploadContext.m_UploadFence));
 }
 
 void CVulkanDevice::ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& aFunction) const

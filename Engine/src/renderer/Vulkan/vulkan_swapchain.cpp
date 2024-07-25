@@ -193,19 +193,20 @@ void CVulkanSwapchain::RecreateSwapchain()
 
 void CVulkanSwapchain::CleanupSwapchain()
 {
+	vkDestroyImageView(m_VulkanDevice->m_Device, m_DepthImageView, nullptr);
     vmaDestroyImage(m_VulkanDevice->m_Allocator, m_DepthImage.Image, m_DepthImage.Allocation);
 
     for (size_t i = 0; i < m_Framebuffers.size(); ++i)
 	{
 		vkDestroyFramebuffer(m_VulkanDevice->m_Device, m_Framebuffers[i], nullptr);
-        m_Framebuffers.clear();
 	}
+    m_Framebuffers.clear();
 
 	for (size_t i = 0; i < m_SwapchainImageViews.size(); ++i)
 	{
 		vkDestroyImageView(m_VulkanDevice->m_Device, m_SwapchainImageViews[i], nullptr);
-        m_SwapchainImageViews.clear();
 	}
+    m_SwapchainImageViews.clear();
 
 	vkDestroySwapchainKHR(m_VulkanDevice->m_Device, m_Swapchain, nullptr);
 }

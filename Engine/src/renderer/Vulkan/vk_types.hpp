@@ -49,6 +49,7 @@ public:
     static bool HasMesh(const std::string& aID);
 
     sMesh(const std::string& aID);
+    ~sMesh();
 
     std::string ID;
     AllocatedBuffer VertexBuffer;

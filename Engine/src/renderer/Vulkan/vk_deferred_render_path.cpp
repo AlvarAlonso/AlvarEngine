@@ -29,6 +29,7 @@ void CVulkanDeferredRenderPath::CreateResources()
     
 void CVulkanDeferredRenderPath::DestroyResources()
 {
+	vkQueueWaitIdle(m_pVulkanDevice->m_GraphicsQueue);
     m_MainDeletionQueue.Flush();
 }
 
@@ -241,6 +242,12 @@ void CVulkanDeferredRenderPath::CreateDeferredQuad()
 	m_Quad.pMesh->NumIndices = static_cast<uint32_t>(Quad.Indices32.size());
 	vkutils::CreateVertexBuffer(m_pVulkanDevice, Quad.Vertices, m_Quad.pMesh->VertexBuffer);
 	vkutils::CreateIndexBuffer(m_pVulkanDevice, Quad.Indices32, m_Quad.pMesh->IndexBuffer);
+
+	m_MainDeletionQueue.PushFunction([=]
+	{
+		vmaDestroyBuffer(m_pVulkanDevice->m_Allocator, m_Quad.pMesh->VertexBuffer.Buffer, m_Quad.pMesh->VertexBuffer.Allocation);
+		vmaDestroyBuffer(m_pVulkanDevice->m_Allocator, m_Quad.pMesh->IndexBuffer.Buffer, m_Quad.pMesh->IndexBuffer.Allocation);
+	});
 }
 
 void CVulkanDeferredRenderPath::CreateDeferredAttachments()
@@ -382,6 +389,7 @@ void CVulkanDeferredRenderPath::CreateGBufferDescriptors()
 
 	m_MainDeletionQueue.PushFunction([=]
 	{
+		vmaDestroyBuffer(m_pVulkanDevice->m_Allocator, m_CameraBuffer.Buffer, m_CameraBuffer.Allocation);
 		vkDestroyDescriptorSetLayout(m_pVulkanDevice->m_Device, m_CameraSetLayout, nullptr);
 		vkDestroyDescriptorSetLayout(m_pVulkanDevice->m_Device, m_GBufferSetLayout, nullptr);
 		vkDestroyDescriptorPool(m_pVulkanDevice->m_Device, m_DeferredDescriptorPool, nullptr);

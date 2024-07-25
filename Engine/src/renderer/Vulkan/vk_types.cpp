@@ -69,3 +69,9 @@ bool sMesh::HasMesh(const std::string& aID)
 sMesh::sMesh(const std::string& aID) : ID(std::move(aID))
 {
 }
+
+sMesh::~sMesh()
+{
+	LoadedMeshes.erase(ID);
+}
+

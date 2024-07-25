@@ -81,7 +81,7 @@ void vkutils::CreateVertexBuffer(const CVulkanDevice* const aVulkanDevice, const
 
 	VmaAllocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
-	// TODO: Resource Leak. Destroy this buffer somewhere.
+	// It is responsibility of the caller to delete this.
 	VK_CHECK(vmaCreateBuffer(Allocator, &VertexBufferInfo, &VmaAllocInfo,
 		&aOutBuffer.Buffer, &aOutBuffer.Allocation, nullptr));
 
@@ -132,7 +132,7 @@ void vkutils::CreateIndexBuffer(const CVulkanDevice* const aVulkanDevice, const 
 
     VmaAllocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
-	// TODO: Resource Leak. Destroy this buffer somewhere.
+	// It is responsibility of the caller to delete this.
 	VK_CHECK(vmaCreateBuffer(Allocator, &IndexBufferInfo, &VmaAllocInfo,
 		&aOutBuffer.Buffer, &aOutBuffer.Allocation, nullptr));
 
@@ -213,7 +213,7 @@ bool vkutils::LoadImageFromFile(const CVulkanDevice* const aVulkanDevice, const 
 	VmaAllocationCreateInfo ImageAllocInfo = {};
 	ImageAllocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
-	// TODO: Memory leak. Destroy this image.
+	// It is responsibility of the caller to destroy the image.
 	vmaCreateImage(Allocator, &ImageInfo, &ImageAllocInfo, &NewImage.Image, &NewImage.Allocation, nullptr);
 
 	aVulkanDevice->ImmediateSubmit([&](VkCommandBuffer aCmd)

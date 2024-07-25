@@ -20,9 +20,8 @@ private:
     void InitDepthBuffer();
     void InitFramebuffers();
 
-    // TODO: This will destroy resources that are also destroyed in the main deletion queue. Do not store resources to be deleted in a queue. Delete them manually.
     void CleanupSwapchain();
-    
+
     CVulkanDevice* m_VulkanDevice;
 
 public:

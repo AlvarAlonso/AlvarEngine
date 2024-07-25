@@ -1,5 +1,6 @@
 #include "render_module.hpp"
 #include "core/logger.h"
+#include "engine.hpp"
 
 #include <glm/gtx/transform.hpp>
 #include <GLFW/glfw3.h>
@@ -10,8 +11,7 @@ CRenderModule::CRenderModule() :
     m_pMainCamera(nullptr),
     m_pDefaultScene(nullptr),
     m_pVulkanBackend(nullptr),
-    m_CurrentRenderPath(eRenderPath::FORWARD),
-    m_bWasRenderPathChanged(false)
+    m_CurrentRenderPath(eRenderPath::FORWARD)
 {
 }
 
@@ -36,14 +36,15 @@ bool CRenderModule::Initialize()
 void CRenderModule::Update()
 {
     m_pMainCamera->Update();
-
-    if (m_bWasRenderPathChanged)
+    
+    // TODO: Release old render path resources.
+    // Initialize new render path resources.
+    // If something went wrong, initialize render module again.
+    if (glfwGetKey(CEngine::Get()->GetWindow(), GLFW_KEY_SPACE) == GLFW_PRESS)
     {
-        m_bWasRenderPathChanged = false;
-
-        // TODO: Release old render path resources.
-        // Initialize new render path resources.
-        // If something went wrong, initialize render module again.
+        m_CurrentRenderPath = m_CurrentRenderPath == eRenderPath::FORWARD ? eRenderPath::DEFERRED : eRenderPath::FORWARD;
+        SGSINFO("Switching RenderPath to: %s.", m_CurrentRenderPath == eRenderPath::FORWARD ? "FORWARD" : "DEFERRED");
+        m_pVulkanBackend->ChangeRenderPath();
     }
 
     Render();
@@ -64,12 +65,6 @@ void CRenderModule::HandleWindowResize()
 eRenderPath CRenderModule::GetRenderPath()
 {
     return m_CurrentRenderPath;
-}
-
-void CRenderModule::SetRenderPath(eRenderPath aRenderPath)
-{
-    m_CurrentRenderPath = aRenderPath;
-    m_bWasRenderPathChanged = true;
 }
 
 void CRenderModule::Render()

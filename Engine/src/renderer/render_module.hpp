@@ -27,7 +27,6 @@ public:
     // enum to represent keys.
 
     eRenderPath GetRenderPath();
-    void SetRenderPath(eRenderPath aRenderPath);
     inline CCamera* GetCamera() const { return m_pMainCamera; };
 
 private:
@@ -46,5 +45,4 @@ private:
     std::unique_ptr<CVulkanBackend> m_pVulkanBackend;
 
     eRenderPath m_CurrentRenderPath;
-    bool m_bWasRenderPathChanged;
 };

@@ -50,14 +50,20 @@ bool CVulkanBackend::Initialize()
 
 	InitTextureSamplers();
 
-	// m_pForwardRenderPath = new CVulkanForwardRenderPath(this, m_pVulkanDevice, m_pVulkanSwapchain);
-	// m_pForwardRenderPath->CreateResources();
-
 	vkutils::LoadImageFromFile(m_pVulkanDevice, "../Resources/Images/viking_room.png", m_Image);
-	
+	m_MainDeletionQueue.PushFunction([=]
+	{
+		vmaDestroyImage(m_pVulkanDevice->m_Allocator, m_Image.Image, m_Image.Allocation);
+	});
+
 	// TODO: Placeholder for testing purposes. TO BE REMOVED.
 	VkImageViewCreateInfo ViewInfo = vkinit::ImageViewCreateInfo(VK_FORMAT_R8G8B8A8_SRGB, m_Image.Image, VK_IMAGE_ASPECT_COLOR_BIT);
 	VK_CHECK(vkCreateImageView(m_pVulkanDevice->m_Device, &ViewInfo, nullptr, &m_ImageView));
+
+	m_MainDeletionQueue.PushFunction([=]
+	{
+		vkDestroyImageView(m_pVulkanDevice->m_Device, m_ImageView, nullptr);
+	});
 
 	InitDescriptorSets();
 
@@ -72,11 +78,6 @@ void CVulkanBackend::Render(const CCamera* const aCamera)
 {
 	assert(m_bIsInitialized);
 
-	// if (m_pForwardRenderPath)
-	// {
-	// 	m_pForwardRenderPath->Render(aCamera);
-	// }
-
 	if (m_pCurrentRenderPath)
 	{
 		m_pCurrentRenderPath->UpdateBuffers();
@@ -86,17 +87,25 @@ void CVulkanBackend::Render(const CCamera* const aCamera)
 
 bool CVulkanBackend::Shutdown()
 {
-	m_pCurrentRenderPath->DestroyResources();
-	delete m_pCurrentRenderPath;
+	SGSINFO("Shutting down Vulkan");
+	vkQueueWaitIdle(m_pVulkanDevice->m_GraphicsQueue);
 
-	if (m_bIsInitialized)
+	if (m_pCurrentRenderPath)
 	{
-		SGSINFO("Shutting down Vulkan");
-
-		vkDestroyCommandPool(m_pVulkanDevice->m_Device, m_CommandPool, nullptr);
+		m_pCurrentRenderPath->DestroyResources();
+		delete m_pCurrentRenderPath;
 	}
 
-	delete m_pVulkanSwapchain;
+	// Destroy CVulkanBackend's vulkan resources.
+	m_MainDeletionQueue.Flush();
+
+	if (m_pVulkanSwapchain)
+	{
+		// Destructor automatically cleans resources.
+		delete m_pVulkanSwapchain;
+	}
+
+	// Destructor automatically cleans resources.
 	delete m_pVulkanDevice;
 
     return false;
@@ -129,6 +138,12 @@ void CVulkanBackend::CreateRenderObjectsData(const std::vector<sRenderObject*>& 
 				RenderObjectData.pMesh->NumIndices = static_cast<uint32_t>(MeshData->Indices32.size());
 				vkutils::CreateVertexBuffer(m_pVulkanDevice, MeshData->Vertices, RenderObjectData.pMesh->VertexBuffer);
 				vkutils::CreateIndexBuffer(m_pVulkanDevice, MeshData->Indices32, RenderObjectData.pMesh->IndexBuffer);
+
+				m_MainDeletionQueue.PushFunction([=]
+				{
+					vmaDestroyBuffer(m_pVulkanDevice->m_Allocator, RenderObjectData.pMesh->VertexBuffer.Buffer, RenderObjectData.pMesh->VertexBuffer.Allocation);
+					vmaDestroyBuffer(m_pVulkanDevice->m_Allocator, RenderObjectData.pMesh->IndexBuffer.Buffer, RenderObjectData.pMesh->IndexBuffer.Allocation);
+				});
 			}
 		}
 
@@ -153,6 +168,11 @@ void CVulkanBackend::CreateRenderObjectsData(const std::vector<sRenderObject*>& 
 	}
 }
 
+void CVulkanBackend::ChangeRenderPath()
+{
+	m_pCurrentRenderPath = CreateRenderPath();
+}
+
 void CVulkanBackend::InitCommandPools()
 {
 	const VkDevice Device = m_pVulkanDevice->m_Device;
@@ -166,14 +186,9 @@ void CVulkanBackend::InitCommandPools()
 		VK_CHECK(vkAllocateCommandBuffers(Device, &CmdAllocInfo, &m_FramesData[i].MainCommandBuffer));
 	}
 
-	// TODO: Move to CVulkanDevice.
-	VkCommandPoolCreateInfo UploadCommandPoolInfo = vkinit::CommandPoolCreateInfo(m_pVulkanDevice->m_GraphicsQueueFamily);
-	VK_CHECK(vkCreateCommandPool(Device, &UploadCommandPoolInfo, nullptr, &m_pVulkanDevice->m_UploadContext.m_CommandPool));
-
-	m_pVulkanDevice->m_MainDeletionQueue.PushFunction([=]
+	m_MainDeletionQueue.PushFunction([=]
 	{
 		vkDestroyCommandPool(Device, m_CommandPool, nullptr);
-		vkDestroyCommandPool(Device, m_pVulkanDevice->m_UploadContext.m_CommandPool, nullptr);
 	});
 }
 
@@ -193,18 +208,13 @@ void CVulkanBackend::InitSyncStructures()
 		VK_CHECK(vkCreateFence(Device, &FenceInfo, nullptr, &m_FramesData[i].RenderFence));
 	}
 
-	// TODO: Move to CVulkanDevice.
-	VkFenceCreateInfo UploadFenceInfo = vkinit::FenceCreateInfo();
-	VK_CHECK(vkCreateFence(Device, &UploadFenceInfo, nullptr, &m_pVulkanDevice->m_UploadContext.m_UploadFence));
-
-	m_pVulkanDevice->m_MainDeletionQueue.PushFunction([=]
+	m_MainDeletionQueue.PushFunction([=]
 	{
 		for (int32_t i = 0; i < FRAME_OVERLAP; ++i)
 		{
 			vkDestroySemaphore(Device, m_FramesData[i].PresentSemaphore, nullptr);
 			vkDestroySemaphore(Device, m_FramesData[i].RenderSemaphore, nullptr);
 			vkDestroyFence(Device, m_FramesData[i].RenderFence, nullptr);
-			vkDestroyFence(Device, m_pVulkanDevice->m_UploadContext.m_UploadFence, nullptr);
 		}
 	});
 }
@@ -231,7 +241,7 @@ void CVulkanBackend::InitTextureSamplers()
 
 	VK_CHECK(vkCreateSampler(m_pVulkanDevice->m_Device, &SamplerInfo, nullptr, &m_DefaultSampler));
 
-	m_pVulkanDevice->m_MainDeletionQueue.PushFunction([=]
+	m_MainDeletionQueue.PushFunction([=]
 	{
 		vkDestroySampler(m_pVulkanDevice->m_Device, m_DefaultSampler, nullptr);
 	});
@@ -261,7 +271,7 @@ void CVulkanBackend::InitDescriptorSetPool()
 
 	VK_CHECK(vkCreateDescriptorPool(m_pVulkanDevice->m_Device, &PoolInfo, nullptr, &m_DescriptorPool));
 
-	m_pVulkanDevice->m_MainDeletionQueue.PushFunction([=]
+	m_MainDeletionQueue.PushFunction([=]
 	{
 		vkDestroyDescriptorPool(m_pVulkanDevice->m_Device, m_DescriptorPool, nullptr);
 	});
@@ -382,10 +392,11 @@ void CVulkanBackend::InitDescriptorSetLayouts()
 	SingleTextureLayoutInfo.bindingCount = 1;
 	SingleTextureLayoutInfo.pBindings = &SingleTextureLayoutBinding;
 
-	m_pVulkanDevice->m_MainDeletionQueue.PushFunction([=]
+	m_MainDeletionQueue.PushFunction([=]
 	{
 		for (size_t i = 0; i < FRAME_OVERLAP; ++i)
 		{
+			vmaUnmapMemory(m_pVulkanDevice->m_Allocator, m_FramesData[i].UBOBuffer.Allocation);
 			vmaDestroyBuffer(m_pVulkanDevice->m_Allocator, m_FramesData[i].UBOBuffer.Buffer, m_FramesData[i].UBOBuffer.Allocation);
 		}
 

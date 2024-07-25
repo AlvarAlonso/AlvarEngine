@@ -20,6 +20,7 @@ void CVulkanForwardRenderPath::CreateResources()
 
 void CVulkanForwardRenderPath::DestroyResources()
 {
+	vkQueueWaitIdle(m_pVulkanDevice->m_GraphicsQueue);
     m_MainDeletionQueue.Flush();
 }
 

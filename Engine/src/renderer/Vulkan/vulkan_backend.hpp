@@ -2,6 +2,7 @@
 
 #include "vk_types.hpp"
 #include "renderer/scene.hpp"
+#include <core/types.hpp>
 
 class CVulkanDevice;
 class CVulkanSwapchain;
@@ -60,6 +61,8 @@ public:
 
     void CreateRenderObjectsData(const std::vector<sRenderObject*>& aRenderObjects);
 
+    void ChangeRenderPath();
+
 private:
     void InitCommandPools();
     void InitSyncStructures();
@@ -105,4 +108,7 @@ private:
 
     VkImageView m_ImageView;
     AllocatedImage m_Image;
+
+    // Holds the deletion functions.
+    sDeletionQueue m_MainDeletionQueue;
 };
