@@ -8,7 +8,7 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
 #include <renderer/core/render_types.hpp>
-
+#include <renderer/resources/material.hpp>
 #include <vector>
 
 #define VK_CHECK(x)                                                 \
@@ -59,4 +59,10 @@ public:
 private:
     static std::unordered_map<std::string, sMesh*> LoadedMeshes;
 
+};
+
+struct sMaterialDescriptor
+{
+    CMaterial* pMaterial;
+    VkDescriptorSet DescriptorSet;
 };

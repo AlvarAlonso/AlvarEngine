@@ -11,7 +11,8 @@ CRenderModule::CRenderModule() :
     m_pMainCamera(nullptr),
     m_pDefaultScene(nullptr),
     m_pVulkanBackend(nullptr),
-    m_CurrentRenderPath(eRenderPath::FORWARD)
+    m_CurrentRenderPath(eRenderPath::FORWARD),
+    m_RenderAPI(eRenderAPI::VULKAN)
 {
 }
 

@@ -63,6 +63,8 @@ public:
 
     void ChangeRenderPath();
 
+    CVulkanDevice* GetDevice() const { return m_pVulkanDevice; }
+
 private:
     void InitCommandPools();
     void InitSyncStructures();

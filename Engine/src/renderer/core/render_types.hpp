@@ -75,3 +75,10 @@ enum class eRenderPath : uint8_t
     DEFERRED,
     NUM
 };
+
+enum class eRenderAPI : uint8_t
+{
+    NONE = 0,
+    VULKAN,
+    NUM
+};

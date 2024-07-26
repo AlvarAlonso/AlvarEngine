@@ -42,3 +42,5 @@ private:
     void* m_pDeviceCreatepNextChain = nullptr;
     // ------------
 };
+
+CVulkanDevice* GetVulkanDevice();

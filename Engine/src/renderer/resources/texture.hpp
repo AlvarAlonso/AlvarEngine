@@ -1,0 +1,49 @@
+#pragma once
+
+#include <engine.hpp>
+#include <core/logger.h>
+
+#include <string>
+#include <unordered_map>
+
+class CTexture
+{
+public:
+    static std::unordered_map<std::string, CTexture*> m_LoadedTextures; 
+
+    template<class T>
+    static T* Get(const std::string& aFilePath)
+    {
+        // Check if we already have the file stored in m_LoadedTextures and is of the requested type.
+        const auto& FoundFile = m_LoadedTextures.find(aFilePath);
+        if (FoundFile != m_LoadedTextures.cend())
+        {
+            const T* Texture = dynamic_cast<T*>(FoundFile->second);
+            if (Texture == nullptr)
+            {
+                SGSERROR("Texture casted to wrong type!");
+            }
+
+            return Texture;
+        }
+
+        return CTexture::Create<T>(std::move(aFilePath));
+    }
+
+    CTexture() = default;
+
+    virtual uint32_t GetWidth() const = 0;
+    virtual uint32_t GetHeight() const = 0;
+
+protected:
+    std::string m_Filename;
+
+private:
+    template<class T>
+    static T* Create(const std::string& aFilePath)
+    {
+        return dynamic_cast<T*>(CreateImpl(aFilePath));
+    }
+
+    static CTexture* CreateImpl(const std::string& aFilePath);
+};

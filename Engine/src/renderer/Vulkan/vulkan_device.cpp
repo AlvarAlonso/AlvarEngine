@@ -147,3 +147,14 @@ void CVulkanDevice::InitEnabledFeatures()
 
 	m_pDeviceCreatepNextChain = &m_EnabledBufferDeviceAddressFeatures;
 }
+
+CVulkanDevice* GetVulkanDevice()
+{
+	const CRenderModule* const RenderModule = CEngine::Get()->GetRenderModule();
+	if (RenderModule->GetRenderAPI() == eRenderAPI::VULKAN)
+	{
+		return RenderModule->GetVulkanDevice();
+	}
+
+	return nullptr;
+}
