@@ -1,6 +1,8 @@
 #include "render_module.hpp"
 #include "core/logger.h"
 #include "engine.hpp"
+#include <renderer/resources/material.hpp>
+#include <renderer/resources/texture.hpp>
 
 #include <glm/gtx/transform.hpp>
 #include <GLFW/glfw3.h>
@@ -20,8 +22,6 @@ bool CRenderModule::Initialize()
 {
     m_pMainCamera = new CCamera();
 
-    CreateDefaultScene();
-
     m_pVulkanBackend = std::make_unique<CVulkanBackend>();
     if (m_pVulkanBackend == nullptr)
     {
@@ -29,6 +29,7 @@ bool CRenderModule::Initialize()
     }
 
     m_pVulkanBackend->Initialize();
+    CreateDefaultScene();
     m_pVulkanBackend->CreateRenderObjectsData(m_pDefaultScene->GetRenderObjects());
 
     return true;
@@ -103,4 +104,15 @@ void CRenderModule::CreateDefaultScene()
     // m_pDefaultScene->AddRenderObject(RenderObject);
     // m_pDefaultScene->AddRenderObject(RenderObject2);
     m_pDefaultScene->AddRenderObject(RenderObject3);
+
+    const auto& DefaultTexture = CTexture::Get<CTexture>("../Resources/Images/default_texture.png");
+
+    CMaterial* pDefaultMaterial = new CMaterial();
+    sMaterialProperties Props;
+    Props.pAlbedoTexture = DefaultTexture;
+    Props.pMetallicRoughnessTexture = DefaultTexture;
+    Props.pNormalTexture = DefaultTexture;
+    pDefaultMaterial->SetMaterialProperties(Props);
+
+    CMaterial::Add("default_material", pDefaultMaterial);
 }

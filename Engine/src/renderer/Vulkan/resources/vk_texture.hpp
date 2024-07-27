@@ -13,7 +13,10 @@ public:
 
     virtual uint32_t GetWidth() const override { return m_Width; }
     virtual uint32_t GetHeight() const override { return m_Height; }
-    
+
+    AllocatedImage GetAllocatedImage() const { return m_AllocatedImage; }
+    VkImageView GetImageView() const { return m_ImageView; }
+
 private:
     uint32_t m_Width;
     uint32_t m_Height;

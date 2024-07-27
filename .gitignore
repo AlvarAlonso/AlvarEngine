@@ -2,3 +2,6 @@ bin/*
 alvar/*
 .vs/*
 ThirdParty/*
+Resources/*
+.vs/*
+.vscode/*

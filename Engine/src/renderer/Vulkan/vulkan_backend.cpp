@@ -14,6 +14,9 @@
 #include <renderer/core/render_types.hpp>
 #include "vk_forward_render_path.hpp"
 #include "vk_deferred_render_path.hpp"
+#include <renderer/resources/material.hpp>
+#include <renderer/resources/texture.hpp>
+#include "resources/vk_texture.hpp"
 
 #include <VulkanBootstrap/VkBootstrap.h>
 #include <glm/gtc/matrix_transform.hpp>
@@ -96,6 +99,12 @@ bool CVulkanBackend::Shutdown()
 		delete m_pCurrentRenderPath;
 	}
 
+	for (auto& MaterialDescriptor : m_MaterialDescriptors)
+	{
+		delete MaterialDescriptor.second;
+	}
+	m_MaterialDescriptors.clear();
+
 	// Destroy CVulkanBackend's vulkan resources.
 	m_MainDeletionQueue.Flush();
 
@@ -120,6 +129,7 @@ void CVulkanBackend::CreateRenderObjectsData(const std::vector<sRenderObject*>& 
 {
 	for (const auto& RenderObject : aRenderObjects)
 	{
+		// TODO: Use namespaces because otherwise is very confusing to know if I'm dealing with vulkan types or generic render types.
 		sRenderObjectData RenderObjectData;
 		RenderObjectData.ModelMatrix = RenderObject->ModelMatrix;
 		const sMeshData* MeshData = sMeshData::GetMeshData(RenderObject->pRenderObjectInfo->MeshPath);
@@ -145,10 +155,64 @@ void CVulkanBackend::CreateRenderObjectsData(const std::vector<sRenderObject*>& 
 					vmaDestroyBuffer(m_pVulkanDevice->m_Allocator, RenderObjectData.pMesh->IndexBuffer.Buffer, RenderObjectData.pMesh->IndexBuffer.Allocation);
 				});
 			}
+
+			// Get material.
+			const std::string MaterialName = RenderObject->pRenderObjectInfo->MaterialName;
+			// Check if we already have the vulkan version of the material.
+			const auto& FoundMaterial = m_MaterialDescriptors.find(MaterialName);
+			if (FoundMaterial != m_MaterialDescriptors.cend())
+			{
+				RenderObjectData.MaterialDescriptor = FoundMaterial->second;
+			}
+			else
+			{
+				CMaterial* pMaterial = CMaterial::Get(MaterialName);
+				if (pMaterial == nullptr)
+				{
+					SGSWARN("Material not found. Placing default material.");
+					pMaterial = CMaterial::Get("default_material");
+				}
+
+				if (pMaterial)
+				{
+					sMaterialDescriptor* MaterialDescriptor = new sMaterialDescriptor();
+					MaterialDescriptor->pMaterial = pMaterial;
+
+					const sMaterialProperties Props = MaterialDescriptor->pMaterial->GetMaterialProperties();
+
+					CVkTexture* pAlbedoTexture = nullptr;
+					CVkTexture* pMetalRoughnessTexture = nullptr;
+					CVkTexture* pNormalTexture = nullptr;
+
+					// TODO: Refactor this into a function where, in case of nullptr, it places a default texture.
+					if (Props.pAlbedoTexture)
+					{
+						pAlbedoTexture = CTexture::Get<CVkTexture>(Props.pAlbedoTexture->GetFilename());
+					}
+					if (Props.pMetallicRoughnessTexture)
+					{
+						pMetalRoughnessTexture = CTexture::Get<CVkTexture>(Props.pMetallicRoughnessTexture->GetFilename());
+					}
+					if (Props.pNormalTexture)
+					{
+						pNormalTexture = CTexture::Get<CVkTexture>(Props.pNormalTexture->GetFilename());
+					}
+					
+					MaterialDescriptor->Resources.pAlbedoTexture = pAlbedoTexture;
+					MaterialDescriptor->Resources.pMetalRoughnessTexture = pMetalRoughnessTexture;
+					MaterialDescriptor->Resources.pNormalTexture = pNormalTexture;
+
+					m_MaterialDescriptors.insert({MaterialName, MaterialDescriptor});
+					RenderObjectData.MaterialDescriptor = MaterialDescriptor;
+					// Descriptors will be created in the specific function to create descriptors.
+				}
+			}
 		}
 
 		m_RenderObjectsData.push_back(RenderObjectData);
 	}
+
+	CreateSceneDescriptorSets();
 
 	void* Data;
 	vmaMapMemory(m_pVulkanDevice->m_Allocator, m_ObjectsDataBuffer.Allocation, &Data);
@@ -266,14 +330,35 @@ void CVulkanBackend::InitDescriptorSetPool()
 	VkDescriptorPoolCreateInfo PoolInfo = {};
 	PoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	PoolInfo.poolSizeCount = static_cast<uint32_t>(PoolSizes.size());
-	PoolInfo.pPoolSizes = PoolSizes.data();;
+	PoolInfo.pPoolSizes = PoolSizes.data();
+	// TODO: This does not make sense. The COMBINE_IMAGE_SAMPLER type is not accounted for.
 	PoolInfo.maxSets = static_cast<uint32_t>(FRAME_OVERLAP) + 1; // +1 set for the objects descriptor set.
-
+	
 	VK_CHECK(vkCreateDescriptorPool(m_pVulkanDevice->m_Device, &PoolInfo, nullptr, &m_DescriptorPool));
+
+
+	VkDescriptorPoolSize MaterialTexturesPoolSize = {};
+	MaterialTexturesPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	MaterialTexturesPoolSize.descriptorCount = 3 * MAX_RENDER_OBJECTS; // Albedo, MetalRoughness, Normal for a total of 3 textures.
+
+	VkDescriptorPoolSize MaterialConstantsPoolSize = {};
+	MaterialConstantsPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	MaterialTexturesPoolSize.descriptorCount = MAX_RENDER_OBJECTS;
+
+	std::array<VkDescriptorPoolSize, 2> MaterialPoolSizes = { MaterialTexturesPoolSize, MaterialConstantsPoolSize };
+
+	VkDescriptorPoolCreateInfo MaterialPoolInfo = {};
+	MaterialPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	MaterialPoolInfo.poolSizeCount = static_cast<uint32_t>(MaterialPoolSizes.size());
+	MaterialPoolInfo.pPoolSizes = MaterialPoolSizes.data();
+	MaterialPoolInfo.maxSets = MAX_RENDER_OBJECTS;
+
+	VK_CHECK(vkCreateDescriptorPool(m_pVulkanDevice->m_Device, &MaterialPoolInfo, nullptr, &m_MaterialsPool));
 
 	m_MainDeletionQueue.PushFunction([=]
 	{
 		vkDestroyDescriptorPool(m_pVulkanDevice->m_Device, m_DescriptorPool, nullptr);
+		vkDestroyDescriptorPool(m_pVulkanDevice->m_Device, m_MaterialsPool, nullptr);
 	});
 }
 
@@ -374,23 +459,32 @@ void CVulkanBackend::InitDescriptorSetLayouts()
 	}
 
 	// RENDER OBJECTS DESCRIPTOR LAYOUT CREATION.
-	VkDescriptorSetLayoutBinding RenderObjectsLayoutBinding = vkinit::DescriptorLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0);
+	VkDescriptorSetLayoutBinding TransformLayoutBinding = vkinit::DescriptorLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0);
+
 
 	VkDescriptorSetLayoutCreateInfo RenderObjectsLayoutInfo = {};
 	RenderObjectsLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 	RenderObjectsLayoutInfo.bindingCount = 1;
-	RenderObjectsLayoutInfo.pBindings = &RenderObjectsLayoutBinding;
+	RenderObjectsLayoutInfo.pBindings = &TransformLayoutBinding;
 
 	VK_CHECK(vkCreateDescriptorSetLayout(m_pVulkanDevice->m_Device, &RenderObjectsLayoutInfo, nullptr, &m_RenderObjectsSetLayout));
 
+	// TODO: Buffer creation should not be here.
 	m_ObjectsDataBuffer = vkutils::CreateBuffer(m_pVulkanDevice, sizeof(sGPURenderObjectData) * MAX_RENDER_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
-	VkDescriptorSetLayoutBinding SingleTextureLayoutBinding = vkinit::DescriptorLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
+	// Material Layout Binding.
+	VkDescriptorSetLayoutBinding AlbedoLayoutBinding = vkinit::DescriptorLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
+	VkDescriptorSetLayoutBinding MetalRoughnessLayoutBinding = vkinit::DescriptorLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1);
+	VkDescriptorSetLayoutBinding NormalLayoutBinding = vkinit::DescriptorLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 2);
+	
+	const std::array<VkDescriptorSetLayoutBinding, 3> MaterialLayoutBindings = { AlbedoLayoutBinding, MetalRoughnessLayoutBinding, NormalLayoutBinding };
 
-	VkDescriptorSetLayoutCreateInfo SingleTextureLayoutInfo = {};
-	SingleTextureLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	SingleTextureLayoutInfo.bindingCount = 1;
-	SingleTextureLayoutInfo.pBindings = &SingleTextureLayoutBinding;
+	VkDescriptorSetLayoutCreateInfo MaterialLayoutInfo = {};
+	MaterialLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	MaterialLayoutInfo.bindingCount = static_cast<uint32_t>(MaterialLayoutBindings.size());
+	MaterialLayoutInfo.pBindings = MaterialLayoutBindings.data();
+
+	VK_CHECK(vkCreateDescriptorSetLayout(m_pVulkanDevice->m_Device, &MaterialLayoutInfo, nullptr, &m_MaterialsSetLayout));
 
 	m_MainDeletionQueue.PushFunction([=]
 	{
@@ -404,6 +498,7 @@ void CVulkanBackend::InitDescriptorSetLayouts()
 
 		vkDestroyDescriptorSetLayout(m_pVulkanDevice->m_Device, m_DescriptorSetLayout, nullptr);
 		vkDestroyDescriptorSetLayout(m_pVulkanDevice->m_Device, m_RenderObjectsSetLayout, nullptr);
+		vkDestroyDescriptorSetLayout(m_pVulkanDevice->m_Device, m_MaterialsSetLayout, nullptr);
 	});
 }
 
@@ -453,12 +548,62 @@ void CVulkanBackend::InitRenderPath(IRenderPath* aRenderPath)
 	m_pCurrentRenderPath->HandleSceneChanged();
 }
 
+void CVulkanBackend::CreateSceneDescriptorSets()
+{
+	VkDescriptorSetAllocateInfo MaterialsAllocInfo = {};
+	MaterialsAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	MaterialsAllocInfo.descriptorPool = m_MaterialsPool;
+	MaterialsAllocInfo.descriptorSetCount = 1;
+	MaterialsAllocInfo.pSetLayouts = &m_MaterialsSetLayout;
+	
+	// TODO: Maybe a unique descriptor with ALL the materials and each mesh reference them by an index?
+	for (auto& MaterialDescriptorTuple : m_MaterialDescriptors)
+	{
+		auto& MaterialDescriptor = MaterialDescriptorTuple.second;
+
+		VK_CHECK(vkAllocateDescriptorSets(m_pVulkanDevice->m_Device, &MaterialsAllocInfo, &MaterialDescriptor->DescriptorSet));
+	
+		const sMaterialResources& Resources = MaterialDescriptor->Resources;
+
+		VkDescriptorImageInfo AlbedoImageInfo = {};
+		AlbedoImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		AlbedoImageInfo.imageView = Resources.pAlbedoTexture->GetImageView();
+		AlbedoImageInfo.sampler = m_DefaultSampler;
+
+		VkDescriptorImageInfo MetalRoughnessImageInfo = {};
+		MetalRoughnessImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		MetalRoughnessImageInfo.imageView = Resources.pMetalRoughnessTexture->GetImageView();
+		MetalRoughnessImageInfo.sampler = m_DefaultSampler;
+
+		VkDescriptorImageInfo NormalImageInfo = {};
+		NormalImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		NormalImageInfo.imageView = Resources.pNormalTexture->GetImageView();
+		NormalImageInfo.sampler = m_DefaultSampler;
+
+		std::array<VkDescriptorImageInfo, 3> DescriptorImageInfos = { AlbedoImageInfo, MetalRoughnessImageInfo, NormalImageInfo };
+
+		VkWriteDescriptorSet MaterialDescriptorWrite = {};
+		MaterialDescriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		MaterialDescriptorWrite.dstSet = MaterialDescriptor->DescriptorSet;
+		MaterialDescriptorWrite.dstBinding = 0;
+		MaterialDescriptorWrite.dstArrayElement = 0;
+		MaterialDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		MaterialDescriptorWrite.descriptorCount = static_cast<uint32_t>(DescriptorImageInfos.size());
+		MaterialDescriptorWrite.pBufferInfo = nullptr;
+		MaterialDescriptorWrite.pImageInfo = DescriptorImageInfos.data();
+		MaterialDescriptorWrite.pTexelBufferView = nullptr;
+
+		vkUpdateDescriptorSets(m_pVulkanDevice->m_Device, 1, &MaterialDescriptorWrite, 0, nullptr);
+	}
+}
+
 void CVulkanBackend::UpdateFrameUBO(const CCamera* const aCamera, uint32_t ImageIdx)
 {
 	assert(ImageIdx >= 0 && ImageIdx < FRAME_OVERLAP);
 
 	sFrameUBO FrameUBO = {};
 	FrameUBO.View = aCamera->GetViewMatrix();
+	// TODO: Do not hardcode this.
 	FrameUBO.Proj = glm::perspective(glm::radians(70.0f), m_pVulkanSwapchain->m_WindowExtent.width / (float)m_pVulkanSwapchain->m_WindowExtent.height, 0.1f, 200.0f);
 	FrameUBO.Proj[1][1] *= -1;
 	FrameUBO.ViewProj = FrameUBO.Proj * FrameUBO.View;

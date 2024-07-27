@@ -18,6 +18,7 @@ struct sRenderObjectInfo
     // TODO: Store everything with IDs instead of strings.
     std::string MeshPath;
     std::string TexturePath;
+    std::string MaterialName;
 
     bool operator==(const sRenderObjectInfo& aOther) const 
     {

@@ -57,13 +57,15 @@ void CVulkanForwardRenderPath::RecordCommands(VkCommandBuffer aCommandBuffer, ui
 	Scissor.extent = m_pVulkanSwapchain->m_WindowExtent;
 	vkCmdSetScissor(aCommandBuffer, 0, 1, &Scissor);
 
-	const std::array<VkDescriptorSet, 2> DescriptorSets = { m_pVulkanBackend->m_FramesData[aImageIdx].DescriptorSet, m_pVulkanBackend->m_ObjectsDataDescriptorSet };
-	vkCmdBindDescriptorSets(aCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ForwardPipelineLayout, 
-		0, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data(), 0, nullptr);
-
 	VkDeviceSize Offset = 0;
 	for (size_t i = 0; i < m_pVulkanBackend->m_RenderObjectsData.size(); ++i)
 	{
+		const std::array<VkDescriptorSet, 3> DescriptorSets = 
+			{ m_pVulkanBackend->m_FramesData[aImageIdx].DescriptorSet, m_pVulkanBackend->m_ObjectsDataDescriptorSet, m_pVulkanBackend->m_RenderObjectsData[i].MaterialDescriptor->DescriptorSet };
+		
+		vkCmdBindDescriptorSets(aCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ForwardPipelineLayout, 
+			0, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data(), 0, nullptr);
+
 		vkCmdBindVertexBuffers(aCommandBuffer, 0, 1, &m_pVulkanBackend->m_RenderObjectsData[i].pMesh->VertexBuffer.Buffer, &Offset);
 		vkCmdBindIndexBuffer(aCommandBuffer, m_pVulkanBackend->m_RenderObjectsData[i].pMesh->IndexBuffer.Buffer, 0, VK_INDEX_TYPE_UINT32);
 		// TODO: Batch rendering.
@@ -157,7 +159,7 @@ void CVulkanForwardRenderPath::CreateForwardPipeline()
 	}
 
 	VkPipelineLayoutCreateInfo PipelineLayoutInfo = vkinit::PipelineLayoutCreateInfo();
-	std::array<VkDescriptorSetLayout, 2> SetLayouts = { m_pVulkanBackend->m_DescriptorSetLayout, m_pVulkanBackend->m_RenderObjectsSetLayout };
+	std::array<VkDescriptorSetLayout, 3> SetLayouts = { m_pVulkanBackend->m_DescriptorSetLayout, m_pVulkanBackend->m_RenderObjectsSetLayout, m_pVulkanBackend->m_MaterialsSetLayout };
 	PipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(SetLayouts.size());
 	PipelineLayoutInfo.pSetLayouts = SetLayouts.data();
 

@@ -18,7 +18,7 @@ CTexture* CTexture::CreateImpl(const std::string& aFilePath)
 
         case eRenderAPI::VULKAN:
         {
-            return new CVkTexture();
+            return new CVkTexture(aFilePath);
         }
         break;
     

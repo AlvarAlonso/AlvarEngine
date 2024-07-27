@@ -19,6 +19,19 @@ CMaterial* CMaterial::Get(const std::string& aID)
     }
 }
 
+void CMaterial::Add(const std::string& aID, CMaterial* aMaterial)
+{
+    const auto& FoundMaterial = m_LoadedMaterials.find(aID);
+    if (FoundMaterial != m_LoadedMaterials.cend())
+    {
+        SGSERROR("The material with ID: %s already exists! Ignoring the new material.", aID.c_str());
+    }
+    else
+    {
+        m_LoadedMaterials.insert({aID, aMaterial});
+    }
+}
+
 void CMaterial::SetMaterialProperties(const sMaterialProperties& aMaterialProperties)
 {
     m_MaterialProperties = aMaterialProperties;

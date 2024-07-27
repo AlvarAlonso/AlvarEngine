@@ -28,6 +28,7 @@ struct sRenderObjectData
 {
     glm::mat4 ModelMatrix;
     sMesh* pMesh;
+    sMaterialDescriptor* MaterialDescriptor;
 };
 
 struct sGPURenderObjectData
@@ -76,6 +77,7 @@ private:
     IRenderPath* CreateRenderPath();
     void InitRenderPath(IRenderPath* aRenderPath);
 
+    void CreateSceneDescriptorSets();
     void UpdateFrameUBO(const CCamera* const aCamera, uint32_t ImageIdx);
     
     bool HasStencilComponent(VkFormat aFormat);
@@ -92,11 +94,13 @@ private:
 
     VkDescriptorSetLayout m_DescriptorSetLayout;
     VkDescriptorSetLayout m_RenderObjectsSetLayout;
+    VkDescriptorSetLayout m_MaterialsSetLayout;
     VkSampler m_DefaultSampler;
 
     VkCommandPool m_CommandPool;
 
     VkDescriptorPool m_DescriptorPool;
+    VkDescriptorPool m_MaterialsPool;
 
     sFrameData m_FramesData[FRAME_OVERLAP];
     uint32_t m_CurrentFrame;
@@ -108,6 +112,10 @@ private:
     AllocatedBuffer m_ObjectsDataBuffer;
     VkDescriptorSet m_ObjectsDataDescriptorSet;
 
+    std::unordered_map<std::string, sMaterialDescriptor*> m_MaterialDescriptors;
+    // ------------------------------------
+
+    // TODO: To be removed.
     VkImageView m_ImageView;
     AllocatedImage m_Image;
 

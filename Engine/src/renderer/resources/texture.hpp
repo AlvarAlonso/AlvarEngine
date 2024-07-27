@@ -18,7 +18,7 @@ public:
         const auto& FoundFile = m_LoadedTextures.find(aFilePath);
         if (FoundFile != m_LoadedTextures.cend())
         {
-            const T* Texture = dynamic_cast<T*>(FoundFile->second);
+            T* Texture = dynamic_cast<T*>(FoundFile->second);
             if (Texture == nullptr)
             {
                 SGSERROR("Texture casted to wrong type!");
@@ -27,13 +27,22 @@ public:
             return Texture;
         }
 
-        return CTexture::Create<T>(std::move(aFilePath));
+        T* pCreatedTexture = CTexture::Create<T>(std::move(aFilePath));
+        pCreatedTexture->m_Filename = aFilePath;
+        if (pCreatedTexture)
+        {
+            m_LoadedTextures.insert({ aFilePath, pCreatedTexture});
+        }
+
+        return pCreatedTexture;
     }
 
     CTexture() = default;
 
     virtual uint32_t GetWidth() const = 0;
     virtual uint32_t GetHeight() const = 0;
+
+    const std::string& GetFilename() const { return m_Filename; }
 
 protected:
     std::string m_Filename;

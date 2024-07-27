@@ -5,7 +5,7 @@
 #include <string>
 #include <unordered_map>
 
-class Texture2D;
+class CTexture;
 
 struct sMaterialProperties
 {
@@ -19,23 +19,26 @@ struct sMaterialProperties
     glm::vec3 EmissiveFactor;
 
     // Textures.
-    Texture2D* pAlbedoTexture;
-    Texture2D* pEmissiveTexture;
-    Texture2D* pMetallicRoughnessTexture;
-    Texture2D* pOcclusionTexture;
-    Texture2D* pNormalTexture;
+    CTexture* pAlbedoTexture;
+    CTexture* pEmissiveTexture;
+    CTexture* pMetallicRoughnessTexture;
+    CTexture* pOcclusionTexture;
+    CTexture* pNormalTexture;
 };
 
 class CMaterial
 {
 public:
-    static std::unordered_map<std::string, CMaterial*> m_LoadedMaterials;
     static CMaterial* Get(const std::string& aID);
+    static void Add(const std::string& aID, CMaterial* aMaterial);
 
     CMaterial() = default;
     void SetMaterialProperties(const sMaterialProperties& aMaterialProperties);
+    sMaterialProperties GetMaterialProperties() const { return m_MaterialProperties; }
 
 private:
+    static std::unordered_map<std::string, CMaterial*> m_LoadedMaterials;
+
     std::string m_ID;
     sMaterialProperties m_MaterialProperties;
 };

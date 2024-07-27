@@ -11,6 +11,10 @@
 #include <renderer/resources/material.hpp>
 #include <vector>
 
+#include <iostream>
+
+class CVkTexture;
+
 #define VK_CHECK(x)                                                 \
     do                                                              \
     {                                                               \
@@ -61,8 +65,16 @@ private:
 
 };
 
+struct sMaterialResources
+{
+    CVkTexture* pAlbedoTexture;
+    CVkTexture* pMetalRoughnessTexture;
+    CVkTexture* pNormalTexture;
+};
+
 struct sMaterialDescriptor
 {
     CMaterial* pMaterial;
+    sMaterialResources Resources;
     VkDescriptorSet DescriptorSet;
 };
