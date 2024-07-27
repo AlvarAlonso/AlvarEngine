@@ -69,6 +69,7 @@ struct sMaterialResources
 {
     CVkTexture* pAlbedoTexture;
     CVkTexture* pMetalRoughnessTexture;
+    CVkTexture* pEmissiveTexture;
     CVkTexture* pNormalTexture;
 };
 

@@ -83,6 +83,7 @@ void CRenderModule::CreateDefaultScene()
     m_RenderObjectInfos["VikingRoom"] = RenderObjectInfo;
 
     sRenderObjectInfo RenderObjectInfo2("sphere", "");
+    RenderObjectInfo2.MaterialName = "test_material";
     m_RenderObjectInfos["Sphere"] = RenderObjectInfo2;
 
     m_pDefaultScene = new CScene();
@@ -111,8 +112,18 @@ void CRenderModule::CreateDefaultScene()
     sMaterialProperties Props;
     Props.pAlbedoTexture = DefaultTexture;
     Props.pMetallicRoughnessTexture = DefaultTexture;
+    Props.pEmissiveTexture = DefaultTexture;
     Props.pNormalTexture = DefaultTexture;
     pDefaultMaterial->SetMaterialProperties(Props);
 
     CMaterial::Add("default_material", pDefaultMaterial);
+
+    CMaterial* pTestMaterial = new CMaterial();
+    Props.pAlbedoTexture = CTexture::Get<CTexture>("../Resources/Images/Material_33_baseColor.png");
+    Props.pMetallicRoughnessTexture = CTexture::Get<CTexture>("../Resources/Images/Material_33_metallicRoughness.png");
+    Props.pEmissiveTexture = CTexture::Get<CTexture>("../Resources/Images/Material_33_emissive.png");
+    Props.pNormalTexture = CTexture::Get<CTexture>("../Resources/Images/Material_33_normal.png");
+    pTestMaterial->SetMaterialProperties(Props);
+
+    CMaterial::Add("test_material", pTestMaterial);
 }

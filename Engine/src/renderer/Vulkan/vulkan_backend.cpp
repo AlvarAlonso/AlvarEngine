@@ -162,6 +162,7 @@ void CVulkanBackend::CreateRenderObjectsData(const std::vector<sRenderObject*>& 
 			const auto& FoundMaterial = m_MaterialDescriptors.find(MaterialName);
 			if (FoundMaterial != m_MaterialDescriptors.cend())
 			{
+				SGSINFO("Found material: %s.", MaterialName.c_str());
 				RenderObjectData.MaterialDescriptor = FoundMaterial->second;
 			}
 			else
@@ -182,6 +183,7 @@ void CVulkanBackend::CreateRenderObjectsData(const std::vector<sRenderObject*>& 
 
 					CVkTexture* pAlbedoTexture = nullptr;
 					CVkTexture* pMetalRoughnessTexture = nullptr;
+					CVkTexture* pEmissiveTexture = nullptr;
 					CVkTexture* pNormalTexture = nullptr;
 
 					// TODO: Refactor this into a function where, in case of nullptr, it places a default texture.
@@ -193,6 +195,10 @@ void CVulkanBackend::CreateRenderObjectsData(const std::vector<sRenderObject*>& 
 					{
 						pMetalRoughnessTexture = CTexture::Get<CVkTexture>(Props.pMetallicRoughnessTexture->GetFilename());
 					}
+					if (Props.pEmissiveTexture)
+					{
+						pEmissiveTexture = CTexture::Get<CVkTexture>(Props.pEmissiveTexture->GetFilename());
+					}
 					if (Props.pNormalTexture)
 					{
 						pNormalTexture = CTexture::Get<CVkTexture>(Props.pNormalTexture->GetFilename());
@@ -200,6 +206,7 @@ void CVulkanBackend::CreateRenderObjectsData(const std::vector<sRenderObject*>& 
 					
 					MaterialDescriptor->Resources.pAlbedoTexture = pAlbedoTexture;
 					MaterialDescriptor->Resources.pMetalRoughnessTexture = pMetalRoughnessTexture;
+					MaterialDescriptor->Resources.pEmissiveTexture = pEmissiveTexture;
 					MaterialDescriptor->Resources.pNormalTexture = pNormalTexture;
 
 					m_MaterialDescriptors.insert({MaterialName, MaterialDescriptor});
@@ -339,7 +346,7 @@ void CVulkanBackend::InitDescriptorSetPool()
 
 	VkDescriptorPoolSize MaterialTexturesPoolSize = {};
 	MaterialTexturesPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	MaterialTexturesPoolSize.descriptorCount = 3 * MAX_RENDER_OBJECTS; // Albedo, MetalRoughness, Normal for a total of 3 textures.
+	MaterialTexturesPoolSize.descriptorCount = 4 * MAX_RENDER_OBJECTS; // Albedo, MetalRoughness, Emissive and Normal for a total of 4 textures.
 
 	VkDescriptorPoolSize MaterialConstantsPoolSize = {};
 	MaterialConstantsPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -475,7 +482,8 @@ void CVulkanBackend::InitDescriptorSetLayouts()
 	// Material Layout Binding.
 	VkDescriptorSetLayoutBinding AlbedoLayoutBinding = vkinit::DescriptorLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
 	VkDescriptorSetLayoutBinding MetalRoughnessLayoutBinding = vkinit::DescriptorLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1);
-	VkDescriptorSetLayoutBinding NormalLayoutBinding = vkinit::DescriptorLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 2);
+	VkDescriptorSetLayoutBinding EmissiveLayoutBinding = vkinit::DescriptorLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 2);
+	VkDescriptorSetLayoutBinding NormalLayoutBinding = vkinit::DescriptorLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 3);
 	
 	const std::array<VkDescriptorSetLayoutBinding, 3> MaterialLayoutBindings = { AlbedoLayoutBinding, MetalRoughnessLayoutBinding, NormalLayoutBinding };
 
@@ -574,6 +582,11 @@ void CVulkanBackend::CreateSceneDescriptorSets()
 		MetalRoughnessImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		MetalRoughnessImageInfo.imageView = Resources.pMetalRoughnessTexture->GetImageView();
 		MetalRoughnessImageInfo.sampler = m_DefaultSampler;
+
+		VkDescriptorImageInfo EmissiveImageInfo = {};
+		EmissiveImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		EmissiveImageInfo.imageView = Resources.pEmissiveTexture->GetImageView();
+		EmissiveImageInfo.sampler = m_DefaultSampler;
 
 		VkDescriptorImageInfo NormalImageInfo = {};
 		NormalImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
