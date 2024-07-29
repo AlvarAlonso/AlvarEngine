@@ -394,34 +394,20 @@ void CVulkanBackend::InitDescriptorSets()
 		VkDescriptorBufferInfo BufferInfo = {};
 		BufferInfo.buffer = m_FramesData[i].UBOBuffer.Buffer;
 		BufferInfo.offset = 0;
-		BufferInfo.range = sizeof(sFrameUBO);
+		BufferInfo.range = sizeof(sCameraFrameUBO);
 
-		VkDescriptorImageInfo ImageInfo = {};
-		ImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		ImageInfo.imageView = m_ImageView;
-		ImageInfo.sampler = m_DefaultSampler;
+		VkWriteDescriptorSet Write;
+		Write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		Write.dstSet =  m_FramesData[i].DescriptorSet;
+		Write.dstBinding = 0;
+		Write.dstArrayElement = 0;
+		Write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		Write.descriptorCount = 1;
+		Write.pBufferInfo = &BufferInfo;
+		Write.pImageInfo = nullptr;
+		Write.pTexelBufferView = nullptr;
 
-		std::array<VkWriteDescriptorSet, 2> DescriptorWrites{};
-
-		DescriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		DescriptorWrites[0].dstSet =  m_FramesData[i].DescriptorSet;
-		DescriptorWrites[0].dstBinding = 0;
-		DescriptorWrites[0].dstArrayElement = 0;
-		DescriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		DescriptorWrites[0].descriptorCount = 1;
-		DescriptorWrites[0].pBufferInfo = &BufferInfo;
-		DescriptorWrites[0].pImageInfo = nullptr;
-		DescriptorWrites[0].pTexelBufferView = nullptr;
-
-		DescriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		DescriptorWrites[1].dstSet = m_FramesData[i].DescriptorSet;
-		DescriptorWrites[1].dstBinding = 1;
-		DescriptorWrites[1].dstArrayElement = 0;
-		DescriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		DescriptorWrites[1].descriptorCount = 1;
-		DescriptorWrites[1].pImageInfo = &ImageInfo;
-
-		vkUpdateDescriptorSets(m_pVulkanDevice->m_Device, static_cast<uint32_t>(DescriptorWrites.size()), DescriptorWrites.data(), 0, nullptr);
+		vkUpdateDescriptorSets(m_pVulkanDevice->m_Device, 1,&Write, 0, nullptr);
 	}
 
 	VkDescriptorSetAllocateInfo RenderObjectsAllocInfo{};
@@ -454,18 +440,16 @@ void CVulkanBackend::InitDescriptorSets()
 void CVulkanBackend::InitDescriptorSetLayouts()
 {
 	// FRAME DESCRIPTOR LAYOUT CREATION.
-	VkDescriptorSetLayoutBinding FrameUBOLayoutBinding = vkinit::DescriptorLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0);
-	VkDescriptorSetLayoutBinding SamplerLayoutBinding =  vkinit::DescriptorLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1);
+	VkDescriptorSetLayoutBinding FrameUBOVertLayoutBinding = vkinit::DescriptorLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0);
 
-	std::array<VkDescriptorSetLayoutBinding, 2> Bindings = { FrameUBOLayoutBinding, SamplerLayoutBinding };
 	VkDescriptorSetLayoutCreateInfo LayoutInfo = {};
 	LayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	LayoutInfo.bindingCount = static_cast<uint32_t>(Bindings.size());
-	LayoutInfo.pBindings = Bindings.data();
+	LayoutInfo.bindingCount = 1;
+	LayoutInfo.pBindings = &FrameUBOVertLayoutBinding;
 
 	VK_CHECK(vkCreateDescriptorSetLayout(m_pVulkanDevice->m_Device, &LayoutInfo, nullptr, &m_DescriptorSetLayout));
 
-	VkDeviceSize BufferSize = sizeof(sFrameUBO);
+	VkDeviceSize BufferSize = sizeof(sCameraFrameUBO);
 	for (int i = 0; i < FRAME_OVERLAP; ++i)
 	{
 		m_FramesData[i].UBOBuffer = vkutils::CreateBuffer(m_pVulkanDevice, BufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
@@ -640,14 +624,15 @@ void CVulkanBackend::UpdateFrameUBO(const CCamera* const aCamera, uint32_t Image
 {
 	assert(ImageIdx >= 0 && ImageIdx < FRAME_OVERLAP);
 
-	sFrameUBO FrameUBO = {};
+	sCameraFrameUBO FrameUBO = {};
 	FrameUBO.View = aCamera->GetViewMatrix();
 	// TODO: Do not hardcode this.
 	FrameUBO.Proj = glm::perspective(glm::radians(70.0f), m_pVulkanSwapchain->m_WindowExtent.width / (float)m_pVulkanSwapchain->m_WindowExtent.height, 0.1f, 200.0f);
 	FrameUBO.Proj[1][1] *= -1;
 	FrameUBO.ViewProj = FrameUBO.Proj * FrameUBO.View;
+	FrameUBO.Pos = aCamera->GetPosition();
 
-	memcpy(m_FramesData[ImageIdx].MappedUBOBuffer, &FrameUBO, sizeof(sFrameUBO));
+	memcpy(m_FramesData[ImageIdx].MappedUBOBuffer, &FrameUBO, sizeof(sCameraFrameUBO));
 }
 
 bool CVulkanBackend::HasStencilComponent(VkFormat aFormat)

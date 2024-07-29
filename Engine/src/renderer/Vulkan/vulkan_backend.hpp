@@ -36,11 +36,12 @@ struct sGPURenderObjectData
     glm::mat4 ModelMatrix;
 };
 
-struct sFrameUBO
+struct sCameraFrameUBO
 {
     glm::mat4 View;
     glm::mat4 Proj;
     glm::mat4 ViewProj;
+    glm::vec3 Pos;
 };
 
 /**
