@@ -181,6 +181,13 @@ void CVulkanBackend::CreateRenderObjectsData(const std::vector<sRenderObject*>& 
 
 					const sMaterialProperties Props = MaterialDescriptor->pMaterial->GetMaterialProperties();
 
+					MaterialDescriptor->ConstantsBuffer = vkutils::CreateBuffer(m_pVulkanDevice, sizeof(sMaterialConstants), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+					void* Data;
+					vmaMapMemory(m_pVulkanDevice->m_Allocator, MaterialDescriptor->ConstantsBuffer.Allocation, &Data);
+					memcpy(Data, &Props.MaterialConstants, sizeof(sMaterialConstants));
+					vmaUnmapMemory(m_pVulkanDevice->m_Allocator, MaterialDescriptor->ConstantsBuffer.Allocation);
+
 					CVkTexture* pAlbedoTexture = nullptr;
 					CVkTexture* pMetalRoughnessTexture = nullptr;
 					CVkTexture* pEmissiveTexture = nullptr;
@@ -480,12 +487,13 @@ void CVulkanBackend::InitDescriptorSetLayouts()
 	m_ObjectsDataBuffer = vkutils::CreateBuffer(m_pVulkanDevice, sizeof(sGPURenderObjectData) * MAX_RENDER_OBJECTS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
 	// Material Layout Binding.
-	VkDescriptorSetLayoutBinding AlbedoLayoutBinding = vkinit::DescriptorLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
-	VkDescriptorSetLayoutBinding MetalRoughnessLayoutBinding = vkinit::DescriptorLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1);
-	VkDescriptorSetLayoutBinding EmissiveLayoutBinding = vkinit::DescriptorLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 2);
-	VkDescriptorSetLayoutBinding NormalLayoutBinding = vkinit::DescriptorLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 3);
+	VkDescriptorSetLayoutBinding MaterialConstants = vkinit::DescriptorLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
+	VkDescriptorSetLayoutBinding AlbedoLayoutBinding = vkinit::DescriptorLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1);
+	VkDescriptorSetLayoutBinding MetalRoughnessLayoutBinding = vkinit::DescriptorLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 2);
+	VkDescriptorSetLayoutBinding EmissiveLayoutBinding = vkinit::DescriptorLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 3);
+	VkDescriptorSetLayoutBinding NormalLayoutBinding = vkinit::DescriptorLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 4);
 	
-	const std::array<VkDescriptorSetLayoutBinding, 3> MaterialLayoutBindings = { AlbedoLayoutBinding, MetalRoughnessLayoutBinding, NormalLayoutBinding };
+	const std::array<VkDescriptorSetLayoutBinding, 4> MaterialLayoutBindings = { MaterialConstants, AlbedoLayoutBinding, MetalRoughnessLayoutBinding, NormalLayoutBinding };
 
 	VkDescriptorSetLayoutCreateInfo MaterialLayoutInfo = {};
 	MaterialLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -573,6 +581,11 @@ void CVulkanBackend::CreateSceneDescriptorSets()
 	
 		const sMaterialResources& Resources = MaterialDescriptor->Resources;
 
+		VkDescriptorBufferInfo ConstantsBufferInfo = {};
+		ConstantsBufferInfo.buffer = MaterialDescriptor->ConstantsBuffer.Buffer;
+		ConstantsBufferInfo.offset = 0;
+		ConstantsBufferInfo.range = sizeof(sMaterialConstants);
+
 		VkDescriptorImageInfo AlbedoImageInfo = {};
 		AlbedoImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		AlbedoImageInfo.imageView = Resources.pAlbedoTexture->GetImageView();
@@ -595,18 +608,31 @@ void CVulkanBackend::CreateSceneDescriptorSets()
 
 		std::array<VkDescriptorImageInfo, 3> DescriptorImageInfos = { AlbedoImageInfo, MetalRoughnessImageInfo, NormalImageInfo };
 
-		VkWriteDescriptorSet MaterialDescriptorWrite = {};
-		MaterialDescriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		MaterialDescriptorWrite.dstSet = MaterialDescriptor->DescriptorSet;
-		MaterialDescriptorWrite.dstBinding = 0;
-		MaterialDescriptorWrite.dstArrayElement = 0;
-		MaterialDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		MaterialDescriptorWrite.descriptorCount = static_cast<uint32_t>(DescriptorImageInfos.size());
-		MaterialDescriptorWrite.pBufferInfo = nullptr;
-		MaterialDescriptorWrite.pImageInfo = DescriptorImageInfos.data();
-		MaterialDescriptorWrite.pTexelBufferView = nullptr;
+		VkWriteDescriptorSet MaterialImagesDescriptorWrite = {};
+		MaterialImagesDescriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		MaterialImagesDescriptorWrite.dstSet = MaterialDescriptor->DescriptorSet;
+		MaterialImagesDescriptorWrite.dstBinding = 1;
+		MaterialImagesDescriptorWrite.dstArrayElement = 0;
+		MaterialImagesDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		MaterialImagesDescriptorWrite.descriptorCount = static_cast<uint32_t>(DescriptorImageInfos.size()); // Add one for the buffer descriptor.
+		MaterialImagesDescriptorWrite.pBufferInfo = nullptr;
+		MaterialImagesDescriptorWrite.pImageInfo = DescriptorImageInfos.data();
+		MaterialImagesDescriptorWrite.pTexelBufferView = nullptr;
 
-		vkUpdateDescriptorSets(m_pVulkanDevice->m_Device, 1, &MaterialDescriptorWrite, 0, nullptr);
+		VkWriteDescriptorSet MaterialConstantsDescriptorWrite = {};
+		MaterialConstantsDescriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		MaterialConstantsDescriptorWrite.dstSet = MaterialDescriptor->DescriptorSet;
+		MaterialConstantsDescriptorWrite.dstBinding = 0;
+		MaterialConstantsDescriptorWrite.dstArrayElement = 0;
+		MaterialConstantsDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		MaterialConstantsDescriptorWrite.descriptorCount = 1; // Add one for the buffer descriptor.
+		MaterialConstantsDescriptorWrite.pBufferInfo = &ConstantsBufferInfo;
+		MaterialConstantsDescriptorWrite.pImageInfo = nullptr;
+		MaterialConstantsDescriptorWrite.pTexelBufferView = nullptr;
+
+		std::array<VkWriteDescriptorSet, 2> Writes = { MaterialImagesDescriptorWrite, MaterialConstantsDescriptorWrite };
+
+		vkUpdateDescriptorSets(m_pVulkanDevice->m_Device, static_cast<uint32_t>(Writes.size()), Writes.data(), 0, nullptr);
 	}
 }
 

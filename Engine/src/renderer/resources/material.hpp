@@ -7,16 +7,19 @@
 
 class CTexture;
 
-struct sMaterialProperties
+struct sMaterialConstants
 {
-    bool bIsTransparent;
-
-    // Property factors.
     glm::vec4 Color;
     float RoughnessFactor;
     float MetallicFactor;
     float TillingFactor;
     glm::vec3 EmissiveFactor;
+    bool bIsTransparent;
+};
+ 
+struct sMaterialProperties
+{
+    sMaterialConstants MaterialConstants;
 
     // Textures.
     CTexture* pAlbedoTexture;
@@ -35,6 +38,7 @@ public:
     CMaterial() = default;
     void SetMaterialProperties(const sMaterialProperties& aMaterialProperties);
     sMaterialProperties GetMaterialProperties() const { return m_MaterialProperties; }
+    sMaterialConstants GetMaterialConstatns() const { return m_MaterialProperties.MaterialConstants; }
 
 private:
     static std::unordered_map<std::string, CMaterial*> m_LoadedMaterials;

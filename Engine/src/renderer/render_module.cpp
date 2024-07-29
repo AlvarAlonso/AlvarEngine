@@ -119,6 +119,11 @@ void CRenderModule::CreateDefaultScene()
     CMaterial::Add("default_material", pDefaultMaterial);
 
     CMaterial* pTestMaterial = new CMaterial();
+    Props.MaterialConstants.Color = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
+    Props.MaterialConstants.EmissiveFactor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    Props.MaterialConstants.MetallicFactor = 0.5f;
+    Props.MaterialConstants.RoughnessFactor = 0.5f;
+    Props.MaterialConstants.TillingFactor = 1.0f;
     Props.pAlbedoTexture = CTexture::Get<CTexture>("../Resources/Images/Material_33_baseColor.png");
     Props.pMetallicRoughnessTexture = CTexture::Get<CTexture>("../Resources/Images/Material_33_metallicRoughness.png");
     Props.pEmissiveTexture = CTexture::Get<CTexture>("../Resources/Images/Material_33_emissive.png");

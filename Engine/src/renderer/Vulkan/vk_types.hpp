@@ -77,5 +77,6 @@ struct sMaterialDescriptor
 {
     CMaterial* pMaterial;
     sMaterialResources Resources;
+    AllocatedBuffer ConstantsBuffer;
     VkDescriptorSet DescriptorSet;
 };
