@@ -185,39 +185,46 @@ bool vkutils::LoadImageFromFile(const CVulkanDevice* const aVulkanDevice, const 
 	}
 
 	void* Pixel_Ptr = Pixels;
-	VkDeviceSize ImageSize = TexWidth * TexHeight * 4;
+	const uint64_t ImageSize = TexWidth * TexHeight * 4;
 
-	// TODO: Should all images have this format?
-	VkFormat ImageFormat = VK_FORMAT_R8G8B8A8_SRGB;
-
-	VmaAllocator Allocator = aVulkanDevice->m_Allocator;
-
-	AllocatedBuffer StagingBuffer = vkutils::CreateBuffer(aVulkanDevice, ImageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
-
-	void* Data;
-	vmaMapMemory(Allocator, StagingBuffer.Allocation, &Data);
-	memcpy(Data, Pixel_Ptr, static_cast<size_t>(ImageSize));
-	vmaUnmapMemory(Allocator, StagingBuffer.Allocation);
-
+    UploadImageToVRAM(aVulkanDevice, ImageSize, Pixel_Ptr, TexWidth, TexHeight, aOutImage);
+    
 	stbi_image_free(Pixels);
 
-	VkExtent3D ImageExtent;
-	ImageExtent.width = static_cast<uint32_t>(TexWidth);
-	ImageExtent.height = static_cast<uint32_t>(TexHeight);
-	ImageExtent.depth = 1;
+    return true;
+}
 
-	VkImageCreateInfo ImageInfo = vkinit::ImageCreateInfo(ImageFormat, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, ImageExtent);
+void vkutils::UploadImageToVRAM(const CVulkanDevice *const aVulkanDevice, const uint64_t aImageSize, void *aPixel_Ptr, int32_t aTexWidth, int32_t aTexHeight, AllocatedImage &aOutImage)
+{
+    // TODO: Should all images have this format?
+    VkFormat ImageFormat = VK_FORMAT_R8G8B8A8_SRGB;
 
-	AllocatedImage NewImage;
+    VmaAllocator Allocator = aVulkanDevice->m_Allocator;
 
-	VmaAllocationCreateInfo ImageAllocInfo = {};
-	ImageAllocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+    AllocatedBuffer StagingBuffer = vkutils::CreateBuffer(aVulkanDevice, aImageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 
-	// It is responsibility of the caller to destroy the image.
-	vmaCreateImage(Allocator, &ImageInfo, &ImageAllocInfo, &NewImage.Image, &NewImage.Allocation, nullptr);
+    void *Data;
+    vmaMapMemory(Allocator, StagingBuffer.Allocation, &Data);
+    memcpy(Data, aPixel_Ptr, static_cast<size_t>(aImageSize));
+    vmaUnmapMemory(Allocator, StagingBuffer.Allocation);
 
-	aVulkanDevice->ImmediateSubmit([&](VkCommandBuffer aCmd)
-	{
+    VkExtent3D ImageExtent;
+    ImageExtent.width = static_cast<uint32_t>(aTexWidth);
+    ImageExtent.height = static_cast<uint32_t>(aTexHeight);
+    ImageExtent.depth = 1;
+
+    VkImageCreateInfo ImageInfo = vkinit::ImageCreateInfo(ImageFormat, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, ImageExtent);
+
+    AllocatedImage NewImage;
+
+    VmaAllocationCreateInfo ImageAllocInfo = {};
+    ImageAllocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
+    // It is responsibility of the caller to destroy the image.
+    vmaCreateImage(Allocator, &ImageInfo, &ImageAllocInfo, &NewImage.Image, &NewImage.Allocation, nullptr);
+
+    aVulkanDevice->ImmediateSubmit([&](VkCommandBuffer aCmd)
+                                   {
 		VkImageSubresourceRange Range;
 		Range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		Range.baseMipLevel = 0;
@@ -256,14 +263,11 @@ bool vkutils::LoadImageFromFile(const CVulkanDevice* const aVulkanDevice, const 
 		ImageBarrierToReadable.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
 		vkCmdPipelineBarrier(aCmd, VK_PIPELINE_STAGE_TRANSFER_BIT,
-			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &ImageBarrierToReadable);
-	});
+			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &ImageBarrierToReadable); });
 
-	vmaDestroyBuffer(Allocator, StagingBuffer.Buffer, StagingBuffer.Allocation);
+    vmaDestroyBuffer(Allocator, StagingBuffer.Buffer, StagingBuffer.Allocation);
 
-	aOutImage = NewImage;
-	
-	return true;
+    aOutImage = NewImage;
 }
 
 size_t vkutils::GetAlignedSize(size_t aOriginalSize, size_t aAlignment)

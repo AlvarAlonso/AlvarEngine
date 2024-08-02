@@ -8,9 +8,14 @@
 #include <tinygltf/tiny_gltf.h>
 
 #include <renderer/core/render_types.hpp>
+#include <renderer/resources/texture.hpp>
+#include <renderer/resources/material.hpp>
+#include <core/logger.h>
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+
+#include <vector>
 
 CMeshNode::~CMeshNode()
 {
@@ -27,9 +32,56 @@ CRenderable::~CRenderable()
     delete m_pRoot;
 }
 
+struct sGLTFData
+{
+    std::vector<CMeshNode*> Nodes;
+    std::vector<CTexture*> Textures;
+    std::vector<CMaterial*> Materials;
+} LoadedData;
+
+static void TextureFromGLTFImage(tinygltf::Image& aGltfImage)
+{
+    unsigned char* Buffer = nullptr;
+	uint64_t BufferSize = 0;
+	bool bDeleteBuffer = false;
+
+	// Convert to rgba if it is rgb
+	if (aGltfImage.component == 3)
+	{
+		BufferSize = aGltfImage.width * aGltfImage.height * 4;
+		Buffer = new unsigned char[BufferSize];
+		unsigned char* rgba = Buffer;
+		unsigned char* rgb = &aGltfImage.image[0];
+		for (int32_t i = 0; i < aGltfImage.width * aGltfImage.height; ++i)
+		{
+			for (int32_t j = 0; j < 3; ++j)
+			{
+				rgba[j] = rgb[j];
+			}
+			rgba += 4;
+			rgb += 3;
+		}
+		bDeleteBuffer = true;
+	}
+	else
+	{
+		Buffer = &aGltfImage.image[0];
+		BufferSize = aGltfImage.image.size();
+	}
+
+    // TODO: Create and upload the image in the graphics API being used.
+    CTexture::Create(BufferSize, Buffer, aGltfImage.width, aGltfImage.height);
+}
+
 static void LoadTextures(tinygltf::Model &aGltfModel)
 {
-
+    for(tinygltf::Texture &Tex : aGltfModel.textures) 
+    {
+        if (aGltfModel.images.size() <= 0) continue;
+        tinygltf::Image Image = aGltfModel.images[Tex.source];
+        
+        TextureFromGLTFImage(Image);
+    }
 }
 
 static void LoadMaterials(tinygltf::Model &aGltfModel)
@@ -77,6 +129,123 @@ static void LoadNode(CMeshNode* aParent, const tinygltf::Node &aNode, uint32_t a
     }
 
     // Node contains mesh data.
+    if (aNode.mesh > -1)
+    {
+        const tinygltf::Mesh Mesh = aModel.meshes[aNode.mesh];
+        sMeshData* pNewMesh = new sMeshData();
+        for (size_t i = 0; i < Mesh.primitives.size(); ++i)
+        {
+            const tinygltf::Primitive& Primitive = Mesh.primitives[i];
+            const uint32_t IndexStart = static_cast<uint32_t>(aIndexBuffer.size());
+            const uint32_t VertexStart = static_cast<uint32_t>(aVertexBuffer.size());
+            uint32_t IndexCount = 0;
+            uint32_t VertexCount = 0;
+            glm::vec3 PosMin{};
+            glm::vec3 PosMax{};
+            bool bHasIndices = Primitive.indices > -1;
+            // Vertices.
+            {
+                const float* BufferPos = nullptr;
+                const float* BufferNormals = nullptr;
+                const float* BufferTexCoordSet0 = nullptr;
+
+                int PosByteStride;
+                int NormalByteStride;
+                int UV0ByteStride;
+
+                // Position attribute is required.
+                assert(Primitive.attributes.find("POSITION") != Primitive.attributes.end());
+
+                const tinygltf::Accessor& PosAccessor = aModel.accessors[Primitive.attributes.find("POSITION")->second];
+                const tinygltf::BufferView& PosView = aModel.bufferViews[PosAccessor.bufferView];
+                BufferPos = reinterpret_cast<const float*>(&aModel.buffers[PosView.buffer].data[PosAccessor.byteOffset + PosView.byteOffset]);
+                PosMin = glm::vec3(PosAccessor.minValues[0], PosAccessor.minValues[1], PosAccessor.minValues[2]);
+                PosMax = glm::vec3(PosAccessor.maxValues[0], PosAccessor.maxValues[1], PosAccessor.maxValues[2]);
+                VertexCount = static_cast<uint32_t>(PosAccessor.count);
+                PosByteStride = PosAccessor.ByteStride(PosView) ? (PosAccessor.ByteStride(PosView) / sizeof(float)) : TINYGLTF_TYPE_VEC3 * 4;
+
+                if(Primitive.attributes.find("NORMAL") != Primitive.attributes.end())
+                {
+                    const tinygltf::Accessor& NormAccessor = aModel.accessors[Primitive.attributes.find("NORMAL")->second];
+                    const tinygltf::BufferView& NormView = aModel.bufferViews[NormAccessor.bufferView];
+                    BufferNormals = reinterpret_cast<const float*>(&(aModel.buffers[NormView.buffer].data[NormAccessor.byteOffset + NormView.byteOffset]));
+                    NormalByteStride = NormAccessor.ByteStride(NormView) ? (NormAccessor.ByteStride(NormView) / sizeof(float)) : TINYGLTF_TYPE_VEC3 * 4;
+                }
+
+                if(Primitive.attributes.find("TEXCOORD_0") != Primitive.attributes.end())
+                {
+                    const tinygltf::Accessor& UVAccessor = aModel.accessors[Primitive.attributes.find("TEXCOORD_0")->second];
+                    const tinygltf::BufferView& UVView = aModel.bufferViews[UVAccessor.bufferView];
+                    BufferTexCoordSet0 = reinterpret_cast<const float*>(&(aModel.buffers[UVView.buffer].data[UVAccessor.byteOffset + UVView.byteOffset]));
+                    UV0ByteStride = UVAccessor.ByteStride(UVView) ? (UVAccessor.ByteStride(UVView) / sizeof(float)) : TINYGLTF_TYPE_VEC2 * 4;
+                }
+
+                for(size_t v = 0; v < PosAccessor.count; v++)
+                {
+                    sVertex Vert{};
+
+                    Vert.Position = glm::vec4(glm::make_vec3(&BufferPos[v * PosByteStride]), 1.0f);
+                    Vert.Normal = glm::normalize(glm::vec3(BufferNormals ? glm::make_vec3(&BufferNormals[v * NormalByteStride]) : glm::vec3(0.0f)));
+                    Vert.UV = BufferTexCoordSet0 ? glm::make_vec2(&BufferTexCoordSet0[v * UV0ByteStride]) : glm::vec3(0.0f);
+
+                    aVertexBuffer.push_back(Vert);
+                }
+            }
+
+            // Indices.
+            if(bHasIndices)
+            {
+                const tinygltf::Accessor& Accessor = aModel.accessors[Primitive.indices > -1 ? Primitive.indices : 0];
+                const tinygltf::BufferView& BufferView = aModel.bufferViews[Accessor.bufferView];
+                const tinygltf::Buffer& buffer = aModel.buffers[BufferView.buffer];
+
+                IndexCount = static_cast<uint32_t>(Accessor.count);
+                const void* dataPtr = &(buffer.data[Accessor.byteOffset + BufferView.byteOffset]);
+
+                switch(Accessor.componentType)
+                {
+                case TINYGLTF_PARAMETER_TYPE_UNSIGNED_INT: {
+                    const uint32_t* Buf = static_cast<const uint32_t*>(dataPtr);
+                    for(size_t index = 0; index < Accessor.count; index++) {
+                        aIndexBuffer.push_back(Buf[index] + VertexStart);
+                    }
+                    break;
+                }
+                case TINYGLTF_PARAMETER_TYPE_UNSIGNED_SHORT: {
+                    const uint16_t* Buf = static_cast<const uint16_t*>(dataPtr);
+                    for(size_t index = 0; index < Accessor.count; index++) {
+                        aIndexBuffer.push_back(Buf[index] + VertexStart);
+                    }
+                    break;
+                }
+                case TINYGLTF_PARAMETER_TYPE_UNSIGNED_BYTE: {
+                    const uint8_t* Buf = static_cast<const uint8_t*>(dataPtr);
+                    for(size_t index = 0; index < Accessor.count; index++) {
+                        aIndexBuffer.push_back(Buf[index] + VertexStart);
+                    }
+                    break;
+                }
+                default:
+                    SGSERROR("Index component type %d not supported!", Accessor.componentType)
+                    return;
+                }
+            }
+
+            CPrimitive* pNewPrimitive = new CPrimitive(VertexStart, IndexStart, IndexCount, VertexCount, Primitive.material > -1 ? LoadedData.Materials[Primitive.material] : nullptr); // TODO: Default material instead of "nullptr".
+            pNewMesh->Primitives.push_back(pNewPrimitive);
+        }
+
+        pNewNode->m_pMeshData = pNewMesh;
+    }
+
+    if (aParent)
+    {
+        aParent->m_Children.push_back(pNewNode);
+    }
+    else
+    {
+        LoadedData.Nodes.push_back(pNewNode);
+    }
 }
 
 void LoadGLTF(const std::string& aFilePath, float aScale)

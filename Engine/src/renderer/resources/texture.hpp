@@ -37,6 +37,8 @@ public:
         return pCreatedTexture;
     }
 
+    static CTexture* Create(const uint64_t aImageSize, void *aPixel_Ptr, int32_t aTexWidth, int32_t aTexHeight);
+
     CTexture() = default;
 
     virtual uint32_t GetWidth() const = 0;

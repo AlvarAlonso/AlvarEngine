@@ -8,6 +8,9 @@
 #include <vector>
 #include <unordered_map>
 
+// TODO: Change that.
+#include <renderer/resources/loaders/glTFLoader.hpp>
+
 struct sVertex
 {
     sVertex();
@@ -47,6 +50,8 @@ public:
     std::string ID;
     std::vector<sVertex> Vertices;
     std::vector<uint32_t> Indices32;
+
+    std::vector<CPrimitive*> Primitives;
 
     std::vector<uint16_t>& GetIndices16()
     {

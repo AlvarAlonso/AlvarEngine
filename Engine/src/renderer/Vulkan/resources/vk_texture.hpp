@@ -9,7 +9,8 @@ class CVkTexture : public CTexture
 {
 public:
     CVkTexture() = default;
-    CVkTexture(const std::string& aFilePath);
+    CVkTexture(const std::string& aFilePath); 
+    CVkTexture(const uint64_t aImageSize, void *aPixel_Ptr, int32_t aTexWidth, int32_t aTexHeight);
 
     virtual uint32_t GetWidth() const override { return m_Width; }
     virtual uint32_t GetHeight() const override { return m_Height; }

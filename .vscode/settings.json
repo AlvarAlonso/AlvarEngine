@@ -76,6 +76,11 @@
         "functional": "cpp",
         "iomanip": "cpp",
         "numeric": "cpp",
-        "shared_mutex": "cpp"
+        "shared_mutex": "cpp",
+        "ranges": "cpp",
+        "span": "cpp",
+        "filesystem": "cpp",
+        "queue": "cpp",
+        "valarray": "cpp"
     }
 }
