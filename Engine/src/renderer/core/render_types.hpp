@@ -11,6 +11,8 @@
 // TODO: Change that.
 #include <renderer/resources/loaders/glTFLoader.hpp>
 
+class CMaterial;
+
 struct sVertex
 {
     sVertex();
@@ -38,6 +40,24 @@ namespace std {
 	};
 }
 
+/**
+ * @brief Represents a submesh from a complete mesh. A mesh can have multiple primitives/submeshes with different materials. 
+ * The CPrimitive has the information of which vertices/indices to use from the CMesh.
+ */
+class CSubMesh
+{
+public:
+	CSubMesh(uint32_t aFirstVertex, uint32_t aFirstIndex, uint32_t aIndexCount, uint32_t aVertexCount, CMaterial* aMaterial) : m_FirstIndex(aFirstIndex), m_IndexCount(aIndexCount), m_VertexCount(aVertexCount), m_Material(m_Material) 
+    {
+	};
+
+    uint32_t m_FirstVertex;
+    uint32_t m_FirstIndex;
+    uint32_t m_IndexCount;
+    uint32_t m_VertexCount;
+    CMaterial* m_Material;
+};
+
 struct sMeshData
 {
 public:
@@ -51,7 +71,7 @@ public:
     std::vector<sVertex> Vertices;
     std::vector<uint32_t> Indices32;
 
-    std::vector<CPrimitive*> Primitives;
+    std::vector<CSubMesh*> Primitives;
 
     std::vector<uint16_t>& GetIndices16()
     {
@@ -86,4 +106,39 @@ enum class eRenderAPI : uint8_t
     NONE = 0,
     VULKAN,
     NUM
+};
+
+/**
+ * @brief Used to build hierarchy of meshes, where transform from child meshes are local to parent's transform.
+ * Will be the basis for the scene graph. 
+ */
+class CMeshNode
+{
+public:
+    CMeshNode() = default;
+    ~CMeshNode();
+
+    std::string m_Name;
+    bool m_bVisible;
+    bool m_bOpaque;
+    glm::mat4 m_Model;
+
+    sMeshData* m_pMeshData;
+    CMeshNode* m_pParent;
+    std::vector<CMeshNode*> m_Children;
+};
+
+class CRenderable
+{
+public:
+    static CRenderable* Create();
+    CRenderable() = default;
+    ~CRenderable();
+
+    virtual void UploadToVRAM() = 0;
+
+    std::string m_Name;
+    CMeshNode* m_pRoot;
+    std::vector<sVertex> m_Vertices;
+    std::vector<uint32_t> m_Indices;
 };

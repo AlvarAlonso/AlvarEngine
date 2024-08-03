@@ -2,6 +2,8 @@
 #include "render_utils.hpp"
 #include "geometry_generator.hpp"
 #include <core/logger.h>
+#include <engine.hpp>
+#include <renderer/vulkan/vk_types.hpp>
 
 #include <unordered_map>
 
@@ -123,4 +125,29 @@ bool sMeshData::HasMeshData(const std::string& aFilename)
 {
     const auto& FoundMeshData = LoadedMeshes.find(aFilename);
 	return FoundMeshData != LoadedMeshes.cend();
+}
+
+CRenderable* CRenderable::Create()
+{
+    const eRenderAPI RenderAPI = CEngine::Get()->GetRenderModule()->GetRenderAPI();
+    switch (RenderAPI)
+    {
+        case eRenderAPI::NONE:
+        {
+            SGSERROR("No graphics API selected!");
+        }
+        break;
+
+        case eRenderAPI::VULKAN:
+        {
+            return new CVulkanRenderable();
+        }
+        break;
+    
+    default:
+        SGSERROR("No graphics API selected!");
+        break;
+    }
+
+    return nullptr;
 }

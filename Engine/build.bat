@@ -25,6 +25,6 @@ popd
 mkdir ..\bin
 
 pushd ..\bin
-cl /EHsc /WX /Zi %include_paths% /DDEBUG /c %SOURCES% ..\ThirdParty\VulkanBootstrap\*cpp /link C:\VulkanSDK\1.3.250.1\Lib\vulkan-1.lib ..\ThirdParty\glfw\lib-vc2022\glfw3.lib
+cl /EHsc /WX /Zi /std:c++17 %include_paths% /DDEBUG /c %SOURCES% ..\ThirdParty\VulkanBootstrap\*cpp /link C:\VulkanSDK\1.3.250.1\Lib\vulkan-1.lib ..\ThirdParty\glfw\lib-vc2022\glfw3.lib
 lib /out:engine.lib *.obj
 popd

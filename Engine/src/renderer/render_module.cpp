@@ -115,8 +115,9 @@ void CRenderModule::CreateDefaultScene()
     Props.pEmissiveTexture = DefaultTexture;
     Props.pNormalTexture = DefaultTexture;
     pDefaultMaterial->SetMaterialProperties(Props);
+    pDefaultMaterial->SetID("default_material");
 
-    CMaterial::Add("default_material", pDefaultMaterial);
+    CMaterial::RegisterMaterial(pDefaultMaterial);
 
     CMaterial* pTestMaterial = new CMaterial();
     Props.MaterialConstants.Color = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
@@ -129,6 +130,7 @@ void CRenderModule::CreateDefaultScene()
     Props.pEmissiveTexture = CTexture::Get<CTexture>("../Resources/Images/Material_33_emissive.png");
     Props.pNormalTexture = CTexture::Get<CTexture>("../Resources/Images/Material_33_normal.png");
     pTestMaterial->SetMaterialProperties(Props);
+    pTestMaterial->SetID("test_material");
 
-    CMaterial::Add("test_material", pTestMaterial);
+    CMaterial::RegisterMaterial(pTestMaterial);
 }

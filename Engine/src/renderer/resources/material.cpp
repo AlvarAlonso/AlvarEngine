@@ -19,16 +19,41 @@ CMaterial* CMaterial::Get(const std::string& aID)
     }
 }
 
-void CMaterial::Add(const std::string& aID, CMaterial* aMaterial)
+void CMaterial::RegisterMaterial(CMaterial* apMaterial)
 {
-    const auto& FoundMaterial = m_LoadedMaterials.find(aID);
-    if (FoundMaterial != m_LoadedMaterials.cend())
+    const std::string MaterialID = apMaterial->m_ID;
+    if (MaterialID.empty())
     {
-        SGSERROR("The material with ID: %s already exists! Ignoring the new material.", aID.c_str());
+        SGSERROR("Can't register the material. The ID is empty!");
     }
     else
     {
-        m_LoadedMaterials.insert({aID, aMaterial});
+        const auto& FoundMaterial = m_LoadedMaterials.find(MaterialID);
+        if (FoundMaterial != m_LoadedMaterials.cend())
+        {
+            SGSWARN("The material with ID: %s is already registered!", MaterialID.c_str());
+        }
+        else
+        {
+            m_LoadedMaterials.insert({MaterialID, apMaterial});
+        }
+    }
+}
+    
+void CMaterial::SetID(const std::string& aID)
+{
+    if (!m_ID.empty())
+    {
+        auto NodeHandler = m_LoadedMaterials.extract(m_ID);
+        if (!NodeHandler.empty())
+        {
+            NodeHandler.key() = aID;
+            m_LoadedMaterials.insert(std::move(NodeHandler));
+        }
+        else
+        {
+            m_LoadedMaterials.insert({aID, this});
+        }
     }
 }
 

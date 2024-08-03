@@ -75,3 +75,7 @@ sMesh::~sMesh()
 	LoadedMeshes.erase(ID);
 }
 
+void CVulkanRenderable::UploadToVRAM()
+{
+
+}

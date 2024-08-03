@@ -38,15 +38,18 @@ public:
     }
 
     static CTexture* Create(const uint64_t aImageSize, void *aPixel_Ptr, int32_t aTexWidth, int32_t aTexHeight);
+    static void RegisterTexture(CTexture* apTexture);
 
     CTexture() = default;
 
     virtual uint32_t GetWidth() const = 0;
     virtual uint32_t GetHeight() const = 0;
 
+    void SetID(const std::string& aID) { m_ID = aID; }
     const std::string& GetFilename() const { return m_Filename; }
 
 protected:
+    std::string m_ID;
     std::string m_Filename;
 
 private:

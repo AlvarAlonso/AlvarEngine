@@ -80,3 +80,14 @@ struct sMaterialDescriptor
     AllocatedBuffer ConstantsBuffer;
     VkDescriptorSet DescriptorSet;
 };
+
+class CVulkanRenderable : public CRenderable
+{
+public:
+    CVulkanRenderable() = default;
+
+    virtual void UploadToVRAM() override;
+
+    AllocatedBuffer m_VertexBuffer;
+    AllocatedBuffer m_IndexBuffer;
+};

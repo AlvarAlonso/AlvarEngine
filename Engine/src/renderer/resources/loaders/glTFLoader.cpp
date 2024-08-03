@@ -69,8 +69,11 @@ static void TextureFromGLTFImage(tinygltf::Image& aGltfImage)
 		BufferSize = aGltfImage.image.size();
 	}
 
-    // TODO: Create and upload the image in the graphics API being used.
-    CTexture::Create(BufferSize, Buffer, aGltfImage.width, aGltfImage.height);
+    // Create and upload the image in the graphics API being used.
+    CTexture* pNewTexture = CTexture::Create(BufferSize, Buffer, aGltfImage.width, aGltfImage.height);
+    pNewTexture->SetID(aGltfImage.name);
+    LoadedData.Textures.push_back(pNewTexture);
+    CTexture::RegisterTexture(pNewTexture);
 }
 
 static void LoadTextures(tinygltf::Model &aGltfModel)
@@ -86,7 +89,39 @@ static void LoadTextures(tinygltf::Model &aGltfModel)
 
 static void LoadMaterials(tinygltf::Model &aGltfModel)
 {
+    for(tinygltf::Material &mat : aGltfModel.materials)
+    {
+        CMaterial* pMaterial = new CMaterial();
+        sMaterialProperties Props = {};
+        if(mat.values.find("baseColorTexture") != mat.values.end()) {
+            Props.pAlbedoTexture = LoadedData.Textures[mat.values["baseColorTexture"].TextureIndex()];
+        }
+        if(mat.values.find("metallicRoughnessTexture") != mat.values.end()) {
+            Props.pMetallicRoughnessTexture = LoadedData.Textures[mat.values["metallicRoughnessTexture"].TextureIndex()];
+        }
+        if(mat.values.find("roughnessFactor") != mat.values.end()) {
+            Props.MaterialConstants.RoughnessFactor = static_cast<float>(mat.values["roughnessFactor"].Factor());
+        }
+        if(mat.values.find("metallicFactor") != mat.values.end()) {
+            Props.MaterialConstants.MetallicFactor = static_cast<float>(mat.values["metallicFactor"].Factor());
+        }
+        if(mat.values.find("baseColorFactor") != mat.values.end()) {
+            Props.MaterialConstants.Color = glm::make_vec4(mat.values["baseColorFactor"].ColorFactor().data());
+        }
+        if(mat.additionalValues.find("normalTexture") != mat.additionalValues.end()) {
+            Props.pNormalTexture = LoadedData.Textures[mat.additionalValues["normalTexture"].TextureIndex()];
+        }
+        if(mat.additionalValues.find("occlusionTexture") != mat.additionalValues.end()) {
+            Props.pOcclusionTexture = LoadedData.Textures[mat.additionalValues["occlusionTexture"].TextureIndex()];
+        }
+        if(mat.additionalValues.find("emissiveFactor") != mat.additionalValues.end()) {
+            Props.MaterialConstants.EmissiveFactor = glm::vec4(glm::make_vec3(mat.additionalValues["emissiveFactor"].ColorFactor().data()), 1.0f);
+        }
 
+        pMaterial->SetID(mat.name.c_str());
+        LoadedData.Materials.push_back(pMaterial);
+        CMaterial::RegisterMaterial(pMaterial);
+    }
 }
 
 static void LoadNode(CMeshNode* aParent, const tinygltf::Node &aNode, uint32_t aNodeIndex, const tinygltf::Model &aModel, 
@@ -231,7 +266,7 @@ static void LoadNode(CMeshNode* aParent, const tinygltf::Node &aNode, uint32_t a
                 }
             }
 
-            CPrimitive* pNewPrimitive = new CPrimitive(VertexStart, IndexStart, IndexCount, VertexCount, Primitive.material > -1 ? LoadedData.Materials[Primitive.material] : nullptr); // TODO: Default material instead of "nullptr".
+            CSubMesh* pNewPrimitive = new CSubMesh(VertexStart, IndexStart, IndexCount, VertexCount, Primitive.material > -1 ? LoadedData.Materials[Primitive.material] : nullptr); // TODO: Default material instead of "nullptr".
             pNewMesh->Primitives.push_back(pNewPrimitive);
         }
 
@@ -248,7 +283,7 @@ static void LoadNode(CMeshNode* aParent, const tinygltf::Node &aNode, uint32_t a
     }
 }
 
-void LoadGLTF(const std::string& aFilePath, float aScale)
+CRenderable* LoadGLTF(const std::string& aFilePath, float aScale)
 {
     tinygltf::Model gltfModel;
     tinygltf::TinyGLTF gltfContext;
@@ -280,5 +315,25 @@ void LoadGLTF(const std::string& aFilePath, float aScale)
             LoadNode(nullptr, Node, Scene.nodes[i], gltfModel, IndexBuffer, VertexBuffer, aScale);
         }
 
+        if (LoadedData.Nodes.size() == 0)
+        {
+            SGSERROR("No Nodes where found while loading %s!!!", aFilePath.c_str());
+            return nullptr;
+        }
+
+        // Is it necessary to store all these pointers in the first place?
+        LoadedData.Textures.clear();
+        LoadedData.Materials.clear();
+        LoadedData.Nodes.clear();
+
+        CRenderable* pRenderable = CRenderable::Create();
+        pRenderable->m_Vertices = VertexBuffer;
+
+        const size_t VertexBufferSize = VertexBuffer.size() * sizeof(sVertex);
+        const size_t IndexBufferSize = IndexBuffer.size() * sizeof(uint32_t); // TODO: Do not hardcode to uint32_t.
+
+        return pRenderable;
     }
+
+    return nullptr;
 }

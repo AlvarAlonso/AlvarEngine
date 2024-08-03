@@ -54,3 +54,24 @@ CTexture* CTexture::CreateImpl(const std::string& aFilePath)
 
     return nullptr;
 }
+
+void CTexture::RegisterTexture(CTexture* apTexture)
+{
+    const std::string TextureID = apTexture->m_ID;
+    if (TextureID.empty())
+    {
+        SGSERROR("Can't register the texture. The ID is empty!");
+    }
+    else
+    {
+        const auto& FoundFile = m_LoadedTextures.find(TextureID);
+        if (FoundFile != m_LoadedTextures.cend())
+        {
+            SGSWARN("Texture with ID: %s is already registered!", TextureID.c_str());
+        }
+        else
+        {
+            m_LoadedTextures.insert({ TextureID, apTexture});
+        }
+    }
+}

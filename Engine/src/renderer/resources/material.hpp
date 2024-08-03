@@ -33,9 +33,10 @@ class CMaterial
 {
 public:
     static CMaterial* Get(const std::string& aID);
-    static void Add(const std::string& aID, CMaterial* aMaterial);
+    static void RegisterMaterial(CMaterial* apMaterial);
 
     CMaterial() = default;
+    void SetID(const std::string& aID);
     void SetMaterialProperties(const sMaterialProperties& aMaterialProperties);
     sMaterialProperties GetMaterialProperties() const { return m_MaterialProperties; }
     sMaterialConstants GetMaterialConstatns() const { return m_MaterialProperties.MaterialConstants; }
