@@ -134,12 +134,14 @@ void CVulkanDeferredRenderPath::RecordLightPassCommands(VkCommandBuffer aCommand
 
 	vkCmdBindDescriptorSets(aCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_LightPipelineLayout, 1, 1, &m_GBufferDescriptorSet, 0, nullptr);
 
-	//deferred quad
+	// Deferred Quad.
 	VkDeviceSize Offset = 0;
 	vkCmdBindVertexBuffers(aCommandBuffer, 0, 1, &m_Quad->m_VertexBuffer.Buffer, &Offset);
 	vkCmdBindIndexBuffer(aCommandBuffer, m_Quad->m_IndexBuffer.Buffer, 0, VK_INDEX_TYPE_UINT32);
 
-	vkCmdDrawIndexed(aCommandBuffer, static_cast<uint32_t>(m_Quad->m_Indices.size()), 1, 0, 0, 0);
+	// TODO: Make a way to refer quicker to submeshes. Too much redirection.
+	const uint32_t NumIndices = static_cast<uint32_t>(m_Quad->m_pRoots[0]->m_pMeshData->SubMeshes[0]->m_IndexCount);
+	vkCmdDrawIndexed(aCommandBuffer, NumIndices, 1, 0, 0, 0);
 
 	vkCmdEndRenderPass(aCommandBuffer);
 
@@ -238,10 +240,11 @@ void CVulkanDeferredRenderPath::HandleSceneChanged()
 
 void CVulkanDeferredRenderPath::CreateDeferredQuad()
 {
-	sMeshData Quad = CGeometryGenerator::CreateQuad(-1.0f, 1.0f, 2.0f, 2.0f, 0.0f);
-	Quad.ID = "DeferredQuad"; //TODO: Improve this.
+	sMeshData* Quad = new sMeshData();
+	*Quad = CGeometryGenerator::CreateQuad(-1.0f, 1.0f, 2.0f, 2.0f, 0.0f);
+	Quad->ID = "DeferredQuad"; //TODO: Improve this.
 
-	m_Quad = new CVulkanRenderable(&Quad);
+	m_Quad = new CVulkanRenderable(Quad);
 	m_Quad->UploadToVRAM();
 }
 
