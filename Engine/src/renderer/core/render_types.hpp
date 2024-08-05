@@ -153,4 +153,6 @@ public:
     std::vector<CMeshNode*> m_pRoots;
     std::vector<sVertex> m_Vertices;
     std::vector<uint32_t> m_Indices;
+    uint32_t m_VerticesCount;
+    uint32_t m_IndicesCount;
 };

@@ -11,6 +11,7 @@
 #include <renderer/resources/texture.hpp>
 #include <renderer/resources/material.hpp>
 #include <core/logger.h>
+#include <core/utils.hpp>
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -37,6 +38,7 @@ CRenderable::~CRenderable()
 
 struct sGLTFData
 {
+    std::string Filename;
     std::vector<CMeshNode*> Nodes;
     std::vector<CTexture*> Textures;
     std::vector<CMaterial*> Materials;
@@ -74,7 +76,13 @@ static void TextureFromGLTFImage(tinygltf::Image& aGltfImage)
 
     // Create and upload the image in the graphics API being used.
     CTexture* pNewTexture = CTexture::Create(BufferSize, Buffer, aGltfImage.width, aGltfImage.height);
-    pNewTexture->SetID(aGltfImage.name);
+    std::string ID = aGltfImage.name;
+    if (ID.empty())
+    {
+        ID = LoadedData.Filename.append(std::to_string(LoadedData.Textures.size()));
+    }
+
+    pNewTexture->SetID(ID);
     LoadedData.Textures.push_back(pNewTexture);
     CTexture::RegisterTexture(pNewTexture);
 }
@@ -146,7 +154,7 @@ static void LoadNode(CMeshNode* aParent, const tinygltf::Node &aNode, uint32_t a
         glm::quat q = glm::make_quat(aNode.rotation.data());
         pNewNode->m_Model *= glm::mat4(q);
     }
-    glm::vec3 Scale = glm::vec3(1.0f);
+    glm::vec3 Scale = glm::vec3(aGlobalScale);
     if (aNode.scale.size() == 3)
     {
         Scale = glm::make_vec3(aNode.scale.data());
@@ -293,6 +301,8 @@ CRenderable* LoadGLTF(const std::string& aFilePath, float aScale)
     std::string Error;
     std::string Warning;
 
+    LoadedData.Filename = utils::GetFileName(aFilePath);
+
     bool bBinary = false;
     size_t ExtPos = aFilePath.rfind('.', aFilePath.length());
     if (ExtPos != std::string::npos)
@@ -324,14 +334,16 @@ CRenderable* LoadGLTF(const std::string& aFilePath, float aScale)
             return nullptr;
         }
 
-        // Is it necessary to store all these pointers in the first place?
+        CRenderable* pRenderable = CRenderable::Create();
+        pRenderable->m_pRoots = LoadedData.Nodes;
+        pRenderable->m_Vertices = VertexBuffer;
+        pRenderable->m_Indices = IndexBuffer;
+        pRenderable->m_VerticesCount = static_cast<uint32_t>(VertexBuffer.size());
+        pRenderable->m_IndicesCount = static_cast<uint32_t>(IndexBuffer.size());
+
         LoadedData.Textures.clear();
         LoadedData.Materials.clear();
         LoadedData.Nodes.clear();
-
-        CRenderable* pRenderable = CRenderable::Create();
-        pRenderable->m_Vertices = VertexBuffer;
-        pRenderable->m_Indices = IndexBuffer;
 
         return pRenderable;
     }

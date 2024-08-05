@@ -55,11 +55,11 @@ public:
 
     void HandleWindowResize();
 
-    void CreateRenderablesData(const std::vector<CRenderable*>& aRenderables);
+    void CreateRenderablesData(const std::vector<CRenderable *> &aRenderables);
 
     void ChangeRenderPath();
 
-    CVulkanDevice* GetDevice() const { return m_pVulkanDevice; }
+    CVulkanDevice *GetDevice() const { return m_pVulkanDevice; }
 
 private:
     void InitCommandPools();
@@ -78,6 +78,9 @@ private:
     bool HasStencilComponent(VkFormat aFormat);
 
     void AddTransformsToBuffer(sGPURenderObjectData* apBuffer, size_t& aIndex, CMeshNode* apMeshNode);
+   
+    void CreateMaterialDescriptorsFromMeshNodeRecursive(CMeshNode *const &aMeshNode);
+    void CreateMaterialDescriptorsFromMeshNode(CMeshNode *const &aMeshNode);
 
     friend class CVulkanDeferredRenderPath;
     friend class CVulkanForwardRenderPath;

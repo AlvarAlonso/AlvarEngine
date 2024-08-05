@@ -148,63 +148,10 @@ void CVulkanBackend::CreateRenderablesData(const std::vector<CRenderable*>& aRen
 		// TODO: Use namespaces because otherwise is very confusing to know if I'm dealing with vulkan types or generic render types.
 
 		// Create the material descriptors.
-		for (const auto& MeshNode : Renderable->m_pRoots)
+		for (const auto& Root : Renderable->m_pRoots)
 		{
-			for (const auto& SubMesh : MeshNode->m_pMeshData->SubMeshes)
-			{
-				CMaterial* pMaterial = SubMesh->m_Material;
-				if (SubMesh->m_Material == nullptr)
-				{
-					SGSWARN("The SubMesh from the MeshNode %s does not have a material. Using default material.", MeshNode->m_Name.c_str());
-					pMaterial = CMaterial::Get("default_material");
-				}
-
-				assert(pMaterial);
-
-				sMaterialDescriptor* MaterialDescriptor = new sMaterialDescriptor();
-				MaterialDescriptor->pMaterial = pMaterial;
-
-				const sMaterialProperties Props = MaterialDescriptor->pMaterial->GetMaterialProperties();
-
-				MaterialDescriptor->ConstantsBuffer = vkutils::CreateBuffer(m_pVulkanDevice, sizeof(sMaterialConstants), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-
-				void* Data;
-				vmaMapMemory(m_pVulkanDevice->m_Allocator, MaterialDescriptor->ConstantsBuffer.Allocation, &Data);
-				memcpy(Data, &Props.MaterialConstants, sizeof(sMaterialConstants));
-				vmaUnmapMemory(m_pVulkanDevice->m_Allocator, MaterialDescriptor->ConstantsBuffer.Allocation);
-
-				CVkTexture* pAlbedoTexture = nullptr;
-				CVkTexture* pMetalRoughnessTexture = nullptr;
-				CVkTexture* pEmissiveTexture = nullptr;
-				CVkTexture* pNormalTexture = nullptr;
-
-				// TODO: Refactor this into a function where, in case of nullptr, it places a default texture.
-				if (Props.pAlbedoTexture)
-				{
-					pAlbedoTexture = CTexture::Get<CVkTexture>(Props.pAlbedoTexture->GetFilename());
-				}
-				if (Props.pMetallicRoughnessTexture)
-				{
-					pMetalRoughnessTexture = CTexture::Get<CVkTexture>(Props.pMetallicRoughnessTexture->GetFilename());
-				}
-				if (Props.pEmissiveTexture)
-				{
-					pEmissiveTexture = CTexture::Get<CVkTexture>(Props.pEmissiveTexture->GetFilename());
-				}
-				if (Props.pNormalTexture)
-				{
-					pNormalTexture = CTexture::Get<CVkTexture>(Props.pNormalTexture->GetFilename());
-				}
-				
-				MaterialDescriptor->Resources.pAlbedoTexture = pAlbedoTexture;
-				MaterialDescriptor->Resources.pMetalRoughnessTexture = pMetalRoughnessTexture;
-				MaterialDescriptor->Resources.pEmissiveTexture = pEmissiveTexture;
-				MaterialDescriptor->Resources.pNormalTexture = pNormalTexture;
-
-				m_MaterialDescriptors.insert({pMaterial->GetID(), MaterialDescriptor});
-				// Descriptors will be created in the specific function to create descriptors.
-			}
-		}
+			CreateMaterialDescriptorsFromMeshNodeRecursive(Root);
+        }
 	}
 
 	CreateSceneDescriptorSets();
@@ -230,6 +177,71 @@ void CVulkanBackend::CreateRenderablesData(const std::vector<CRenderable*>& aRen
 	{
 		m_pCurrentRenderPath->HandleSceneChanged();
 	}
+}
+
+void CVulkanBackend::CreateMaterialDescriptorsFromMeshNodeRecursive(CMeshNode *const &aMeshNode)
+{
+	for (const auto& Child : aMeshNode->m_Children)
+	{
+		CreateMaterialDescriptorsFromMeshNodeRecursive(Child);
+	}
+
+	CreateMaterialDescriptorsFromMeshNode(aMeshNode);
+}
+
+void CVulkanBackend::CreateMaterialDescriptorsFromMeshNode(CMeshNode *const &aMeshNode)
+{
+    if (aMeshNode->m_pMeshData)
+    {
+        for (const auto &SubMesh : aMeshNode->m_pMeshData->SubMeshes)
+        {
+            CMaterial *pMaterial = SubMesh->m_Material;
+            if (SubMesh->m_Material == nullptr)
+            {
+                SGSWARN("The SubMesh from the MeshNode %s does not have a material. Using default material.", aMeshNode->m_Name.c_str());
+                pMaterial = CMaterial::Get("default_material");
+            }
+			
+            assert(pMaterial);
+
+			if (m_MaterialDescriptors.find(pMaterial->GetID()) != m_MaterialDescriptors.cend())
+			{
+				SGSWARN("Already have the descriptor for material %s.", pMaterial->GetID().c_str());
+				return;
+			}
+
+            sMaterialDescriptor *MaterialDescriptor = new sMaterialDescriptor();
+            MaterialDescriptor->pMaterial = pMaterial;
+
+            const sMaterialProperties Props = MaterialDescriptor->pMaterial->GetMaterialProperties();
+
+            MaterialDescriptor->ConstantsBuffer = vkutils::CreateBuffer(m_pVulkanDevice, sizeof(sMaterialConstants), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+            void *Data;
+            vmaMapMemory(m_pVulkanDevice->m_Allocator, MaterialDescriptor->ConstantsBuffer.Allocation, &Data);
+            memcpy(Data, &Props.MaterialConstants, sizeof(sMaterialConstants));
+            vmaUnmapMemory(m_pVulkanDevice->m_Allocator, MaterialDescriptor->ConstantsBuffer.Allocation);
+
+            CVkTexture *pAlbedoTexture = nullptr;
+            CVkTexture *pMetalRoughnessTexture = nullptr;
+            CVkTexture *pEmissiveTexture = nullptr;
+            CVkTexture *pNormalTexture = nullptr;
+
+            // TODO: Refactor this into a function where, in case of nullptr, it places a default texture.
+			pAlbedoTexture = Props.pAlbedoTexture ? CTexture::Get<CVkTexture>(Props.pAlbedoTexture->GetFilename()) : CTexture::Get<CVkTexture>("../Resources/Images/default_texture.png");
+			pMetalRoughnessTexture = Props.pMetallicRoughnessTexture ? CTexture::Get<CVkTexture>(Props.pMetallicRoughnessTexture->GetFilename()) : CTexture::Get<CVkTexture>("../Resources/Images/default_texture.png");
+			pEmissiveTexture = Props.pEmissiveTexture ?  CTexture::Get<CVkTexture>(Props.pEmissiveTexture->GetFilename()) : CTexture::Get<CVkTexture>("../Resources/Images/default_texture.png");
+			pNormalTexture = Props.pNormalTexture ? CTexture::Get<CVkTexture>(Props.pNormalTexture->GetFilename()) : CTexture::Get<CVkTexture>("../Resources/Images/default_texture.png");
+
+            MaterialDescriptor->Resources.pAlbedoTexture = pAlbedoTexture;
+            MaterialDescriptor->Resources.pMetalRoughnessTexture = pMetalRoughnessTexture;
+            MaterialDescriptor->Resources.pEmissiveTexture = pEmissiveTexture;
+            MaterialDescriptor->Resources.pNormalTexture = pNormalTexture;
+
+            m_MaterialDescriptors.insert({pMaterial->GetID(), MaterialDescriptor});
+            // Descriptors will be created in the specific function to create descriptors.
+        }
+    }
 }
 
 void CVulkanBackend::ChangeRenderPath()
@@ -613,7 +625,7 @@ void CVulkanBackend::UpdateFrameUBO(const CCamera* const aCamera, uint32_t Image
 	sCameraFrameUBO FrameUBO = {};
 	FrameUBO.View = aCamera->GetViewMatrix();
 	// TODO: Do not hardcode this.
-	FrameUBO.Proj = glm::perspective(glm::radians(70.0f), m_pVulkanSwapchain->m_WindowExtent.width / (float)m_pVulkanSwapchain->m_WindowExtent.height, 0.1f, 200.0f);
+	FrameUBO.Proj = glm::perspective(glm::radians(90.0f), m_pVulkanSwapchain->m_WindowExtent.width / (float)m_pVulkanSwapchain->m_WindowExtent.height, 0.1f, 1000.0f);
 	FrameUBO.Proj[1][1] *= -1;
 	FrameUBO.ViewProj = FrameUBO.Proj * FrameUBO.View;
 	FrameUBO.Pos = aCamera->GetPosition();

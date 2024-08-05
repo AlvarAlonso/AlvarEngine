@@ -3,6 +3,7 @@
 #include "engine.hpp"
 #include <renderer/resources/material.hpp>
 #include <renderer/resources/texture.hpp>
+#include <renderer/resources/loaders/glTFLoader.hpp>
 
 #include <glm/gtx/transform.hpp>
 #include <GLFW/glfw3.h>
@@ -108,17 +109,21 @@ void CRenderModule::CreateDefaultScene()
 
     CMaterial::RegisterMaterial(pTestMaterial);
 
-    CRenderable* pSphere = CRenderable::Create();
-    CMeshNode* pSphereNode = new CMeshNode();
-    pSphereNode->m_pMeshData = sMeshData::GetMeshData("sphere");
-    pSphereNode->m_Model = glm::translate(glm::vec3(1.0f, 1.0f, -3.0f));
-    pSphere->m_Vertices = std::move(pSphereNode->m_pMeshData->Vertices);
-    pSphere->m_Indices = std::move(pSphereNode->m_pMeshData->Indices32);
-    CSubMesh* pSubMesh = new CSubMesh(0, 0, pSphere->m_Indices.size(), pSphere->m_Vertices.size(), CMaterial::Get("test_material"));
-    pSphereNode->m_pMeshData->SubMeshes.push_back(pSubMesh);
-    pSphere->UploadToVRAM();
-    pSphere->m_pRoots.push_back(pSphereNode);
+    // CRenderable* pSphere = CRenderable::Create();
+    // CMeshNode* pSphereNode = new CMeshNode();
+    // pSphereNode->m_pMeshData = sMeshData::GetMeshData("sphere");
+    // pSphereNode->m_Model = glm::translate(glm::vec3(1.0f, 1.0f, -3.0f));
+    // pSphere->m_Vertices = std::move(pSphereNode->m_pMeshData->Vertices);
+    // pSphere->m_Indices = std::move(pSphereNode->m_pMeshData->Indices32);
+    // CSubMesh* pSubMesh = new CSubMesh(0, 0, pSphere->m_Indices.size(), pSphere->m_Vertices.size(), CMaterial::Get("test_material"));
+    // pSphereNode->m_pMeshData->SubMeshes.push_back(pSubMesh);
+    // pSphere->UploadToVRAM();
+    // pSphere->m_pRoots.push_back(pSphereNode);
+
+    CRenderable* pPato = LoadGLTF("../Resources/Prefabs/Duck.glb", 0.1f);
+    pPato->UploadToVRAM();
 
     m_pDefaultScene = new CScene();
-    m_pDefaultScene->AddRenderable(pSphere);
+    //m_pDefaultScene->AddRenderable(pSphere);
+    m_pDefaultScene->AddRenderable(pPato);
 }

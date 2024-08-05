@@ -61,4 +61,5 @@ void main() {
 	vec3 direct = kd + ks;
 
     outColor = vec4(direct * color_texture, 1.0);
+    outColor = vec4(color_texture, 1.0);
 }

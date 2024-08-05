@@ -80,9 +80,12 @@ void CVulkanRenderable::DrawNode(CMeshNode* apMeshNode, sRenderContext& aRenderC
 	}
 
 	// Draw current node.
-	for (const auto& SubMesh : apMeshNode->m_pMeshData->SubMeshes)
+	if (apMeshNode->m_pMeshData)
 	{
-		DrawSubMesh(SubMesh, aRenderContext, bBindMaterialDescriptor);
+		for (const auto& SubMesh : apMeshNode->m_pMeshData->SubMeshes)
+		{
+			DrawSubMesh(SubMesh, aRenderContext, bBindMaterialDescriptor);
+		}
 	}
 }
 
