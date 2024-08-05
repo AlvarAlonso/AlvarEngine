@@ -29,7 +29,10 @@ CMeshNode::~CMeshNode()
 
 CRenderable::~CRenderable()
 {
-    delete m_pRoot;
+    for (auto& Root : m_pRoots)
+    {
+        delete Root;
+    }
 }
 
 struct sGLTFData
@@ -267,7 +270,7 @@ static void LoadNode(CMeshNode* aParent, const tinygltf::Node &aNode, uint32_t a
             }
 
             CSubMesh* pNewPrimitive = new CSubMesh(VertexStart, IndexStart, IndexCount, VertexCount, Primitive.material > -1 ? LoadedData.Materials[Primitive.material] : nullptr); // TODO: Default material instead of "nullptr".
-            pNewMesh->Primitives.push_back(pNewPrimitive);
+            pNewMesh->SubMeshes.push_back(pNewPrimitive);
         }
 
         pNewNode->m_pMeshData = pNewMesh;
@@ -328,9 +331,7 @@ CRenderable* LoadGLTF(const std::string& aFilePath, float aScale)
 
         CRenderable* pRenderable = CRenderable::Create();
         pRenderable->m_Vertices = VertexBuffer;
-
-        const size_t VertexBufferSize = VertexBuffer.size() * sizeof(sVertex);
-        const size_t IndexBufferSize = IndexBuffer.size() * sizeof(uint32_t); // TODO: Do not hardcode to uint32_t.
+        pRenderable->m_Indices = IndexBuffer;
 
         return pRenderable;
     }

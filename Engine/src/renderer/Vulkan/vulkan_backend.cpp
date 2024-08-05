@@ -125,105 +125,86 @@ void CVulkanBackend::HandleWindowResize()
 	m_bWasWindowResized = true;
 }
 
-void CVulkanBackend::CreateRenderObjectsData(const std::vector<sRenderObject*>& aRenderObjects)
+void CVulkanBackend::CreateRenderablesData(const std::vector<CRenderable*>& aRenderables)
 {
-	for (const auto& RenderObject : aRenderObjects)
+	m_Renderables.reserve(aRenderables.size());
+	for (const auto& Renderable : aRenderables)
+	{
+		CVulkanRenderable* pVulkanRenderable = dynamic_cast<CVulkanRenderable*>(Renderable);
+		if (pVulkanRenderable)
+		{
+			m_Renderables.emplace_back(pVulkanRenderable);
+		}
+		else
+		{
+			SGSERROR("The renderables were not of type CVulkanRenderable!!!");
+			std::abort();
+		}
+	}
+
+	// TODO: Triple for dona nauseas.
+	for (const auto& Renderable : aRenderables)
 	{
 		// TODO: Use namespaces because otherwise is very confusing to know if I'm dealing with vulkan types or generic render types.
-		sRenderObjectData RenderObjectData;
-		RenderObjectData.ModelMatrix = RenderObject->ModelMatrix;
-		const sMeshData* MeshData = sMeshData::GetMeshData(RenderObject->pRenderObjectInfo->MeshPath);
-		if (MeshData)
+
+		// Create the material descriptors.
+		for (const auto& MeshNode : Renderable->m_pRoots)
 		{
-			// If there is already a Vulkan representation of that mesh, use it instead of creating a copy of the same data.
-			// If not, create a new mesh with its Vertex and Index buffer.
-			if(sMesh::HasMesh(MeshData->ID))
+			for (const auto& SubMesh : MeshNode->m_pMeshData->SubMeshes)
 			{
-				RenderObjectData.pMesh = sMesh::GetMesh(MeshData->ID);
-			}
-			else
-			{
-				// TODO: This is not being added to the meshes map?
-				RenderObjectData.pMesh = new sMesh(MeshData->ID);
-				RenderObjectData.pMesh->NumIndices = static_cast<uint32_t>(MeshData->Indices32.size());
-				vkutils::CreateVertexBuffer(m_pVulkanDevice, MeshData->Vertices, RenderObjectData.pMesh->VertexBuffer);
-				vkutils::CreateIndexBuffer(m_pVulkanDevice, MeshData->Indices32, RenderObjectData.pMesh->IndexBuffer);
-
-				m_MainDeletionQueue.PushFunction([=]
+				CMaterial* pMaterial = SubMesh->m_Material;
+				if (SubMesh->m_Material == nullptr)
 				{
-					vmaDestroyBuffer(m_pVulkanDevice->m_Allocator, RenderObjectData.pMesh->VertexBuffer.Buffer, RenderObjectData.pMesh->VertexBuffer.Allocation);
-					vmaDestroyBuffer(m_pVulkanDevice->m_Allocator, RenderObjectData.pMesh->IndexBuffer.Buffer, RenderObjectData.pMesh->IndexBuffer.Allocation);
-				});
-			}
-
-			// Get material.
-			const std::string MaterialName = RenderObject->pRenderObjectInfo->MaterialName;
-			// Check if we already have the vulkan version of the material.
-			const auto& FoundMaterial = m_MaterialDescriptors.find(MaterialName);
-			if (FoundMaterial != m_MaterialDescriptors.cend())
-			{
-				SGSINFO("Found material: %s.", MaterialName.c_str());
-				RenderObjectData.MaterialDescriptor = FoundMaterial->second;
-			}
-			else
-			{
-				CMaterial* pMaterial = CMaterial::Get(MaterialName);
-				if (pMaterial == nullptr)
-				{
-					SGSWARN("Material not found. Placing default material.");
+					SGSWARN("The SubMesh from the MeshNode %s does not have a material. Using default material.", MeshNode->m_Name.c_str());
 					pMaterial = CMaterial::Get("default_material");
 				}
 
-				if (pMaterial)
+				assert(pMaterial);
+
+				sMaterialDescriptor* MaterialDescriptor = new sMaterialDescriptor();
+				MaterialDescriptor->pMaterial = pMaterial;
+
+				const sMaterialProperties Props = MaterialDescriptor->pMaterial->GetMaterialProperties();
+
+				MaterialDescriptor->ConstantsBuffer = vkutils::CreateBuffer(m_pVulkanDevice, sizeof(sMaterialConstants), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+				void* Data;
+				vmaMapMemory(m_pVulkanDevice->m_Allocator, MaterialDescriptor->ConstantsBuffer.Allocation, &Data);
+				memcpy(Data, &Props.MaterialConstants, sizeof(sMaterialConstants));
+				vmaUnmapMemory(m_pVulkanDevice->m_Allocator, MaterialDescriptor->ConstantsBuffer.Allocation);
+
+				CVkTexture* pAlbedoTexture = nullptr;
+				CVkTexture* pMetalRoughnessTexture = nullptr;
+				CVkTexture* pEmissiveTexture = nullptr;
+				CVkTexture* pNormalTexture = nullptr;
+
+				// TODO: Refactor this into a function where, in case of nullptr, it places a default texture.
+				if (Props.pAlbedoTexture)
 				{
-					sMaterialDescriptor* MaterialDescriptor = new sMaterialDescriptor();
-					MaterialDescriptor->pMaterial = pMaterial;
-
-					const sMaterialProperties Props = MaterialDescriptor->pMaterial->GetMaterialProperties();
-
-					MaterialDescriptor->ConstantsBuffer = vkutils::CreateBuffer(m_pVulkanDevice, sizeof(sMaterialConstants), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-
-					void* Data;
-					vmaMapMemory(m_pVulkanDevice->m_Allocator, MaterialDescriptor->ConstantsBuffer.Allocation, &Data);
-					memcpy(Data, &Props.MaterialConstants, sizeof(sMaterialConstants));
-					vmaUnmapMemory(m_pVulkanDevice->m_Allocator, MaterialDescriptor->ConstantsBuffer.Allocation);
-
-					CVkTexture* pAlbedoTexture = nullptr;
-					CVkTexture* pMetalRoughnessTexture = nullptr;
-					CVkTexture* pEmissiveTexture = nullptr;
-					CVkTexture* pNormalTexture = nullptr;
-
-					// TODO: Refactor this into a function where, in case of nullptr, it places a default texture.
-					if (Props.pAlbedoTexture)
-					{
-						pAlbedoTexture = CTexture::Get<CVkTexture>(Props.pAlbedoTexture->GetFilename());
-					}
-					if (Props.pMetallicRoughnessTexture)
-					{
-						pMetalRoughnessTexture = CTexture::Get<CVkTexture>(Props.pMetallicRoughnessTexture->GetFilename());
-					}
-					if (Props.pEmissiveTexture)
-					{
-						pEmissiveTexture = CTexture::Get<CVkTexture>(Props.pEmissiveTexture->GetFilename());
-					}
-					if (Props.pNormalTexture)
-					{
-						pNormalTexture = CTexture::Get<CVkTexture>(Props.pNormalTexture->GetFilename());
-					}
-					
-					MaterialDescriptor->Resources.pAlbedoTexture = pAlbedoTexture;
-					MaterialDescriptor->Resources.pMetalRoughnessTexture = pMetalRoughnessTexture;
-					MaterialDescriptor->Resources.pEmissiveTexture = pEmissiveTexture;
-					MaterialDescriptor->Resources.pNormalTexture = pNormalTexture;
-
-					m_MaterialDescriptors.insert({MaterialName, MaterialDescriptor});
-					RenderObjectData.MaterialDescriptor = MaterialDescriptor;
-					// Descriptors will be created in the specific function to create descriptors.
+					pAlbedoTexture = CTexture::Get<CVkTexture>(Props.pAlbedoTexture->GetFilename());
 				}
+				if (Props.pMetallicRoughnessTexture)
+				{
+					pMetalRoughnessTexture = CTexture::Get<CVkTexture>(Props.pMetallicRoughnessTexture->GetFilename());
+				}
+				if (Props.pEmissiveTexture)
+				{
+					pEmissiveTexture = CTexture::Get<CVkTexture>(Props.pEmissiveTexture->GetFilename());
+				}
+				if (Props.pNormalTexture)
+				{
+					pNormalTexture = CTexture::Get<CVkTexture>(Props.pNormalTexture->GetFilename());
+				}
+				
+				MaterialDescriptor->Resources.pAlbedoTexture = pAlbedoTexture;
+				MaterialDescriptor->Resources.pMetalRoughnessTexture = pMetalRoughnessTexture;
+				MaterialDescriptor->Resources.pEmissiveTexture = pEmissiveTexture;
+				MaterialDescriptor->Resources.pNormalTexture = pNormalTexture;
+
+				m_MaterialDescriptors.insert({pMaterial->GetID(), MaterialDescriptor});
+				// Descriptors will be created in the specific function to create descriptors.
 			}
 		}
-
-		m_RenderObjectsData.push_back(RenderObjectData);
 	}
 
 	CreateSceneDescriptorSets();
@@ -231,11 +212,16 @@ void CVulkanBackend::CreateRenderObjectsData(const std::vector<sRenderObject*>& 
 	void* Data;
 	vmaMapMemory(m_pVulkanDevice->m_Allocator, m_ObjectsDataBuffer.Allocation, &Data);
 
+	// There will be a draw call per CMeshNode, hence, we need a transform for each CMeshNode.
 	sGPURenderObjectData* GPURenderObjectData = static_cast<sGPURenderObjectData*>(Data);
+	size_t Index = 0;
 
-	for (size_t i = 0; i < aRenderObjects.size(); ++i)
+	for (const auto& Renderable : aRenderables)
 	{
-		GPURenderObjectData[i].ModelMatrix = aRenderObjects[i]->ModelMatrix;
+		for (const auto& Root : Renderable->m_pRoots)
+		{
+			AddTransformsToBuffer(GPURenderObjectData, Index, Root);
+		}
 	}
 
 	vmaUnmapMemory(m_pVulkanDevice->m_Allocator, m_ObjectsDataBuffer.Allocation);
@@ -396,9 +382,9 @@ void CVulkanBackend::InitDescriptorSets()
 		BufferInfo.offset = 0;
 		BufferInfo.range = sizeof(sCameraFrameUBO);
 
-		VkWriteDescriptorSet Write;
+		VkWriteDescriptorSet Write = {};
 		Write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		Write.dstSet =  m_FramesData[i].DescriptorSet;
+		Write.dstSet = m_FramesData[i].DescriptorSet;
 		Write.dstBinding = 0;
 		Write.dstArrayElement = 0;
 		Write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -638,4 +624,15 @@ void CVulkanBackend::UpdateFrameUBO(const CCamera* const aCamera, uint32_t Image
 bool CVulkanBackend::HasStencilComponent(VkFormat aFormat)
 {
 	return aFormat == VK_FORMAT_D32_SFLOAT_S8_UINT || aFormat == VK_FORMAT_D24_UNORM_S8_UINT;
+}
+
+void CVulkanBackend::AddTransformsToBuffer(sGPURenderObjectData* apBuffer, size_t& aIndex, CMeshNode* apMeshNode)
+{
+	for (const auto& MeshNode : apMeshNode->m_Children)
+	{
+		AddTransformsToBuffer(apBuffer, aIndex, MeshNode);
+	}
+
+	apBuffer[aIndex].ModelMatrix = apMeshNode->GetWorldTransform();
+	++aIndex;
 }

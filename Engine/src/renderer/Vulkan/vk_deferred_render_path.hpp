@@ -72,7 +72,7 @@ private:
     VkCommandBuffer m_DeferredCommandBuffer;
     VkSemaphore m_GBufferReadySemaphore;
 
-    sRenderObjectData m_Quad;
+    CVulkanRenderable* m_Quad;
 
     // Holds the deletion functions.
     sDeletionQueue m_MainDeletionQueue;

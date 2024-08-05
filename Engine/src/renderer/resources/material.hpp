@@ -37,6 +37,7 @@ public:
 
     CMaterial() = default;
     void SetID(const std::string& aID);
+    std::string GetID() const { return m_ID; }
     void SetMaterialProperties(const sMaterialProperties& aMaterialProperties);
     sMaterialProperties GetMaterialProperties() const { return m_MaterialProperties; }
     sMaterialConstants GetMaterialConstatns() const { return m_MaterialProperties.MaterialConstants; }

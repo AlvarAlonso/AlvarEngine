@@ -47,14 +47,15 @@ namespace std {
 class CSubMesh
 {
 public:
-	CSubMesh(uint32_t aFirstVertex, uint32_t aFirstIndex, uint32_t aIndexCount, uint32_t aVertexCount, CMaterial* aMaterial) : m_FirstIndex(aFirstIndex), m_IndexCount(aIndexCount), m_VertexCount(aVertexCount), m_Material(m_Material) 
+	CSubMesh(uint32_t aFirstVertex, uint32_t aFirstIndex, uint32_t aIndexCount, uint32_t aVertexCount, CMaterial* aMaterial) : 
+        m_FirstVertex(aFirstVertex), m_FirstIndex(aFirstIndex), m_IndexCount(aIndexCount), m_VertexCount(aVertexCount), m_Material(aMaterial) 
     {
 	};
 
-    uint32_t m_FirstVertex;
-    uint32_t m_FirstIndex;
-    uint32_t m_IndexCount;
-    uint32_t m_VertexCount;
+    uint64_t m_FirstVertex;
+    uint64_t m_FirstIndex;
+    uint64_t m_IndexCount;
+    uint64_t m_VertexCount;
     CMaterial* m_Material;
 };
 
@@ -71,7 +72,7 @@ public:
     std::vector<sVertex> Vertices;
     std::vector<uint32_t> Indices32;
 
-    std::vector<CSubMesh*> Primitives;
+    std::vector<CSubMesh*> SubMeshes;
 
     std::vector<uint16_t>& GetIndices16()
     {
@@ -115,13 +116,16 @@ enum class eRenderAPI : uint8_t
 class CMeshNode
 {
 public:
-    CMeshNode() = default;
+    CMeshNode();
     ~CMeshNode();
+
+    glm::mat4 GetWorldTransform(bool bFast = false);
 
     std::string m_Name;
     bool m_bVisible;
     bool m_bOpaque;
     glm::mat4 m_Model;
+    glm::mat4 m_WorldModel;
 
     sMeshData* m_pMeshData;
     CMeshNode* m_pParent;
@@ -132,13 +136,21 @@ class CRenderable
 {
 public:
     static CRenderable* Create();
+    /**
+     * @brief Creates a CRenderable with a node containing the info passed as sMeshData.
+     * @param apMeshData The apMeshData to create the node from.
+     * @return The new renderable.
+     */
+    static CRenderable* Create(sMeshData* apMeshData);
+
     CRenderable() = default;
+    CRenderable(sMeshData* apMeshData);
     ~CRenderable();
 
     virtual void UploadToVRAM() = 0;
 
     std::string m_Name;
-    CMeshNode* m_pRoot;
+    std::vector<CMeshNode*> m_pRoots;
     std::vector<sVertex> m_Vertices;
     std::vector<uint32_t> m_Indices;
 };

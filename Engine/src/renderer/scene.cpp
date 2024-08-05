@@ -6,19 +6,19 @@ sRenderObjectInfo::sRenderObjectInfo(const std::string& aMeshPath, const std::st
 }
 
 CScene::CScene() :
-    m_RenderObjects()
+    m_Renderables()
 {
 }
 
 CScene::~CScene()
 {
-    for (auto& RenderObject : m_RenderObjects)
+    for (auto& Renderable : m_Renderables)
     {
-        delete RenderObject;
+        delete Renderable;
     }
 }
 
-void CScene::AddRenderObject(sRenderObject* const apRenderObject)
+void CScene::AddRenderable(CRenderable* const apRenderable)
 {
-    m_RenderObjects.emplace_back(apRenderObject);
+    m_Renderables.emplace_back(apRenderable);
 }

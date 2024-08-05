@@ -46,25 +46,6 @@ struct sVertexInputDescription
 
 sVertexInputDescription GetVertexDescription();
 
-struct sMesh
-{ 
-public:
-    static sMesh* GetMesh(const std::string& aID);
-    static bool HasMesh(const std::string& aID);
-
-    sMesh(const std::string& aID);
-    ~sMesh();
-
-    std::string ID;
-    AllocatedBuffer VertexBuffer;
-    AllocatedBuffer IndexBuffer;
-    uint32_t NumIndices;
-
-private:
-    static std::unordered_map<std::string, sMesh*> LoadedMeshes;
-
-};
-
 struct sMaterialResources
 {
     CVkTexture* pAlbedoTexture;
@@ -81,13 +62,29 @@ struct sMaterialDescriptor
     VkDescriptorSet DescriptorSet;
 };
 
+struct sRenderContext
+{
+    VkPipelineLayout PipelineLayout;
+    VkCommandBuffer CmdBuffer;
+    VkDescriptorSet FrameDescriptorSet;
+    VkDescriptorSet ObjectsDescriptorSet;
+    std::unordered_map<std::string, sMaterialDescriptor*>* MaterialDescriptors; // TODO: This should be get directly from CVulkanBackend.
+    uint32_t DrawCallNum;
+};
+
 class CVulkanRenderable : public CRenderable
 {
 public:
     CVulkanRenderable() = default;
+    CVulkanRenderable(sMeshData* apMeshData);
 
+    void Draw(sRenderContext& aRenderContext, bool bBindMaterialDescriptor = false);
     virtual void UploadToVRAM() override;
 
     AllocatedBuffer m_VertexBuffer;
     AllocatedBuffer m_IndexBuffer;
+
+private:
+    void DrawNode(CMeshNode* apMeshNode, sRenderContext& aRenderContext, bool bBindMaterialDescriptor = false);
+    void DrawSubMesh(CSubMesh* apSubMesh, sRenderContext& aRenderContext, bool bBindMaterialDescriptor = false);
 };

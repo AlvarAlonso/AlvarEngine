@@ -1,5 +1,7 @@
 #pragma once
 
+#include <renderer/core/render_types.hpp>
+
 #include <glm/mat4x4.hpp>
 
 #include <string>
@@ -47,10 +49,10 @@ public:
     CScene();
     ~CScene();
 
-    void AddRenderObject(sRenderObject* const apRenderObject);
+    void AddRenderable(CRenderable* const apRenderable);
 
-    const std::vector<sRenderObject*>& GetRenderObjects() { return m_RenderObjects; }
+    const std::vector<CRenderable*>& GetRenderObjects() { return m_Renderables; }
 
 private:
-    std::vector<sRenderObject*> m_RenderObjects;
+    std::vector<CRenderable*> m_Renderables;
 };

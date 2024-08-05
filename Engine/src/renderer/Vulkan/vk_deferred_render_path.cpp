@@ -74,13 +74,16 @@ void CVulkanDeferredRenderPath::RecordGBufferPassCommands()
 
 	vkCmdBindDescriptorSets(m_DeferredCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_DeferredPipelineLayout, 0, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data(), 0, nullptr);
 
-	VkDeviceSize Offset = 0;
-	for (size_t i = 0; i < m_pVulkanBackend->m_RenderObjectsData.size(); ++i)
+	sRenderContext RenderContext = {};
+	RenderContext.CmdBuffer = m_DeferredCommandBuffer;
+	RenderContext.DrawCallNum = 0;
+	RenderContext.MaterialDescriptors = &m_pVulkanBackend->m_MaterialDescriptors;
+	RenderContext.ObjectsDescriptorSet = m_pVulkanBackend->m_ObjectsDataDescriptorSet;
+	RenderContext.PipelineLayout = m_DeferredPipelineLayout;
+
+	for (const auto& Renderable :  m_pVulkanBackend->m_Renderables)
 	{
-		vkCmdBindVertexBuffers(m_DeferredCommandBuffer, 0, 1, &m_pVulkanBackend->m_RenderObjectsData[i].pMesh->VertexBuffer.Buffer, &Offset);
-		vkCmdBindIndexBuffer(m_DeferredCommandBuffer, m_pVulkanBackend->m_RenderObjectsData[i].pMesh->IndexBuffer.Buffer, 0, VK_INDEX_TYPE_UINT32);
-		// TODO: Batch rendering.
-		vkCmdDrawIndexed(m_DeferredCommandBuffer, m_pVulkanBackend->m_RenderObjectsData[i].pMesh->NumIndices, 1, 0, 0, i);
+		Renderable->Draw(RenderContext);
 	}
 
 	vkCmdEndRenderPass(m_DeferredCommandBuffer);
@@ -133,10 +136,10 @@ void CVulkanDeferredRenderPath::RecordLightPassCommands(VkCommandBuffer aCommand
 
 	//deferred quad
 	VkDeviceSize Offset = 0;
-	vkCmdBindVertexBuffers(aCommandBuffer, 0, 1, &m_Quad.pMesh->VertexBuffer.Buffer, &Offset);
-	vkCmdBindIndexBuffer(aCommandBuffer, m_Quad.pMesh->IndexBuffer.Buffer, 0, VK_INDEX_TYPE_UINT32);
+	vkCmdBindVertexBuffers(aCommandBuffer, 0, 1, &m_Quad->m_VertexBuffer.Buffer, &Offset);
+	vkCmdBindIndexBuffer(aCommandBuffer, m_Quad->m_IndexBuffer.Buffer, 0, VK_INDEX_TYPE_UINT32);
 
-	vkCmdDrawIndexed(aCommandBuffer, m_Quad.pMesh->NumIndices, 1, 0, 0, 0);
+	vkCmdDrawIndexed(aCommandBuffer, static_cast<uint32_t>(m_Quad->m_Indices.size()), 1, 0, 0, 0);
 
 	vkCmdEndRenderPass(aCommandBuffer);
 
@@ -238,16 +241,8 @@ void CVulkanDeferredRenderPath::CreateDeferredQuad()
 	sMeshData Quad = CGeometryGenerator::CreateQuad(-1.0f, 1.0f, 2.0f, 2.0f, 0.0f);
 	Quad.ID = "DeferredQuad"; //TODO: Improve this.
 
-	m_Quad.pMesh = new sMesh("DeferredQuad");
-	m_Quad.pMesh->NumIndices = static_cast<uint32_t>(Quad.Indices32.size());
-	vkutils::CreateVertexBuffer(m_pVulkanDevice, Quad.Vertices, m_Quad.pMesh->VertexBuffer);
-	vkutils::CreateIndexBuffer(m_pVulkanDevice, Quad.Indices32, m_Quad.pMesh->IndexBuffer);
-
-	m_MainDeletionQueue.PushFunction([=]
-	{
-		vmaDestroyBuffer(m_pVulkanDevice->m_Allocator, m_Quad.pMesh->VertexBuffer.Buffer, m_Quad.pMesh->VertexBuffer.Allocation);
-		vmaDestroyBuffer(m_pVulkanDevice->m_Allocator, m_Quad.pMesh->IndexBuffer.Buffer, m_Quad.pMesh->IndexBuffer.Allocation);
-	});
+	m_Quad = new CVulkanRenderable(&Quad);
+	m_Quad->UploadToVRAM();
 }
 
 void CVulkanDeferredRenderPath::CreateDeferredAttachments()

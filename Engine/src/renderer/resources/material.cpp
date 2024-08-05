@@ -55,6 +55,8 @@ void CMaterial::SetID(const std::string& aID)
             m_LoadedMaterials.insert({aID, this});
         }
     }
+
+    m_ID = aID;
 }
 
 void CMaterial::SetMaterialProperties(const sMaterialProperties& aMaterialProperties)

@@ -8,6 +8,7 @@ class CVulkanDevice;
 class CVulkanSwapchain;
 class CCamera;
 class IRenderPath;
+class CRenderable;
 
 constexpr uint32_t MAX_RENDER_OBJECTS = 1024;
 constexpr uint32_t FRAME_OVERLAP = 3;
@@ -22,13 +23,6 @@ struct sFrameData
     AllocatedBuffer UBOBuffer;
     void* MappedUBOBuffer;
     VkDescriptorSet DescriptorSet;
-};
-
-struct sRenderObjectData
-{
-    glm::mat4 ModelMatrix;
-    sMesh* pMesh;
-    sMaterialDescriptor* MaterialDescriptor;
 };
 
 struct sGPURenderObjectData
@@ -61,7 +55,7 @@ public:
 
     void HandleWindowResize();
 
-    void CreateRenderObjectsData(const std::vector<sRenderObject*>& aRenderObjects);
+    void CreateRenderablesData(const std::vector<CRenderable*>& aRenderables);
 
     void ChangeRenderPath();
 
@@ -82,6 +76,8 @@ private:
     void UpdateFrameUBO(const CCamera* const aCamera, uint32_t ImageIdx);
     
     bool HasStencilComponent(VkFormat aFormat);
+
+    void AddTransformsToBuffer(sGPURenderObjectData* apBuffer, size_t& aIndex, CMeshNode* apMeshNode);
 
     friend class CVulkanDeferredRenderPath;
     friend class CVulkanForwardRenderPath;
@@ -109,7 +105,7 @@ private:
     bool m_bWasWindowResized;
 
     // TODO: Some way to represent a Scene.
-    std::vector<sRenderObjectData> m_RenderObjectsData;
+    std::vector<CVulkanRenderable*> m_Renderables;
     AllocatedBuffer m_ObjectsDataBuffer;
     VkDescriptorSet m_ObjectsDataDescriptorSet;
 

@@ -151,3 +151,48 @@ CRenderable* CRenderable::Create()
 
     return nullptr;
 }
+
+CRenderable* CRenderable::Create(sMeshData* apMeshData)
+{
+    const eRenderAPI RenderAPI = CEngine::Get()->GetRenderModule()->GetRenderAPI();
+    switch (RenderAPI)
+    {
+        case eRenderAPI::NONE:
+        {
+            SGSERROR("No graphics API selected!");
+        }
+        break;
+
+        case eRenderAPI::VULKAN:
+        {
+            return new CVulkanRenderable(apMeshData);
+        }
+        break;
+    
+    default:
+        SGSERROR("No graphics API selected!");
+        break;
+    }
+
+    return nullptr;
+}
+
+CMeshNode::CMeshNode() : 
+    m_Name(""), m_bVisible(true), m_bOpaque(true), m_Model(glm::mat4(1)), 
+    m_WorldModel(glm::mat4(1)), m_pMeshData(nullptr), m_pParent(nullptr), m_Children()
+{
+}
+
+glm::mat4 CMeshNode::GetWorldTransform(bool bFast)
+{
+    if (m_pParent)
+    {
+        m_WorldModel = m_Model * (bFast ? m_pParent->m_WorldModel : m_pParent->GetWorldTransform());
+    }
+    else
+    {
+        m_WorldModel = m_Model;
+    }
+
+    return m_WorldModel;
+}

@@ -1,5 +1,9 @@
 #include "vk_types.hpp"
+#include "vk_utils.hpp"
+#include "vulkan_device.hpp"
 #include <core/logger.h>
+
+#include <array>
 
 sVertexInputDescription GetVertexDescription()
 {
@@ -44,38 +48,65 @@ sVertexInputDescription GetVertexDescription()
 	return Description;
 }
 
-std::unordered_map<std::string, sMesh*> sMesh::LoadedMeshes;
-
-sMesh* sMesh::GetMesh(const std::string& aID)
+CVulkanRenderable::CVulkanRenderable(sMeshData* apMeshData)
 {
-    const auto& FoundMesh = LoadedMeshes.find(aID);
-    if (FoundMesh != LoadedMeshes.cend())
-    {
-        return FoundMesh->second;
-    }
-    else 
-    {
-		SGSERROR("Vulkan mesh with ID %s does not exist!", aID.c_str());
-		return nullptr;
-    }
+	m_pRoots.push_back(new CMeshNode());
+	m_pRoots[1]->m_pMeshData = apMeshData;
+	m_Vertices = apMeshData->Vertices;
+	m_Indices = apMeshData->Indices32;
+}
+    
+void CVulkanRenderable::Draw(sRenderContext& aRenderContext, bool bBindMaterialDescriptor)
+{
+	// Bind resources once for each renderables. Use offsets to determine which parts are drawn.
+	VkDeviceSize Offset = 0;
+	vkCmdBindVertexBuffers(aRenderContext.CmdBuffer, 0, 1, &m_VertexBuffer.Buffer, &Offset);
+	vkCmdBindIndexBuffer(aRenderContext.CmdBuffer, m_IndexBuffer.Buffer, 0, VK_INDEX_TYPE_UINT32);
+
+	for (const auto& Root : m_pRoots)
+	{
+		DrawNode(Root, aRenderContext, bBindMaterialDescriptor);
+	}
+}
+    
+void CVulkanRenderable::DrawNode(CMeshNode* apMeshNode, sRenderContext& aRenderContext, bool bBindMaterialDescriptor)
+{
+	// Draw children.
+	for (auto* pMeshNode : apMeshNode->m_Children)
+	{
+		DrawNode(pMeshNode, aRenderContext, bBindMaterialDescriptor);
+	}
+
+	// Draw current node.
+	for (const auto& SubMesh : apMeshNode->m_pMeshData->SubMeshes)
+	{
+		DrawSubMesh(SubMesh, aRenderContext, bBindMaterialDescriptor);
+	}
 }
 
-bool sMesh::HasMesh(const std::string& aID)
+void CVulkanRenderable::DrawSubMesh(CSubMesh* apSubMesh, sRenderContext& aRenderContext, bool bBindMaterialDescriptor)
 {
-	const auto& FoundMesh = LoadedMeshes.find(aID);
-	return FoundMesh != LoadedMeshes.cend();
-}
+	if (bBindMaterialDescriptor)
+	{
+		const std::array<VkDescriptorSet, 3> DescriptorSets = 
+			{ aRenderContext.FrameDescriptorSet, aRenderContext.ObjectsDescriptorSet, aRenderContext.MaterialDescriptors->at(apSubMesh->m_Material->GetID())->DescriptorSet };
 
-sMesh::sMesh(const std::string& aID) : ID(std::move(aID))
-{
-}
+		vkCmdBindDescriptorSets(aRenderContext.CmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, aRenderContext.PipelineLayout, 
+			0, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data(), 0, nullptr);
+	}
 
-sMesh::~sMesh()
-{
-	LoadedMeshes.erase(ID);
+	// TODO: Batch rendering.
+	vkCmdDrawIndexed(aRenderContext.CmdBuffer, apSubMesh->m_IndexCount, 1, apSubMesh->m_FirstIndex, apSubMesh->m_FirstVertex, aRenderContext.DrawCallNum);
+	++aRenderContext.DrawCallNum;
 }
 
 void CVulkanRenderable::UploadToVRAM()
 {
+	vkutils::CreateVertexBuffer(GetVulkanDevice(), m_Vertices, m_VertexBuffer);
+	vkutils::CreateIndexBuffer(GetVulkanDevice(), m_Indices, m_IndexBuffer);
 
+	// TODO: Should this be done in all functions that upload things to GPU?
+	// IDEA: Do it like this and just get again from file the vertices/indices in case we detect the buffers are no logner filled and uploaded.
+	m_Vertices.clear();
+	m_Indices.clear();
 }

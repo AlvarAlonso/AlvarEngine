@@ -30,7 +30,7 @@ bool CRenderModule::Initialize()
 
     m_pVulkanBackend->Initialize();
     CreateDefaultScene();
-    m_pVulkanBackend->CreateRenderObjectsData(m_pDefaultScene->GetRenderObjects());
+    m_pVulkanBackend->CreateRenderablesData(m_pDefaultScene->GetRenderObjects());
 
     return true;
 }
@@ -79,33 +79,7 @@ std::unordered_map<std::string, sRenderObjectInfo> CRenderModule::m_RenderObject
 
 void CRenderModule::CreateDefaultScene()
 {
-    sRenderObjectInfo RenderObjectInfo("../Resources/Meshes/viking_room.obj", "../Resources/Images/viking_room.png");    
-    m_RenderObjectInfos["VikingRoom"] = RenderObjectInfo;
-
-    sRenderObjectInfo RenderObjectInfo2("sphere", "");
-    RenderObjectInfo2.MaterialName = "test_material";
-    m_RenderObjectInfos["Sphere"] = RenderObjectInfo2;
-
-    m_pDefaultScene = new CScene();
-
-    // glm::mat4 ModelMatrix(0);
-    // ModelMatrix = glm::translate(glm::vec3{0.0f, 0.0f, 0.0f});
-    // sRenderObject* RenderObject = new sRenderObject();
-    // RenderObject->ModelMatrix = ModelMatrix;
-    // RenderObject->pRenderObjectInfo = &m_RenderObjectInfos.at("VikingRoom");
-
-    // sRenderObject* RenderObject2 = new sRenderObject();
-    // RenderObject2->ModelMatrix = glm::translate(glm::vec3{10.0f, 0.0f, 10.0f});
-    // RenderObject2->pRenderObjectInfo = &m_RenderObjectInfos.at("VikingRoom");
-
-    sRenderObject* RenderObject3 = new sRenderObject();
-    RenderObject3->ModelMatrix = glm::translate(glm::vec3(1.0f, 1.0f, -3.0f));
-    RenderObject3->pRenderObjectInfo = &m_RenderObjectInfos.at("Sphere");
-
-    // m_pDefaultScene->AddRenderObject(RenderObject);
-    // m_pDefaultScene->AddRenderObject(RenderObject2);
-    m_pDefaultScene->AddRenderObject(RenderObject3);
-
+    // Add materials.
     const auto& DefaultTexture = CTexture::Get<CTexture>("../Resources/Images/default_texture.png");
 
     CMaterial* pDefaultMaterial = new CMaterial();
@@ -133,4 +107,18 @@ void CRenderModule::CreateDefaultScene()
     pTestMaterial->SetID("test_material");
 
     CMaterial::RegisterMaterial(pTestMaterial);
+
+    CRenderable* pSphere = CRenderable::Create();
+    CMeshNode* pSphereNode = new CMeshNode();
+    pSphereNode->m_pMeshData = sMeshData::GetMeshData("sphere");
+    pSphereNode->m_Model = glm::translate(glm::vec3(1.0f, 1.0f, -3.0f));
+    pSphere->m_Vertices = std::move(pSphereNode->m_pMeshData->Vertices);
+    pSphere->m_Indices = std::move(pSphereNode->m_pMeshData->Indices32);
+    CSubMesh* pSubMesh = new CSubMesh(0, 0, pSphere->m_Indices.size(), pSphere->m_Vertices.size(), CMaterial::Get("test_material"));
+    pSphereNode->m_pMeshData->SubMeshes.push_back(pSubMesh);
+    pSphere->UploadToVRAM();
+    pSphere->m_pRoots.push_back(pSphereNode);
+
+    m_pDefaultScene = new CScene();
+    m_pDefaultScene->AddRenderable(pSphere);
 }
