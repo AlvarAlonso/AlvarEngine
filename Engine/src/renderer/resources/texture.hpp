@@ -29,6 +29,7 @@ public:
 
         T* pCreatedTexture = CTexture::Create<T>(std::move(aFilePath));
         pCreatedTexture->m_Filename = aFilePath;
+        pCreatedTexture->m_ID = aFilePath;
         if (pCreatedTexture)
         {
             m_LoadedTextures.insert({ aFilePath, pCreatedTexture});
@@ -46,6 +47,7 @@ public:
     virtual uint32_t GetHeight() const = 0;
 
     void SetID(const std::string& aID) { m_ID = aID; }
+    std::string GetID() const { return m_ID; }
     const std::string& GetFilename() const { return m_Filename; }
 
 protected:

@@ -228,10 +228,10 @@ void CVulkanBackend::CreateMaterialDescriptorsFromMeshNode(CMeshNode *const &aMe
             CVkTexture *pNormalTexture = nullptr;
 
             // TODO: Refactor this into a function where, in case of nullptr, it places a default texture.
-			pAlbedoTexture = Props.pAlbedoTexture ? CTexture::Get<CVkTexture>(Props.pAlbedoTexture->GetFilename()) : CTexture::Get<CVkTexture>("../Resources/Images/default_texture.png");
-			pMetalRoughnessTexture = Props.pMetallicRoughnessTexture ? CTexture::Get<CVkTexture>(Props.pMetallicRoughnessTexture->GetFilename()) : CTexture::Get<CVkTexture>("../Resources/Images/default_texture.png");
-			pEmissiveTexture = Props.pEmissiveTexture ?  CTexture::Get<CVkTexture>(Props.pEmissiveTexture->GetFilename()) : CTexture::Get<CVkTexture>("../Resources/Images/default_texture.png");
-			pNormalTexture = Props.pNormalTexture ? CTexture::Get<CVkTexture>(Props.pNormalTexture->GetFilename()) : CTexture::Get<CVkTexture>("../Resources/Images/default_texture.png");
+			pAlbedoTexture = Props.pAlbedoTexture ? CTexture::Get<CVkTexture>(Props.pAlbedoTexture->GetID()) : CTexture::Get<CVkTexture>("../Resources/Images/default_texture.png");
+			pMetalRoughnessTexture = Props.pMetallicRoughnessTexture ? CTexture::Get<CVkTexture>(Props.pMetallicRoughnessTexture->GetID()) : CTexture::Get<CVkTexture>("../Resources/Images/default_texture.png");
+			pEmissiveTexture = Props.pEmissiveTexture ?  CTexture::Get<CVkTexture>(Props.pEmissiveTexture->GetID()) : CTexture::Get<CVkTexture>("../Resources/Images/default_texture.png");
+			pNormalTexture = Props.pNormalTexture ? CTexture::Get<CVkTexture>(Props.pNormalTexture->GetID()) : CTexture::Get<CVkTexture>("../Resources/Images/default_texture.png");
 
             MaterialDescriptor->Resources.pAlbedoTexture = pAlbedoTexture;
             MaterialDescriptor->Resources.pMetalRoughnessTexture = pMetalRoughnessTexture;

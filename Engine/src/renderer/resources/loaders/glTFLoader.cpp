@@ -105,10 +105,12 @@ static void LoadMaterials(tinygltf::Model &aGltfModel)
         CMaterial* pMaterial = new CMaterial();
         sMaterialProperties Props = {};
         if(mat.values.find("baseColorTexture") != mat.values.end()) {
-            Props.pAlbedoTexture = LoadedData.Textures[mat.values["baseColorTexture"].TextureIndex()];
+            CTexture* pAlbedoTexture = LoadedData.Textures[mat.values["baseColorTexture"].TextureIndex()];
+            Props.pAlbedoTexture = CTexture::Get<CTexture>(pAlbedoTexture->GetID());
         }
         if(mat.values.find("metallicRoughnessTexture") != mat.values.end()) {
-            Props.pMetallicRoughnessTexture = LoadedData.Textures[mat.values["metallicRoughnessTexture"].TextureIndex()];
+            CTexture* pMetallicRoughnesTexture = LoadedData.Textures[mat.values["metallicRoughnessTexture"].TextureIndex()];
+            Props.pMetallicRoughnessTexture = CTexture::Get<CTexture>(pMetallicRoughnesTexture->GetID());
         }
         if(mat.values.find("roughnessFactor") != mat.values.end()) {
             Props.MaterialConstants.RoughnessFactor = static_cast<float>(mat.values["roughnessFactor"].Factor());
@@ -120,16 +122,19 @@ static void LoadMaterials(tinygltf::Model &aGltfModel)
             Props.MaterialConstants.Color = glm::make_vec4(mat.values["baseColorFactor"].ColorFactor().data());
         }
         if(mat.additionalValues.find("normalTexture") != mat.additionalValues.end()) {
-            Props.pNormalTexture = LoadedData.Textures[mat.additionalValues["normalTexture"].TextureIndex()];
+            CTexture* pNormalTexture = LoadedData.Textures[mat.additionalValues["normalTexture"].TextureIndex()];
+            Props.pNormalTexture = CTexture::Get<CTexture>(pNormalTexture->GetID());
         }
         if(mat.additionalValues.find("occlusionTexture") != mat.additionalValues.end()) {
-            Props.pOcclusionTexture = LoadedData.Textures[mat.additionalValues["occlusionTexture"].TextureIndex()];
+            CTexture* pOcclusionTexture = LoadedData.Textures[mat.additionalValues["occlusionTexture"].TextureIndex()];
+            Props.pOcclusionTexture = CTexture::Get<CTexture>(pOcclusionTexture->GetID());
         }
         if(mat.additionalValues.find("emissiveFactor") != mat.additionalValues.end()) {
             Props.MaterialConstants.EmissiveFactor = glm::vec4(glm::make_vec3(mat.additionalValues["emissiveFactor"].ColorFactor().data()), 1.0f);
         }
 
         pMaterial->SetID(mat.name.c_str());
+        pMaterial->SetMaterialProperties(Props);
         LoadedData.Materials.push_back(pMaterial);
         CMaterial::RegisterMaterial(pMaterial);
     }
