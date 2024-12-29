@@ -1,7 +1,7 @@
 #pragma once
 
 #include "vk_types.hpp"
-#include "renderer/scene.hpp"
+#include <renderer/scene/scene.hpp>
 #include <core/types.hpp>
 
 class CVulkanDevice;
@@ -55,7 +55,7 @@ public:
 
     void HandleWindowResize();
 
-    void CreateRenderablesData(const std::vector<CRenderable *> &aRenderables);
+    void CreateRenderablesData(const CScene* const apScene);
 
     void ChangeRenderPath();
 

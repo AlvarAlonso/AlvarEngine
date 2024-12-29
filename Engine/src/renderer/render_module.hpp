@@ -2,7 +2,7 @@
 
 #include "vulkan/vulkan_backend.hpp"
 #include "vulkan/vulkan_device.hpp"
-#include "scene.hpp"
+#include "scene/scene.hpp"
 #include "core/camera.hpp"
 #include <core/IModule.hpp>
 
@@ -39,8 +39,6 @@ private:
     void Render();
 
     void CreateDefaultScene();
-
-    static std::unordered_map<std::string, sRenderObjectInfo> m_RenderObjectInfos;
 
     CCamera* m_pMainCamera;
 

@@ -1,10 +1,5 @@
 #include "scene.hpp"
 
-sRenderObjectInfo::sRenderObjectInfo(const std::string& aMeshPath, const std::string& aTexturePath) :
-    MeshPath(std::move(aMeshPath)), TexturePath(std::move(aTexturePath))
-{
-}
-
 CScene::CScene() :
     m_Renderables()
 {
@@ -21,4 +16,9 @@ CScene::~CScene()
 void CScene::AddRenderable(CRenderable* const apRenderable)
 {
     m_Renderables.emplace_back(apRenderable);
+}
+
+void CScene::AddLightSource(sLightSource* const apLightSource)
+{
+    m_LightSources.emplace_back(apLightSource);
 }

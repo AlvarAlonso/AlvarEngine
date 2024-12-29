@@ -31,7 +31,7 @@ bool CRenderModule::Initialize()
 
     m_pVulkanBackend->Initialize();
     CreateDefaultScene();
-    m_pVulkanBackend->CreateRenderablesData(m_pDefaultScene->GetRenderObjects());
+    m_pVulkanBackend->CreateRenderablesData(m_pDefaultScene);
 
     return true;
 }
@@ -75,8 +75,6 @@ void CRenderModule::Render()
     // TODO: Should this pointer be checked?
     m_pVulkanBackend->Render(m_pMainCamera);
 }
-
-std::unordered_map<std::string, sRenderObjectInfo> CRenderModule::m_RenderObjectInfos{};
 
 void CRenderModule::CreateDefaultScene()
 {

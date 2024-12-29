@@ -125,10 +125,11 @@ void CVulkanBackend::HandleWindowResize()
 	m_bWasWindowResized = true;
 }
 
-void CVulkanBackend::CreateRenderablesData(const std::vector<CRenderable*>& aRenderables)
+void CVulkanBackend::CreateRenderablesData(const CScene* const apScene)
 {
-	m_Renderables.reserve(aRenderables.size());
-	for (const auto& Renderable : aRenderables)
+	const auto& SceneRenderables = apScene->GetRenderables();
+	m_Renderables.reserve(apScene->GetRenderables().size());
+	for (const auto& Renderable : SceneRenderables)
 	{
 		CVulkanRenderable* pVulkanRenderable = dynamic_cast<CVulkanRenderable*>(Renderable);
 		if (pVulkanRenderable)
@@ -143,7 +144,7 @@ void CVulkanBackend::CreateRenderablesData(const std::vector<CRenderable*>& aRen
 	}
 
 	// TODO: Triple for dona nauseas.
-	for (const auto& Renderable : aRenderables)
+	for (const auto& Renderable : SceneRenderables)
 	{
 		// TODO: Use namespaces because otherwise is very confusing to know if I'm dealing with vulkan types or generic render types.
 
@@ -163,7 +164,7 @@ void CVulkanBackend::CreateRenderablesData(const std::vector<CRenderable*>& aRen
 	sGPURenderObjectData* GPURenderObjectData = static_cast<sGPURenderObjectData*>(Data);
 	size_t Index = 0;
 
-	for (const auto& Renderable : aRenderables)
+	for (const auto& Renderable : SceneRenderables)
 	{
 		for (const auto& Root : Renderable->m_pRoots)
 		{
@@ -176,6 +177,12 @@ void CVulkanBackend::CreateRenderablesData(const std::vector<CRenderable*>& aRen
 	if (m_pCurrentRenderPath)
 	{
 		m_pCurrentRenderPath->HandleSceneChanged();
+	}
+
+	const auto& SceneLightSources = apScene->GetLightSources();
+	for (const auto& LightSource : SceneLightSources)
+	{
+		// TODO: Put light info into buffer.
 	}
 }
 
