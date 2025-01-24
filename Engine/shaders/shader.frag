@@ -19,6 +19,20 @@ layout(set = 2, binding = 0) uniform MaterialConstants {
     bool bIsTransparent;
 } materialConstants;
 
+struct LightData {
+    mat4 Model;
+    vec3 TargetPosition;
+    vec3 Color;
+    float MaxDist;
+    float Intensity;
+    float Radius;
+    int LightType;
+};
+
+layout(std140, set = 3, binding = 0) readonly buffer LightsBuffer {
+    LightData lights[];
+} lightsBuffer;
+
 layout(set = 2, binding = 1) uniform sampler2D albedoSampler;
 layout(set = 2, binding = 2) uniform sampler2D metalRoughnessSampler;
 layout(set = 2, binding = 3) uniform sampler2D emissiveSampler;
@@ -58,8 +72,9 @@ void main() {
 	vec3 ks = SpecularBRDF( roughness, f0, NdotH, NdotV, NdotL, LdotH );
 	vec3 diffuse = ( 1.0 - metal ) * color_texture;	//the most metalness the less diffuse color
 	vec3 kd = diffuse * NdotL;
-	vec3 direct = kd + ks;
+	vec3 direct = (kd + ks) * lightsBuffer.lights[0].Color;
 
     outColor = vec4(direct * color_texture, 1.0);
     outColor = vec4(color_texture, 1.0);
+    outColor = vec4(lightsBuffer.lights[0].Color, 1.0);
 }

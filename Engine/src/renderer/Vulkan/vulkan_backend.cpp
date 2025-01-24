@@ -157,32 +157,45 @@ void CVulkanBackend::CreateRenderablesData(const CScene* const apScene)
 
 	CreateSceneDescriptorSets();
 
-	void* Data;
-	vmaMapMemory(m_pVulkanDevice->m_Allocator, m_ObjectsDataBuffer.Allocation, &Data);
-
-	// There will be a draw call per CMeshNode, hence, we need a transform for each CMeshNode.
-	sGPURenderObjectData* GPURenderObjectData = static_cast<sGPURenderObjectData*>(Data);
-	size_t Index = 0;
-
-	for (const auto& Renderable : SceneRenderables)
 	{
-		for (const auto& Root : Renderable->m_pRoots)
+		void* Data;
+		vmaMapMemory(m_pVulkanDevice->m_Allocator, m_ObjectsDataBuffer.Allocation, &Data);
+
+		// There will be a draw call per CMeshNode, hence, we need a transform for each CMeshNode.
+		sGPURenderObjectData* GPURenderObjectData = static_cast<sGPURenderObjectData*>(Data);
+		size_t Index = 0;
+
+		for (const auto& Renderable : SceneRenderables)
 		{
-			AddTransformsToBuffer(GPURenderObjectData, Index, Root);
+			for (const auto& Root : Renderable->m_pRoots)
+			{
+				AddTransformsToBuffer(GPURenderObjectData, Index, Root);
+			}
 		}
+
+		vmaUnmapMemory(m_pVulkanDevice->m_Allocator, m_ObjectsDataBuffer.Allocation);
 	}
 
-	vmaUnmapMemory(m_pVulkanDevice->m_Allocator, m_ObjectsDataBuffer.Allocation);
+	{
+		void* Data;
+		vmaMapMemory(m_pVulkanDevice->m_Allocator, m_LightSourcesBuffer.Allocation, &Data);
+		
+		sLightSource::sProperties* LightSourcesData = static_cast<sLightSource::sProperties*>(Data);
+		size_t Index = 0;
+
+		const auto& LightSources = apScene->GetLightSources();
+		for (const auto& LightSource : LightSources)
+		{
+			LightSourcesData[Index] = LightSource->Properties;
+			++Index;
+		}
+
+		vmaUnmapMemory(m_pVulkanDevice->m_Allocator, m_LightSourcesBuffer.Allocation);
+	}
 
 	if (m_pCurrentRenderPath)
 	{
 		m_pCurrentRenderPath->HandleSceneChanged();
-	}
-
-	const auto& SceneLightSources = apScene->GetLightSources();
-	for (const auto& LightSource : SceneLightSources)
-	{
-		// TODO: Put light info into buffer.
 	}
 }
 
@@ -332,6 +345,8 @@ void CVulkanBackend::InitTextureSamplers()
 
 void CVulkanBackend::InitDescriptorSetPool()
 {
+	// Frame descriptors.
+
 	VkDescriptorPoolSize UBOPoolSize = {};
 	UBOPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	UBOPoolSize.descriptorCount = static_cast<uint32_t>(FRAME_OVERLAP);
@@ -355,6 +370,7 @@ void CVulkanBackend::InitDescriptorSetPool()
 	
 	VK_CHECK(vkCreateDescriptorPool(m_pVulkanDevice->m_Device, &PoolInfo, nullptr, &m_DescriptorPool));
 
+	// Materials.
 
 	VkDescriptorPoolSize MaterialTexturesPoolSize = {};
 	MaterialTexturesPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -374,10 +390,25 @@ void CVulkanBackend::InitDescriptorSetPool()
 
 	VK_CHECK(vkCreateDescriptorPool(m_pVulkanDevice->m_Device, &MaterialPoolInfo, nullptr, &m_MaterialsPool));
 
+	// Lights.
+
+	VkDescriptorPoolSize LightSourcePoolSize = {};
+	LightSourcePoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	LightSourcePoolSize.descriptorCount = MAX_LIGHT_SOURCES;
+
+	VkDescriptorPoolCreateInfo LightSourcesPoolInfo = {};
+	LightSourcesPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	LightSourcesPoolInfo.poolSizeCount = 1;
+	LightSourcesPoolInfo.pPoolSizes = &LightSourcePoolSize;
+	LightSourcesPoolInfo.maxSets = MAX_LIGHT_SOURCES;
+
+	VK_CHECK(vkCreateDescriptorPool(m_pVulkanDevice->m_Device, &LightSourcesPoolInfo, nullptr, &m_LightsPool));
+
 	m_MainDeletionQueue.PushFunction([=]
 	{
 		vkDestroyDescriptorPool(m_pVulkanDevice->m_Device, m_DescriptorPool, nullptr);
 		vkDestroyDescriptorPool(m_pVulkanDevice->m_Device, m_MaterialsPool, nullptr);
+		vkDestroyDescriptorPool(m_pVulkanDevice->m_Device, m_LightsPool, nullptr);
 	});
 }
 
@@ -491,6 +522,20 @@ void CVulkanBackend::InitDescriptorSetLayouts()
 
 	VK_CHECK(vkCreateDescriptorSetLayout(m_pVulkanDevice->m_Device, &MaterialLayoutInfo, nullptr, &m_MaterialsSetLayout));
 
+	// LIGHT SOURCES DESCRIPTOR LAYOUT CREATION.
+
+	VkDescriptorSetLayoutBinding LightSourceLayoutBinding = vkinit::DescriptorLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
+
+	VkDescriptorSetLayoutCreateInfo LightSourceLayoutInfo = {};
+	LightSourceLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	LightSourceLayoutInfo.bindingCount = 1;
+	LightSourceLayoutInfo.pBindings = &LightSourceLayoutBinding;
+
+	VK_CHECK(vkCreateDescriptorSetLayout(m_pVulkanDevice->m_Device, &LightSourceLayoutInfo, nullptr, &m_LightSourceSetLayout));
+	
+	// TODO: Buffer creation should not be here.
+	m_LightSourcesBuffer = vkutils::CreateBuffer(m_pVulkanDevice, sizeof(sLightSource::sProperties) * MAX_LIGHT_SOURCES, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
 	m_MainDeletionQueue.PushFunction([=]
 	{
 		for (size_t i = 0; i < FRAME_OVERLAP; ++i)
@@ -500,10 +545,12 @@ void CVulkanBackend::InitDescriptorSetLayouts()
 		}
 
 		vmaDestroyBuffer(m_pVulkanDevice->m_Allocator, m_ObjectsDataBuffer.Buffer, m_ObjectsDataBuffer.Allocation);
+		vmaDestroyBuffer(m_pVulkanDevice->m_Allocator, m_LightSourcesBuffer.Buffer, m_LightSourcesBuffer.Allocation);
 
 		vkDestroyDescriptorSetLayout(m_pVulkanDevice->m_Device, m_DescriptorSetLayout, nullptr);
 		vkDestroyDescriptorSetLayout(m_pVulkanDevice->m_Device, m_RenderObjectsSetLayout, nullptr);
 		vkDestroyDescriptorSetLayout(m_pVulkanDevice->m_Device, m_MaterialsSetLayout, nullptr);
+		vkDestroyDescriptorSetLayout(m_pVulkanDevice->m_Device, m_LightSourceSetLayout, nullptr);
 	});
 }
 
@@ -553,6 +600,7 @@ void CVulkanBackend::InitRenderPath(IRenderPath* aRenderPath)
 	m_pCurrentRenderPath->HandleSceneChanged();
 }
 
+// TODO: This scales like shit. Use huge buffers instead of one per entity.
 void CVulkanBackend::CreateSceneDescriptorSets()
 {
 	VkDescriptorSetAllocateInfo MaterialsAllocInfo = {};
@@ -623,6 +671,32 @@ void CVulkanBackend::CreateSceneDescriptorSets()
 
 		vkUpdateDescriptorSets(m_pVulkanDevice->m_Device, static_cast<uint32_t>(Writes.size()), Writes.data(), 0, nullptr);
 	}
+
+	VkDescriptorSetAllocateInfo LightSourcesAllocInfo{};
+	LightSourcesAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	LightSourcesAllocInfo.descriptorPool = m_LightsPool;
+	LightSourcesAllocInfo.descriptorSetCount = 1;
+	LightSourcesAllocInfo.pSetLayouts = &m_LightSourceSetLayout;
+
+	VK_CHECK(vkAllocateDescriptorSets(m_pVulkanDevice->m_Device, &LightSourcesAllocInfo, &m_LightSourcesDescriptorSet));
+
+	VkDescriptorBufferInfo LightSourcesBufferInfo = {};
+	LightSourcesBufferInfo.buffer = m_LightSourcesBuffer.Buffer;
+	LightSourcesBufferInfo.offset = 0;
+	LightSourcesBufferInfo.range = sizeof(sLightSource::sProperties) * MAX_LIGHT_SOURCES;
+
+	VkWriteDescriptorSet LightSourcesDescriptorWrite{};
+	LightSourcesDescriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	LightSourcesDescriptorWrite.dstSet = m_LightSourcesDescriptorSet;
+	LightSourcesDescriptorWrite.dstBinding = 0;
+	LightSourcesDescriptorWrite.dstArrayElement = 0;
+	LightSourcesDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	LightSourcesDescriptorWrite.descriptorCount = 1;
+	LightSourcesDescriptorWrite.pBufferInfo = &LightSourcesBufferInfo;
+	LightSourcesDescriptorWrite.pImageInfo = nullptr;
+	LightSourcesDescriptorWrite.pTexelBufferView = nullptr;
+
+	vkUpdateDescriptorSets(m_pVulkanDevice->m_Device, 1, &LightSourcesDescriptorWrite, 0, nullptr);
 }
 
 void CVulkanBackend::UpdateFrameUBO(const CCamera* const aCamera, uint32_t ImageIdx)

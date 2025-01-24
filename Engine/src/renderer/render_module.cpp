@@ -3,6 +3,7 @@
 #include "engine.hpp"
 #include <renderer/resources/material.hpp>
 #include <renderer/resources/texture.hpp>
+#include <renderer/scene/entities/light_source.hpp>
 #include <renderer/resources/loaders/glTFLoader.hpp>
 
 #include <glm/gtx/transform.hpp>
@@ -124,4 +125,12 @@ void CRenderModule::CreateDefaultScene()
     m_pDefaultScene = new CScene();
     //m_pDefaultScene->AddRenderable(pSphere);
     m_pDefaultScene->AddRenderable(pPato);
+
+    sLightSource* LightSource = new sLightSource();
+    LightSource->Properties.Color = {255.0f, 255.0f, 0.0f};
+    LightSource->Properties.Intensity = 1.0f;
+    LightSource->Properties.LightType = eLightType::DIRECTIONAL;
+    LightSource->Properties.TargetPosition = {0.0f, 0.0f, 0.0f};
+
+    m_pDefaultScene->AddLightSource(LightSource);
 }

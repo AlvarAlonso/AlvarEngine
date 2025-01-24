@@ -93,8 +93,12 @@ void CVulkanRenderable::DrawSubMesh(CSubMesh* apSubMesh, sRenderContext& aRender
 {
 	if (bBindMaterialDescriptor)
 	{
-		const std::array<VkDescriptorSet, 3> DescriptorSets = 
-			{ aRenderContext.FrameDescriptorSet, aRenderContext.ObjectsDescriptorSet, aRenderContext.MaterialDescriptors->at(apSubMesh->m_Material->GetID())->DescriptorSet };
+		const std::array<VkDescriptorSet, 4> DescriptorSets = 
+			{ 	aRenderContext.FrameDescriptorSet, 
+				aRenderContext.ObjectsDescriptorSet, 
+				aRenderContext.MaterialDescriptors->at(apSubMesh->m_Material->GetID())->DescriptorSet,
+				aRenderContext.LightSourcesDescriptorSet
+			};
 
 		vkCmdBindDescriptorSets(aRenderContext.CmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, aRenderContext.PipelineLayout, 
 			0, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data(), 0, nullptr);

@@ -63,6 +63,7 @@ void CVulkanForwardRenderPath::RecordCommands(VkCommandBuffer aCommandBuffer, ui
 	RenderContext.FrameDescriptorSet = m_pVulkanBackend->m_FramesData[aImageIdx].DescriptorSet;
 	RenderContext.MaterialDescriptors = &m_pVulkanBackend->m_MaterialDescriptors;
 	RenderContext.ObjectsDescriptorSet = m_pVulkanBackend->m_ObjectsDataDescriptorSet;
+	RenderContext.LightSourcesDescriptorSet = m_pVulkanBackend->m_LightSourcesDescriptorSet;
 	RenderContext.PipelineLayout = m_ForwardPipelineLayout;
 
 	for (const auto& Renderable :  m_pVulkanBackend->m_Renderables)
@@ -157,7 +158,7 @@ void CVulkanForwardRenderPath::CreateForwardPipeline()
 	}
 
 	VkPipelineLayoutCreateInfo PipelineLayoutInfo = vkinit::PipelineLayoutCreateInfo();
-	std::array<VkDescriptorSetLayout, 3> SetLayouts = { m_pVulkanBackend->m_DescriptorSetLayout, m_pVulkanBackend->m_RenderObjectsSetLayout, m_pVulkanBackend->m_MaterialsSetLayout };
+	std::array<VkDescriptorSetLayout, 4> SetLayouts = { m_pVulkanBackend->m_DescriptorSetLayout, m_pVulkanBackend->m_RenderObjectsSetLayout, m_pVulkanBackend->m_MaterialsSetLayout, m_pVulkanBackend->m_LightSourceSetLayout };
 	PipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(SetLayouts.size());
 	PipelineLayoutInfo.pSetLayouts = SetLayouts.data();
 

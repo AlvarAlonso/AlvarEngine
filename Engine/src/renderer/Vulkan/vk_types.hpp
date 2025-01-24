@@ -9,6 +9,7 @@
 #include <glm/gtx/hash.hpp>
 #include <renderer/core/render_types.hpp>
 #include <renderer/resources/material.hpp>
+#include <renderer/scene/entities/light_source.hpp> // TODO: Vulkan no hauria d'estar incloent coses específiques de renderer.
 #include <vector>
 
 #include <iostream>
@@ -69,6 +70,7 @@ struct sRenderContext
     VkDescriptorSet FrameDescriptorSet;
     VkDescriptorSet ObjectsDescriptorSet;
     std::unordered_map<std::string, sMaterialDescriptor*>* MaterialDescriptors; // TODO: This should be get directly from CVulkanBackend.
+    VkDescriptorSet LightSourcesDescriptorSet;
     uint32_t DrawCallNum;
 };
 

@@ -11,6 +11,7 @@ class IRenderPath;
 class CRenderable;
 
 constexpr uint32_t MAX_RENDER_OBJECTS = 1024;
+constexpr uint32_t MAX_LIGHT_SOURCES = 24;
 constexpr uint32_t FRAME_OVERLAP = 3;
 
 struct sFrameData
@@ -92,15 +93,18 @@ private:
 
     IRenderPath* m_pCurrentRenderPath;
 
+    // TODO: Each render path should have its own memory layout.
     VkDescriptorSetLayout m_DescriptorSetLayout;
     VkDescriptorSetLayout m_RenderObjectsSetLayout;
     VkDescriptorSetLayout m_MaterialsSetLayout;
+    VkDescriptorSetLayout m_LightSourceSetLayout;
     VkSampler m_DefaultSampler;
 
     VkCommandPool m_CommandPool;
 
     VkDescriptorPool m_DescriptorPool;
     VkDescriptorPool m_MaterialsPool;
+    VkDescriptorPool m_LightsPool;
 
     sFrameData m_FramesData[FRAME_OVERLAP];
     uint32_t m_CurrentFrame;
@@ -111,6 +115,8 @@ private:
     std::vector<CVulkanRenderable*> m_Renderables;
     AllocatedBuffer m_ObjectsDataBuffer;
     VkDescriptorSet m_ObjectsDataDescriptorSet;
+    AllocatedBuffer m_LightSourcesBuffer;
+    VkDescriptorSet m_LightSourcesDescriptorSet;
 
     std::unordered_map<std::string, sMaterialDescriptor*> m_MaterialDescriptors;
     // ------------------------------------
