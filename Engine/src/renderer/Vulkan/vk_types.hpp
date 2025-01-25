@@ -77,8 +77,13 @@ struct sRenderContext
 
 struct sLightData
 {
+    glm::vec3 Position;
+    float MaxDist;
+    glm::vec3 TargetPosition;
+    float Intensity;
     glm::vec3 Color;
-    int Padding;
+    float Radius;
+    int LightType;
 };
 
 class CVulkanRenderable : public CRenderable

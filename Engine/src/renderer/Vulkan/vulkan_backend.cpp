@@ -187,7 +187,16 @@ void CVulkanBackend::CreateRenderablesData(const CScene* const apScene)
 		m_NumLightSources = LightSources.size();
 		for (const auto& LightSource : LightSources)
 		{
-			LightSourcesData[Index].Color = LightSource->Properties.Color;
+			// TODO: Make a math.hpp file.
+			const sLightSource::sProperties LightProps = LightSource->Properties;
+			const glm::mat4 Model = LightProps.Model;
+			LightSourcesData[Index].Position = glm::vec3(Model[3][0], Model[3][1], Model[3][2]);
+			LightSourcesData[Index].MaxDist = LightProps.MaxDist;
+			LightSourcesData[Index].TargetPosition = LightProps.TargetPosition;
+			LightSourcesData[Index].Intensity = LightProps.Intensity;
+			LightSourcesData[Index].Color = LightProps.Color;
+			LightSourcesData[Index].Radius = LightProps.Radius;
+			LightSourcesData[Index].LightType = static_cast<int32_t>(LightProps.LightType);
 			++Index;
 		}
 

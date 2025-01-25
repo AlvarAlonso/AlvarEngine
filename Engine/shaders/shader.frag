@@ -19,21 +19,14 @@ layout(set = 2, binding = 0) uniform MaterialConstants {
     bool bIsTransparent;
 } materialConstants;
 
-/*
 struct LightData {
-    mat4 Model;
-    vec3 TargetPosition;
-    vec3 Color;
+    vec3 Position;
     float MaxDist;
+    vec3 TargetPosition;
     float Intensity;
+    vec3 Color;
     float Radius;
     int LightType;
-};
-*/
-struct LightData
-{
-    vec3 Color;
-    int Padding;
 };
 
 layout(push_constant) uniform PushConstants 

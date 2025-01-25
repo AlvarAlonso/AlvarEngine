@@ -4,7 +4,7 @@
 #include <glm/mat4x4.hpp> 
 #include <string>
 
-enum class eLightType : uint8_t
+enum class eLightType : int32_t
 {
     NONE = 0,
     DIRECTIONAL,
