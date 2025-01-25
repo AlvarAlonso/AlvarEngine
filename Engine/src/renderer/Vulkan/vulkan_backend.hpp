@@ -9,6 +9,7 @@ class CVulkanSwapchain;
 class CCamera;
 class IRenderPath;
 class CRenderable;
+struct sLightSource;
 
 constexpr uint32_t MAX_RENDER_OBJECTS = 1024;
 constexpr uint32_t MAX_LIGHT_SOURCES = 24;
@@ -117,6 +118,7 @@ private:
     VkDescriptorSet m_ObjectsDataDescriptorSet;
     AllocatedBuffer m_LightSourcesBuffer;
     VkDescriptorSet m_LightSourcesDescriptorSet;
+    size_t m_NumLightSources;
 
     std::unordered_map<std::string, sMaterialDescriptor*> m_MaterialDescriptors;
     // ------------------------------------

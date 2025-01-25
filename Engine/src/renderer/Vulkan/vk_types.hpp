@@ -71,7 +71,14 @@ struct sRenderContext
     VkDescriptorSet ObjectsDescriptorSet;
     std::unordered_map<std::string, sMaterialDescriptor*>* MaterialDescriptors; // TODO: This should be get directly from CVulkanBackend.
     VkDescriptorSet LightSourcesDescriptorSet;
+    size_t NumLights; // TODO: Find a way to link this to the LightSourcesDescriptorSet so they can't go out of sync.
     uint32_t DrawCallNum;
+};
+
+struct sLightData
+{
+    glm::vec3 Color;
+    int Padding;
 };
 
 class CVulkanRenderable : public CRenderable

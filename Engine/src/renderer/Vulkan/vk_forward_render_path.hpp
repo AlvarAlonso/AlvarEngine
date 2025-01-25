@@ -8,6 +8,11 @@ class CVulkanBackend;
 class CVulkanDevice;
 class CVulkanSwapchain;
 
+struct sPushConstants
+{
+    int numLights;
+};
+
 class CVulkanForwardRenderPath : public IRenderPath
 {
 public:

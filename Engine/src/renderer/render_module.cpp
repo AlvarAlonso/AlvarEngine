@@ -127,10 +127,17 @@ void CRenderModule::CreateDefaultScene()
     m_pDefaultScene->AddRenderable(pPato);
 
     sLightSource* LightSource = new sLightSource();
-    LightSource->Properties.Color = {255.0f, 255.0f, 0.0f};
+    LightSource->Properties.Color = {0.0f, 255.0f, 0.0f};
     LightSource->Properties.Intensity = 1.0f;
     LightSource->Properties.LightType = eLightType::DIRECTIONAL;
     LightSource->Properties.TargetPosition = {0.0f, 0.0f, 0.0f};
 
+    sLightSource* LightSource2 = new sLightSource();
+    LightSource2->Properties.Color = {255.0f, 0.0f, 0.0f};
+    LightSource2->Properties.Intensity = 1.0f;
+    LightSource2->Properties.LightType = eLightType::DIRECTIONAL;
+    LightSource2->Properties.TargetPosition = {0.0f, 0.0f, 0.0f};
+
     m_pDefaultScene->AddLightSource(LightSource);
+    m_pDefaultScene->AddLightSource(LightSource2);
 }

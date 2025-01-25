@@ -26,6 +26,17 @@ void CVulkanForwardRenderPath::DestroyResources()
 
 void CVulkanForwardRenderPath::RecordCommands(VkCommandBuffer aCommandBuffer, uint32_t aImageIdx)
 {
+	// TODO: Is it necessary to set it all in every command recording?
+	sRenderContext RenderContext = {};
+	RenderContext.CmdBuffer = aCommandBuffer;
+	RenderContext.DrawCallNum = 0;
+	RenderContext.FrameDescriptorSet = m_pVulkanBackend->m_FramesData[aImageIdx].DescriptorSet;
+	RenderContext.MaterialDescriptors = &m_pVulkanBackend->m_MaterialDescriptors;
+	RenderContext.ObjectsDescriptorSet = m_pVulkanBackend->m_ObjectsDataDescriptorSet;
+	RenderContext.LightSourcesDescriptorSet = m_pVulkanBackend->m_LightSourcesDescriptorSet;
+	RenderContext.NumLights = m_pVulkanBackend->m_NumLightSources;
+	RenderContext.PipelineLayout = m_ForwardPipelineLayout;
+
 	VkCommandBufferBeginInfo BeginInfo = vkinit::CommandBufferBeginInfo();
 
 	VK_CHECK(vkBeginCommandBuffer(aCommandBuffer, &BeginInfo));
@@ -38,6 +49,11 @@ void CVulkanForwardRenderPath::RecordCommands(VkCommandBuffer aCommandBuffer, ui
 	
 	RenderPassInfo.clearValueCount = static_cast<uint32_t>(ClearValues.size());
 	RenderPassInfo.pClearValues = ClearValues.data();
+
+	sPushConstants PushConstants = {};
+	PushConstants.numLights = RenderContext.NumLights;
+
+	vkCmdPushConstants(aCommandBuffer, m_ForwardPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(float), &PushConstants);
 
 	vkCmdBeginRenderPass(aCommandBuffer, &RenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -56,15 +72,6 @@ void CVulkanForwardRenderPath::RecordCommands(VkCommandBuffer aCommandBuffer, ui
 	Scissor.offset = {0, 0};
 	Scissor.extent = m_pVulkanSwapchain->m_WindowExtent;
 	vkCmdSetScissor(aCommandBuffer, 0, 1, &Scissor);
-
-	sRenderContext RenderContext = {};
-	RenderContext.CmdBuffer = aCommandBuffer;
-	RenderContext.DrawCallNum = 0;
-	RenderContext.FrameDescriptorSet = m_pVulkanBackend->m_FramesData[aImageIdx].DescriptorSet;
-	RenderContext.MaterialDescriptors = &m_pVulkanBackend->m_MaterialDescriptors;
-	RenderContext.ObjectsDescriptorSet = m_pVulkanBackend->m_ObjectsDataDescriptorSet;
-	RenderContext.LightSourcesDescriptorSet = m_pVulkanBackend->m_LightSourcesDescriptorSet;
-	RenderContext.PipelineLayout = m_ForwardPipelineLayout;
 
 	for (const auto& Renderable :  m_pVulkanBackend->m_Renderables)
 	{
@@ -156,11 +163,18 @@ void CVulkanForwardRenderPath::CreateForwardPipeline()
 	{
 		std::cout << "Fragment Shader loaded SUCCESSFULLY!" << std::endl;
 	}
+	
+	std::array<VkDescriptorSetLayout, 4> SetLayouts = { m_pVulkanBackend->m_DescriptorSetLayout, m_pVulkanBackend->m_RenderObjectsSetLayout, m_pVulkanBackend->m_MaterialsSetLayout, m_pVulkanBackend->m_LightSourceSetLayout };
+	VkPushConstantRange PushConstantRange = {};
+	PushConstantRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	PushConstantRange.offset = 0;
+	PushConstantRange.size = sizeof(sPushConstants); // TODO: Look at GPU push constant max size.
 
 	VkPipelineLayoutCreateInfo PipelineLayoutInfo = vkinit::PipelineLayoutCreateInfo();
-	std::array<VkDescriptorSetLayout, 4> SetLayouts = { m_pVulkanBackend->m_DescriptorSetLayout, m_pVulkanBackend->m_RenderObjectsSetLayout, m_pVulkanBackend->m_MaterialsSetLayout, m_pVulkanBackend->m_LightSourceSetLayout };
 	PipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(SetLayouts.size());
 	PipelineLayoutInfo.pSetLayouts = SetLayouts.data();
+	PipelineLayoutInfo.pPushConstantRanges = &PushConstantRange;
+	PipelineLayoutInfo.pushConstantRangeCount = 1;
 
 	VK_CHECK(vkCreatePipelineLayout(m_pVulkanDevice->m_Device, &PipelineLayoutInfo, nullptr, &m_ForwardPipelineLayout));
 

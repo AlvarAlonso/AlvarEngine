@@ -180,13 +180,14 @@ void CVulkanBackend::CreateRenderablesData(const CScene* const apScene)
 		void* Data;
 		vmaMapMemory(m_pVulkanDevice->m_Allocator, m_LightSourcesBuffer.Allocation, &Data);
 		
-		sLightSource::sProperties* LightSourcesData = static_cast<sLightSource::sProperties*>(Data);
+		sLightData* LightSourcesData = static_cast<sLightData*>(Data);
 		size_t Index = 0;
 
 		const auto& LightSources = apScene->GetLightSources();
+		m_NumLightSources = LightSources.size();
 		for (const auto& LightSource : LightSources)
 		{
-			LightSourcesData[Index] = LightSource->Properties;
+			LightSourcesData[Index].Color = LightSource->Properties.Color;
 			++Index;
 		}
 
@@ -378,7 +379,7 @@ void CVulkanBackend::InitDescriptorSetPool()
 
 	VkDescriptorPoolSize MaterialConstantsPoolSize = {};
 	MaterialConstantsPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	MaterialTexturesPoolSize.descriptorCount = MAX_RENDER_OBJECTS;
+	MaterialConstantsPoolSize.descriptorCount = MAX_RENDER_OBJECTS;
 
 	std::array<VkDescriptorPoolSize, 2> MaterialPoolSizes = { MaterialTexturesPoolSize, MaterialConstantsPoolSize };
 
@@ -534,7 +535,7 @@ void CVulkanBackend::InitDescriptorSetLayouts()
 	VK_CHECK(vkCreateDescriptorSetLayout(m_pVulkanDevice->m_Device, &LightSourceLayoutInfo, nullptr, &m_LightSourceSetLayout));
 	
 	// TODO: Buffer creation should not be here.
-	m_LightSourcesBuffer = vkutils::CreateBuffer(m_pVulkanDevice, sizeof(sLightSource::sProperties) * MAX_LIGHT_SOURCES, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+	m_LightSourcesBuffer = vkutils::CreateBuffer(m_pVulkanDevice, sizeof(sLightData) * MAX_LIGHT_SOURCES, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
 	m_MainDeletionQueue.PushFunction([=]
 	{
@@ -683,7 +684,7 @@ void CVulkanBackend::CreateSceneDescriptorSets()
 	VkDescriptorBufferInfo LightSourcesBufferInfo = {};
 	LightSourcesBufferInfo.buffer = m_LightSourcesBuffer.Buffer;
 	LightSourcesBufferInfo.offset = 0;
-	LightSourcesBufferInfo.range = sizeof(sLightSource::sProperties) * MAX_LIGHT_SOURCES;
+	LightSourcesBufferInfo.range = sizeof(sLightData) * MAX_LIGHT_SOURCES;
 
 	VkWriteDescriptorSet LightSourcesDescriptorWrite{};
 	LightSourcesDescriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

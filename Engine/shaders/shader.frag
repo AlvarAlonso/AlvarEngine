@@ -19,6 +19,7 @@ layout(set = 2, binding = 0) uniform MaterialConstants {
     bool bIsTransparent;
 } materialConstants;
 
+/*
 struct LightData {
     mat4 Model;
     vec3 TargetPosition;
@@ -28,8 +29,19 @@ struct LightData {
     float Radius;
     int LightType;
 };
+*/
+struct LightData
+{
+    vec3 Color;
+    int Padding;
+};
 
-layout(std140, set = 3, binding = 0) readonly buffer LightsBuffer {
+layout(push_constant) uniform PushConstants 
+{
+    int numLights;
+} pushConstants;
+
+layout(set = 3, binding = 0) readonly buffer LightsBuffer {
     LightData lights[];
 } lightsBuffer;
 
@@ -59,22 +71,26 @@ void main() {
 	vec3 N = texture( normalSampler, fragTexCoord ).xyz;
     N = normalize( N * 2.0 - 1.0 );
     
-    // normalize the Light, Vision and Half vector and compute some dot products
-	vec3 L = normalize( light_position - fragWorldPos );
-	vec3 V = normalize( ubo.pos - fragWorldPos );
-	vec3 H = normalize( L + V );
-	float NdotL = clamp( dot( N, L ), 0.0, 1.0 );
-	float NdotV = clamp( dot( N, V ), 0.0, 1.0 );
-	float NdotH = clamp( dot( N, H ), 0.0, 1.0 );
-	float LdotH = clamp( dot( L, H ), 0.0, 1.0 );
+    vec3 totalLight = vec3(0.0);
+    for (int i = 0; i < pushConstants.numLights; ++i)
+    {
+        // normalize the Light, Vision and Half vector and compute some dot products
+        vec3 L = normalize( light_position - fragWorldPos );
+        vec3 V = normalize( ubo.pos - fragWorldPos );
+        vec3 H = normalize( L + V );
+        float NdotL = clamp( dot( N, L ), 0.0, 1.0 );
+        float NdotV = clamp( dot( N, V ), 0.0, 1.0 );
+        float NdotH = clamp( dot( N, H ), 0.0, 1.0 );
+        float LdotH = clamp( dot( L, H ), 0.0, 1.0 );
 
-    // calulate the specular and difusse
-	vec3 ks = SpecularBRDF( roughness, f0, NdotH, NdotV, NdotL, LdotH );
-	vec3 diffuse = ( 1.0 - metal ) * color_texture;	//the most metalness the less diffuse color
-	vec3 kd = diffuse * NdotL;
-	vec3 direct = (kd + ks) * lightsBuffer.lights[0].Color;
+        // calulate the specular and difusse
+        vec3 ks = SpecularBRDF( roughness, f0, NdotH, NdotV, NdotL, LdotH );
+        vec3 diffuse = ( 1.0 - metal ) * color_texture;	//the most metalness the less diffuse color
+        vec3 kd = diffuse * NdotL;
+        vec3 direct = (kd + ks) * lightsBuffer.lights[i].Color;
 
-    outColor = vec4(direct * color_texture, 1.0);
-    outColor = vec4(color_texture, 1.0);
-    outColor = vec4(lightsBuffer.lights[0].Color, 1.0);
+        totalLight += direct;
+    }
+
+    outColor = vec4(totalLight * color_texture, 1.0);
 }
