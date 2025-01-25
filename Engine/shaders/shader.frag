@@ -50,9 +50,8 @@ layout(location = 3) in vec3 fragWorldPos;
 
 layout(location = 0) out vec4 outColor;
 
-// TODO: Pass lights into the shader.
-
-void main() {
+void main() 
+{
     vec3 color_texture = texture( albedoSampler, fragTexCoord ).xyz;
     float metal = texture(metalRoughnessSampler, fragTexCoord).z;
     float roughness = texture(metalRoughnessSampler, fragTexCoord).y;
@@ -67,8 +66,9 @@ void main() {
     vec3 totalLight = vec3(0.0);
     for (int i = 0; i < pushConstants.numLights; ++i)
     {
+        LightData lightData = lightsBuffer.lights[i];
         // normalize the Light, Vision and Half vector and compute some dot products
-        vec3 L = normalize( light_position - fragWorldPos );
+        vec3 L = normalize( lightData.Position - fragWorldPos );
         vec3 V = normalize( ubo.pos - fragWorldPos );
         vec3 H = normalize( L + V );
         float NdotL = clamp( dot( N, L ), 0.0, 1.0 );
@@ -80,9 +80,32 @@ void main() {
         vec3 ks = SpecularBRDF( roughness, f0, NdotH, NdotV, NdotL, LdotH );
         vec3 diffuse = ( 1.0 - metal ) * color_texture;	//the most metalness the less diffuse color
         vec3 kd = diffuse * NdotL;
-        vec3 direct = (kd + ks) * lightsBuffer.lights[i].Color;
+        vec3 direct = (kd + ks) * lightData.Color;
 
-        totalLight += direct;
+    	float att_factor = ComputeAttenuation(lightData.Position, fragWorldPos, lightData.MaxDist);
+
+        vec3 currentLight = vec3(0.0);
+        if (lightData.LightType == 1) // directional
+        {
+            currentLight = direct;
+        }
+        else if (lightData.LightType == 2) // Point
+        {
+            currentLight = direct * lightData.Intensity * att_factor;
+        }
+        else if (lightData.LightType == 3) // Spot
+        {
+            // Determine if it's inside light's cone.
+            //direct *= SpotDirection(fragWorldPos);
+		    //light = direct * intensity * att_factor;
+        }
+        else
+        {
+            // Invalid Type.
+            // TODO: Find some way to debug this.
+        }
+
+        totalLight += currentLight;
     }
 
     outColor = vec4(totalLight * color_texture, 1.0);
