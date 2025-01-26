@@ -3,6 +3,7 @@
 #include "vk_types.hpp"
 #include <renderer/render_pipeline/IRenderPath.hpp>
 #include <core/types.hpp>
+#include <memory>
 
 class CVulkanBackend;
 class CVulkanDevice;
@@ -19,7 +20,7 @@ public:
     CVulkanForwardRenderPath(CVulkanBackend* apVulkanBackend, CVulkanDevice* apVulkanDevice, CVulkanSwapchain* apVulkanSwapchain);
     virtual void CreateResources() override;
     virtual void DestroyResources() override;
-    virtual void Render(const CCamera* const aCamera) override;
+    virtual void Render(const std::weak_ptr<CCamera> apCamera) override;
     virtual void UpdateBuffers() override {};
     virtual void HandleSceneChanged() override;
 

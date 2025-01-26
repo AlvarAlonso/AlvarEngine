@@ -5,47 +5,10 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/quaternion.hpp>
-#include <GLFW/glfw3.h>
 
-CCamera::CCamera(glm::vec3 aPosition, float aYaw, float aPitch, float aSpeed) :
-    m_Position(aPosition), m_Yaw(aYaw), m_Pitch(aPitch), m_Speed(aSpeed), m_Sensitivity(DEFAULT_CAMERA_SENSITIVITY)
+CCamera::CCamera(glm::vec3 aPosition, float aYaw, float aPitch) :
+    m_Position(aPosition), m_Yaw(aYaw), m_Pitch(aPitch)
 {
-}
-
-void CCamera::Update()
-{
-    glm::vec3 Velocity = glm::vec3(0.0f);
-
-    if (glfwGetKey(CEngine::Get()->GetWindow(), GLFW_KEY_UP))
-    {
-        Velocity.z = -1.0f;
-    }
-    if (glfwGetKey(CEngine::Get()->GetWindow(), GLFW_KEY_DOWN))
-    {
-        Velocity.z = 1.0f;
-    }
-    if (glfwGetKey(CEngine::Get()->GetWindow(), GLFW_KEY_LEFT))
-    {
-        Velocity.x = -1.0f;
-    }
-    if (glfwGetKey(CEngine::Get()->GetWindow(), GLFW_KEY_RIGHT))
-    {
-        Velocity.x = 1.0f;
-    }
-    if (glfwGetKey(CEngine::Get()->GetWindow(), GLFW_KEY_E))
-    {
-        Rotate(1.0f * 0.005f, 0.0f);
-    }
-    if (glfwGetKey(CEngine::Get()->GetWindow(), GLFW_KEY_Q))
-    {
-        Rotate(-1.0f * 0.005f, 0.0f);
-    }
-
-    glm::normalize(Velocity);
-    Velocity *= m_Speed * CEngine::Get()->GetDeltaTime();
-
-    const glm::mat4 CameraRotation = GetRotationMatrix();
-    m_Position += glm::vec3(CameraRotation * glm::vec4(Velocity, 0.f));
 }
 
 glm::mat4 CCamera::GetViewMatrix() const
@@ -71,9 +34,6 @@ glm::mat4 CCamera::GetProjection() const
 
 void CCamera::Rotate(float aXOfsset, float aYOffset, bool abConstraintPitch)
 {
-    aXOfsset *= m_Sensitivity;
-    aYOffset *= m_Sensitivity;
-
     m_Yaw -= aXOfsset;
     m_Pitch += aYOffset;
 

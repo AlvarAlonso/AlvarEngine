@@ -6,6 +6,7 @@
 #include "engine.hpp"
 #include <renderer/core/geometry_generator.hpp>
 #include <core/logger.h>
+#include <renderer/core/camera.hpp>
 
 #include <iostream>
 #include <array>
@@ -148,7 +149,7 @@ void CVulkanDeferredRenderPath::RecordLightPassCommands(VkCommandBuffer aCommand
 	VK_CHECK(vkEndCommandBuffer(aCommandBuffer));
 }
 
-void CVulkanDeferredRenderPath::Render(const CCamera* const aCamera)
+void CVulkanDeferredRenderPath::Render(const std::weak_ptr<CCamera> apCamera)
 {
     // TODO: Probably there is a chunk of this code that can go to CVulkanBackend.
 	
@@ -167,7 +168,7 @@ void CVulkanDeferredRenderPath::Render(const CCamera* const aCamera)
 		throw std::runtime_error("Failed to acquire swap chain image!");
 	}
 
-    m_pVulkanBackend->UpdateFrameUBO(aCamera, m_pVulkanBackend->m_CurrentFrame);
+    m_pVulkanBackend->UpdateFrameUBO(apCamera, m_pVulkanBackend->m_CurrentFrame);
 
     // Delay fence reset to prevent possible deadlock when recreating the swapchain.
 	VK_CHECK(vkResetFences(m_pVulkanDevice->m_Device, 1, &m_pVulkanBackend->m_FramesData[m_pVulkanBackend->m_CurrentFrame].RenderFence));
@@ -215,21 +216,24 @@ void CVulkanDeferredRenderPath::Render(const CCamera* const aCamera)
 
 void CVulkanDeferredRenderPath::UpdateBuffers()
 {	
-	const auto Camera = CEngine::Get()->GetRenderModule()->GetCamera();
+	const auto WeakCamera = CEngine::Get()->GetRenderModule()->GetCamera();
 
-	glm::mat4 Projection = glm::perspective(glm::radians(70.0f), m_pVulkanSwapchain->m_WindowExtent.width / (float)m_pVulkanSwapchain->m_WindowExtent.height, 0.1f, 200.0f);
-	Projection[1][1] *= -1;
+	if (const auto Camera = WeakCamera.lock())
+	{
+		glm::mat4 Projection = glm::perspective(glm::radians(70.0f), m_pVulkanSwapchain->m_WindowExtent.width / (float)m_pVulkanSwapchain->m_WindowExtent.height, 0.1f, 200.0f);
+		Projection[1][1] *= -1;
 
-	sGPUCameraData CameraData;
-	// TODO: Do not harcode this.
-	CameraData.Projection =  
-	CameraData.View = Camera->GetViewMatrix();
-	CameraData.Viewproj = Projection * CameraData.View;
+		sGPUCameraData CameraData;
+		// TODO: Do not harcode this.
+		CameraData.Projection =  
+		CameraData.View = Camera->GetViewMatrix();
+		CameraData.Viewproj = Projection * CameraData.View;
 
-	void* Data;
-	vmaMapMemory(m_pVulkanDevice->m_Allocator, m_CameraBuffer.Allocation, &Data);
-	memcpy(Data, &CameraData, sizeof(sGPUCameraData));
-	vmaUnmapMemory(m_pVulkanDevice->m_Allocator, m_CameraBuffer.Allocation);
+		void* Data;
+		vmaMapMemory(m_pVulkanDevice->m_Allocator, m_CameraBuffer.Allocation, &Data);
+		memcpy(Data, &CameraData, sizeof(sGPUCameraData));
+		vmaUnmapMemory(m_pVulkanDevice->m_Allocator, m_CameraBuffer.Allocation);
+	}
 }
 
 void CVulkanDeferredRenderPath::HandleSceneChanged()

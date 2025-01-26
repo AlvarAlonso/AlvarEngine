@@ -5,6 +5,8 @@
 #include <renderer/resources/texture.hpp>
 #include <renderer/scene/entities/light_source.hpp>
 #include <renderer/resources/loaders/glTFLoader.hpp>
+#include <renderer/controllers/editor_camera_controller.hpp>
+#include <renderer/core/camera.hpp>
 
 #include <glm/gtx/transform.hpp>
 #include <GLFW/glfw3.h>
@@ -22,7 +24,9 @@ CRenderModule::CRenderModule() :
 
 bool CRenderModule::Initialize()
 {
-    m_pMainCamera = new CCamera();
+    m_pMainCamera = std::make_shared<CCamera>();
+    m_pEditorCameraController = std::make_shared<CEditorCameraController>();
+    m_pEditorCameraController->SetCamera(m_pMainCamera);
 
     m_pVulkanBackend = std::make_unique<CVulkanBackend>();
     if (m_pVulkanBackend == nullptr)
@@ -39,7 +43,7 @@ bool CRenderModule::Initialize()
 
 void CRenderModule::Update()
 {
-    m_pMainCamera->Update();
+    m_pEditorCameraController->Update();
     
     // TODO: Release old render path resources.
     // Initialize new render path resources.
@@ -56,7 +60,6 @@ void CRenderModule::Update()
 
 bool CRenderModule::Shutdown()
 {
-    delete m_pMainCamera;
     delete m_pDefaultScene;
     return m_pVulkanBackend->Shutdown();
 }

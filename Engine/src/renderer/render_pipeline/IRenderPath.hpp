@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 class CCamera;
 
 /**
@@ -22,7 +24,7 @@ public:
      * @brief Renders the scene.
      * @param aCamera Point of view to render the scene from.
      */
-    virtual void Render(const CCamera* const aCamera) = 0;
+    virtual void Render(const std::weak_ptr<CCamera> aCamera) = 0;
 
     /**
      * @brief Updates the content of the buffers accessed by GPU, like uniform buffers.

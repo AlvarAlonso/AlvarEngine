@@ -83,7 +83,7 @@ void CVulkanForwardRenderPath::RecordCommands(VkCommandBuffer aCommandBuffer, ui
 	VK_CHECK(vkEndCommandBuffer(aCommandBuffer));
 }
 
-void CVulkanForwardRenderPath::Render(const CCamera* const aCamera)
+void CVulkanForwardRenderPath::Render(const std::weak_ptr<CCamera> apCamera)
 {
     // TODO: Probably there is a chunk of this code that can go to CVulkanBackend.
 
@@ -102,7 +102,7 @@ void CVulkanForwardRenderPath::Render(const CCamera* const aCamera)
 		throw std::runtime_error("Failed to acquire swap chain image!");
 	}
 
-	m_pVulkanBackend->UpdateFrameUBO(aCamera, m_pVulkanBackend->m_CurrentFrame);
+	m_pVulkanBackend->UpdateFrameUBO(apCamera, m_pVulkanBackend->m_CurrentFrame);
 
 	// Delay fence reset to prevent possible deadlock when recreating the swapchain.
 	VK_CHECK(vkResetFences(m_pVulkanDevice->m_Device, 1, &m_pVulkanBackend->m_FramesData[m_pVulkanBackend->m_CurrentFrame].RenderFence));

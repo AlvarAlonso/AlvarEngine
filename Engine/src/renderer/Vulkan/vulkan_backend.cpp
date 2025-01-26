@@ -77,14 +77,25 @@ bool CVulkanBackend::Initialize()
     return true;
 }
 
-void CVulkanBackend::Render(const CCamera* const aCamera)
+void CVulkanBackend::Render(const std::weak_ptr<CCamera> apCamera)
 {
 	assert(m_bIsInitialized);
 
-	if (m_pCurrentRenderPath)
+	if (apCamera.lock())
 	{
-		m_pCurrentRenderPath->UpdateBuffers();
-		m_pCurrentRenderPath->Render(aCamera);
+		if ( m_pCurrentRenderPath)
+		{
+			m_pCurrentRenderPath->UpdateBuffers();
+			m_pCurrentRenderPath->Render(apCamera);
+		}
+		else
+		{
+			SGSWARN("No render path selected. Cannot render.");
+		}
+	}
+	else
+	{
+		SGSWARN("THe Editor camera is not set. Cannot render.");
 	}
 }
 
@@ -709,19 +720,26 @@ void CVulkanBackend::CreateSceneDescriptorSets()
 	vkUpdateDescriptorSets(m_pVulkanDevice->m_Device, 1, &LightSourcesDescriptorWrite, 0, nullptr);
 }
 
-void CVulkanBackend::UpdateFrameUBO(const CCamera* const aCamera, uint32_t ImageIdx)
+void CVulkanBackend::UpdateFrameUBO(const std::weak_ptr<CCamera> apCamera, uint32_t ImageIdx)
 {
 	assert(ImageIdx >= 0 && ImageIdx < FRAME_OVERLAP);
 
-	sCameraFrameUBO FrameUBO = {};
-	FrameUBO.View = aCamera->GetViewMatrix();
-	// TODO: Do not hardcode this.
-	FrameUBO.Proj = glm::perspective(glm::radians(90.0f), m_pVulkanSwapchain->m_WindowExtent.width / (float)m_pVulkanSwapchain->m_WindowExtent.height, 0.1f, 1000.0f);
-	FrameUBO.Proj[1][1] *= -1;
-	FrameUBO.ViewProj = FrameUBO.Proj * FrameUBO.View;
-	FrameUBO.Pos = aCamera->GetPosition();
+	if (const auto Camera = apCamera.lock())
+	{
+		sCameraFrameUBO FrameUBO = {};
+		FrameUBO.View = Camera->GetViewMatrix();
+		// TODO: Do not hardcode this.
+		FrameUBO.Proj = glm::perspective(glm::radians(90.0f), m_pVulkanSwapchain->m_WindowExtent.width / (float)m_pVulkanSwapchain->m_WindowExtent.height, 0.1f, 1000.0f);
+		FrameUBO.Proj[1][1] *= -1;
+		FrameUBO.ViewProj = FrameUBO.Proj * FrameUBO.View;
+		FrameUBO.Pos = Camera->GetPosition();
 
-	memcpy(m_FramesData[ImageIdx].MappedUBOBuffer, &FrameUBO, sizeof(sCameraFrameUBO));
+		memcpy(m_FramesData[ImageIdx].MappedUBOBuffer, &FrameUBO, sizeof(sCameraFrameUBO));
+	}
+	else
+	{
+		SGSWARN("Editor Camera was nullptr.");
+	}
 }
 
 bool CVulkanBackend::HasStencilComponent(VkFormat aFormat)

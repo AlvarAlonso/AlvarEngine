@@ -4,6 +4,7 @@
 #include <renderer/render_pipeline/IRenderPath.hpp>
 #include <core/types.hpp>
 #include "vulkan_backend.hpp"
+#include <memory>
 
 class CVulkanDevice;
 class CVulkanSwapchain;
@@ -20,7 +21,7 @@ public:
     CVulkanDeferredRenderPath(CVulkanBackend* apVulkanBackend, CVulkanDevice* apVulkanDevice, CVulkanSwapchain* apVulkanSwapchain);
     virtual void CreateResources() override;
     virtual void DestroyResources() override;
-    virtual void Render(const CCamera* const aCamera) override;
+    virtual void Render(const std::weak_ptr<CCamera> apCamera) override;
     virtual void UpdateBuffers() override;
     virtual void HandleSceneChanged() override;
 

@@ -3,6 +3,7 @@
 #include "vk_types.hpp"
 #include <renderer/scene/scene.hpp>
 #include <core/types.hpp>
+#include <memory>
 
 class CVulkanDevice;
 class CVulkanSwapchain;
@@ -51,7 +52,7 @@ public:
     
     bool Initialize();
 
-    void Render(const CCamera* const aCamera);
+    void Render(const std::weak_ptr<CCamera> apCamera);
 
     bool Shutdown();
 
@@ -75,7 +76,7 @@ private:
     void InitRenderPath(IRenderPath* aRenderPath);
 
     void CreateSceneDescriptorSets();
-    void UpdateFrameUBO(const CCamera* const aCamera, uint32_t ImageIdx);
+    void UpdateFrameUBO(const std::weak_ptr<CCamera> apCamera, uint32_t ImageIdx);
     
     bool HasStencilComponent(VkFormat aFormat);
 
