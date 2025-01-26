@@ -2,6 +2,7 @@
 
 #include <renderer/core/camera.hpp>
 #include <engine.hpp>
+#include <core/logger.h>
 
 #include <GLFW/glfw3.h>
 
@@ -17,6 +18,11 @@ void CEditorCameraController::SetCamera(std::weak_ptr<CCamera> apCamera)
         pCamera = apCamera;
     }
 }
+
+// TODO: Remove this and create an input/poll system.
+static double xMouseOld = 0.0;
+static double yMouseOld = 0.0;
+static bool MouseLocked = false;
 
 void CEditorCameraController::Update()
 {
@@ -40,11 +46,39 @@ void CEditorCameraController::Update()
     }
     if (glfwGetKey(CEngine::Get()->GetWindow(), GLFW_KEY_E))
     {
-        pCamera.lock()->Rotate(1.0f * 0.005f * m_Sensitivity, 0.0f); // TODO: DeltaTime.
+        pCamera.lock()->Rotate(1.0f * m_Sensitivity * CEngine::Get()->GetDeltaTime(), 0.0f);
     }
     if (glfwGetKey(CEngine::Get()->GetWindow(), GLFW_KEY_Q))
     {
-        pCamera.lock()->Rotate(-1.0f * 0.005f * m_Sensitivity, 0.0f);
+        pCamera.lock()->Rotate(-1.0f * m_Sensitivity * CEngine::Get()->GetDeltaTime(), 0.0f);
+    }
+    if (glfwGetKey(CEngine::Get()->GetWindow(), GLFW_KEY_ESCAPE))
+    {
+        MouseLocked = !MouseLocked;
+    }
+    
+    if (MouseLocked)
+    {
+        SGSINFO("MOUSE LOCKED");
+        double xMouse, yMouse;
+        glfwGetCursorPos(CEngine::Get()->GetWindow(), &xMouse, &yMouse);
+
+        const double xMouseDiff = xMouse - xMouseOld;
+        const double yMouseDiff = yMouse - yMouseOld;
+
+        pCamera.lock()->Rotate(
+            static_cast<float>(xMouseDiff) * m_Sensitivity * CEngine::Get()->GetDeltaTime(), 
+            -(static_cast<float>(yMouseDiff) * m_Sensitivity * CEngine::Get()->GetDeltaTime()));
+
+        int WindowWidth, WindowHeight;
+        glfwGetWindowSize(CEngine::Get()->GetWindow(), &WindowWidth, &WindowHeight);
+
+        const int CenterX = static_cast<int>(floor(WindowWidth * 0.5f));
+        const int CenterY = static_cast<int>(floor(WindowHeight * 0.5f));
+
+        glfwSetCursorPos(CEngine::Get()->GetWindow(), CenterX, CenterY);
+        xMouseOld = CenterX;
+        yMouseOld = CenterY;
     }
 
     glm::normalize(Velocity);

@@ -6,7 +6,7 @@
 
 class CCamera;
 
-const float DEFAULT_CAMERA_SENSITIVITY = 0.2f;
+const float DEFAULT_CAMERA_SENSITIVITY = 0.01f;
 const float DEFAULT_CAMERA_SPEED = 0.01f;
 
 class CEditorCameraController : public IUpdatable, std::enable_shared_from_this<CEditorCameraController>
