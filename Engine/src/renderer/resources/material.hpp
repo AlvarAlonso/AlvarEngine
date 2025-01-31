@@ -5,46 +5,49 @@
 #include <string>
 #include <unordered_map>
 
-class CTexture;
-
-struct sMaterialConstants
+namespace Alvar
 {
-    glm::vec4 Color;
-    float RoughnessFactor;
-    float MetallicFactor;
-    float TillingFactor;
-    glm::vec3 EmissiveFactor;
-    bool bIsTransparent;
-};
- 
-struct sMaterialProperties
-{
-    sMaterialConstants MaterialConstants;
+    class CTexture;
 
-    // Textures.
-    CTexture* pAlbedoTexture;
-    CTexture* pEmissiveTexture;
-    CTexture* pMetallicRoughnessTexture;
-    CTexture* pOcclusionTexture;
-    CTexture* pNormalTexture;
-};
+    struct sMaterialConstants
+    {
+        glm::vec4 Color;
+        float RoughnessFactor;
+        float MetallicFactor;
+        float TillingFactor;
+        glm::vec3 EmissiveFactor;
+        bool bIsTransparent;
+    };
+    
+    struct sMaterialProperties
+    {
+        sMaterialConstants MaterialConstants;
 
-class CMaterial
-{
-public:
-    static CMaterial* Get(const std::string& aID);
-    static void RegisterMaterial(CMaterial* apMaterial);
+        // Textures.
+        CTexture* pAlbedoTexture;
+        CTexture* pEmissiveTexture;
+        CTexture* pMetallicRoughnessTexture;
+        CTexture* pOcclusionTexture;
+        CTexture* pNormalTexture;
+    };
 
-    CMaterial() = default;
-    void SetID(const std::string& aID);
-    std::string GetID() const { return m_ID; }
-    void SetMaterialProperties(const sMaterialProperties& aMaterialProperties);
-    sMaterialProperties GetMaterialProperties() const { return m_MaterialProperties; }
-    sMaterialConstants GetMaterialConstatns() const { return m_MaterialProperties.MaterialConstants; }
+    class CMaterial
+    {
+    public:
+        static CMaterial* Get(const std::string& aID);
+        static void RegisterMaterial(CMaterial* apMaterial);
 
-private:
-    static std::unordered_map<std::string, CMaterial*> m_LoadedMaterials;
+        CMaterial() = default;
+        void SetID(const std::string& aID);
+        std::string GetID() const { return m_ID; }
+        void SetMaterialProperties(const sMaterialProperties& aMaterialProperties);
+        sMaterialProperties GetMaterialProperties() const { return m_MaterialProperties; }
+        sMaterialConstants GetMaterialConstatns() const { return m_MaterialProperties.MaterialConstants; }
 
-    std::string m_ID;
-    sMaterialProperties m_MaterialProperties;
-};
+    private:
+        static std::unordered_map<std::string, CMaterial*> m_LoadedMaterials;
+
+        std::string m_ID;
+        sMaterialProperties m_MaterialProperties;
+    };
+}

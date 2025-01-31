@@ -7,7 +7,7 @@
 
 int main()
 {
-    CEngine* App = CEngine::Get();
+    Alvar::CEngine* App = Alvar::CEngine::Get();
 
     App->StartUp();
 

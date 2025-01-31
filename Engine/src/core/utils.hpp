@@ -2,7 +2,11 @@
 
 #include <string>
 
-namespace utils
+namespace Alvar
 {
-    std::string GetFileName(const std::string& aFilePath);
+    namespace utils
+    {
+        std::string GetFileName(const std::string& aFilePath);
+    }
 }
+

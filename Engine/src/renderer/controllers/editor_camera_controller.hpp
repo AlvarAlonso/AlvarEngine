@@ -4,23 +4,26 @@
 
 #include <memory>
 
-class CCamera;
-
-const float DEFAULT_CAMERA_SENSITIVITY = 0.01f;
-const float DEFAULT_CAMERA_SPEED = 0.01f;
-
-class CEditorCameraController : public IUpdatable, std::enable_shared_from_this<CEditorCameraController>
+namespace Alvar
 {
-public:
-    CEditorCameraController();
+    class CCamera;
 
-    float m_Sensitivity;
-    float m_Speed;
+    const float DEFAULT_CAMERA_SENSITIVITY = 0.01f;
+    const float DEFAULT_CAMERA_SPEED = 0.01f;
 
-    void SetCamera(std::weak_ptr<CCamera> apCamera);
+    class CEditorCameraController : public IUpdatable, std::enable_shared_from_this<CEditorCameraController>
+    {
+    public:
+        CEditorCameraController();
 
-    virtual void Update() override;
+        float m_Sensitivity;
+        float m_Speed;
 
-private:
-    std::weak_ptr<CCamera> pCamera;
-};
+        void SetCamera(std::weak_ptr<CCamera> apCamera);
+
+        virtual void Update() override;
+
+    private:
+        std::weak_ptr<CCamera> pCamera;
+    };
+}

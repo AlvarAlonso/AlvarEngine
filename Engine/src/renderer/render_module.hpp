@@ -8,49 +8,52 @@
 #include <memory>
 #include <unordered_map>
 
-class CVulkanDevice;
-class CCamera;
-class CEditorCameraController;
-
-/**
- * @brief Class that manages the rendering of scenes and all the associated 
- * rendering algorithms and data structures.
- */
-class CRenderModule : public IModule
+namespace Alvar
 {
-public:
-    CRenderModule();
-    CRenderModule(const CRenderModule&) = delete;
+    class CVulkanDevice;
+    class CCamera;
+    class CEditorCameraController;
 
-    virtual bool Initialize() override;
-    virtual void Update() override;
-    virtual bool Shutdown() override;
+    /**
+     * @brief Class that manages the rendering of scenes and all the associated 
+     * rendering algorithms and data structures.
+     */
+    class CRenderModule : public IModule
+    {
+    public:
+        CRenderModule();
+        CRenderModule(const CRenderModule&) = delete;
 
-    void HandleWindowResize();
-    // TODO: Design a generic way to handle input. Use layers (if an input is consumed in a top layer, do not go to the next layer) and my own
-    // enum to represent keys.
+        virtual bool Initialize() override;
+        virtual void Update() override;
+        virtual bool Shutdown() override;
 
-    eRenderPath GetRenderPath();
-    inline std::weak_ptr<CCamera> GetCamera() const { return m_pMainCamera; }
-    eRenderAPI GetRenderAPI() const { return m_RenderAPI; }
-    // TODO: Find a better way to do this. RenderModule should not have any reference to vulkan.
-    CVulkanDevice*  GetVulkanDevice() const { return m_pVulkanBackend->GetDevice(); }
+        void HandleWindowResize();
+        // TODO: Design a generic way to handle input. Use layers (if an input is consumed in a top layer, do not go to the next layer) and my own
+        // enum to represent keys.
 
-private:
-    void Render();
+        eRenderPath GetRenderPath();
+        inline std::weak_ptr<CCamera> GetCamera() const { return m_pMainCamera; }
+        eRenderAPI GetRenderAPI() const { return m_RenderAPI; }
+        // TODO: Find a better way to do this. RenderModule should not have any reference to vulkan.
+        CVulkanDevice*  GetVulkanDevice() const { return m_pVulkanBackend->GetDevice(); }
 
-    void CreateDefaultScene();
+    private:
+        void Render();
 
-    std::shared_ptr<CCamera> m_pMainCamera;
-    std::shared_ptr<CEditorCameraController> m_pEditorCameraController;
+        void CreateDefaultScene();
 
-    // TODO: An scene is fed to the renderer but should not be part of it. What should be part of it, is a processed scene (for scene graph use purposes for example).
-    CScene* m_pDefaultScene;
+        std::shared_ptr<CCamera> m_pMainCamera;
+        std::shared_ptr<CEditorCameraController> m_pEditorCameraController;
 
-    // TODO: This backend in the future, could be other graphics API.
-    std::unique_ptr<CVulkanBackend> m_pVulkanBackend;
+        // TODO: An scene is fed to the renderer but should not be part of it. What should be part of it, is a processed scene (for scene graph use purposes for example).
+        CScene* m_pDefaultScene;
 
-    eRenderPath m_CurrentRenderPath;
+        // TODO: This backend in the future, could be other graphics API.
+        std::unique_ptr<CVulkanBackend> m_pVulkanBackend;
 
-    eRenderAPI m_RenderAPI;
-};
+        eRenderPath m_CurrentRenderPath;
+
+        eRenderAPI m_RenderAPI;
+    };
+}

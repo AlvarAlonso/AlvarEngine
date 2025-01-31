@@ -1,7 +1,10 @@
 #pragma once
 
-class IUpdatable
+namespace Alvar
 {
-public:
-    virtual void Update() = 0;
-};
+    class IUpdatable
+    {
+    public:
+        virtual void Update() = 0;
+    };
+}

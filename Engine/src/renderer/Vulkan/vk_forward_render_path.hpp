@@ -5,36 +5,39 @@
 #include <core/types.hpp>
 #include <memory>
 
-class CVulkanBackend;
-class CVulkanDevice;
-class CVulkanSwapchain;
-
-struct sPushConstants
+namespace Alvar
 {
-    int numLights;
-};
+    class CVulkanBackend;
+    class CVulkanDevice;
+    class CVulkanSwapchain;
 
-class CVulkanForwardRenderPath : public IRenderPath
-{
-public:
-    CVulkanForwardRenderPath(CVulkanBackend* apVulkanBackend, CVulkanDevice* apVulkanDevice, CVulkanSwapchain* apVulkanSwapchain);
-    virtual void CreateResources() override;
-    virtual void DestroyResources() override;
-    virtual void Render(const std::weak_ptr<CCamera> apCamera) override;
-    virtual void UpdateBuffers() override {};
-    virtual void HandleSceneChanged() override;
+    struct sPushConstants
+    {
+        int numLights;
+    };
 
-    VkPipeline m_ForwardPipeline;
-    VkPipelineLayout m_ForwardPipelineLayout;
-    
-private:
-    void CreateForwardPipeline();
-    void RecordCommands(VkCommandBuffer aCommandBuffer, uint32_t aImageIdx);
+    class CVulkanForwardRenderPath : public IRenderPath
+    {
+    public:
+        CVulkanForwardRenderPath(CVulkanBackend* apVulkanBackend, CVulkanDevice* apVulkanDevice, CVulkanSwapchain* apVulkanSwapchain);
+        virtual void CreateResources() override;
+        virtual void DestroyResources() override;
+        virtual void Render(const std::weak_ptr<CCamera> apCamera) override;
+        virtual void UpdateBuffers() override {};
+        virtual void HandleSceneChanged() override;
 
-    CVulkanBackend* m_pVulkanBackend;
-    CVulkanDevice* m_pVulkanDevice;
-    CVulkanSwapchain* m_pVulkanSwapchain;
+        VkPipeline m_ForwardPipeline;
+        VkPipelineLayout m_ForwardPipelineLayout;
+        
+    private:
+        void CreateForwardPipeline();
+        void RecordCommands(VkCommandBuffer aCommandBuffer, uint32_t aImageIdx);
 
-    // Holds the deletion functions.
-    sDeletionQueue m_MainDeletionQueue;
-};
+        CVulkanBackend* m_pVulkanBackend;
+        CVulkanDevice* m_pVulkanDevice;
+        CVulkanSwapchain* m_pVulkanSwapchain;
+
+        // Holds the deletion functions.
+        sDeletionQueue m_MainDeletionQueue;
+    };
+}

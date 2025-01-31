@@ -3,22 +3,25 @@
 #include <deque>
 #include <functional>
 
-struct sDeletionQueue
+namespace Alvar
 {
-	std::deque<std::function<void()>> Deletors;
-
-	void PushFunction(std::function<void()>&& function)
+	struct sDeletionQueue
 	{
-		Deletors.push_back(function);
-	}
+		std::deque<std::function<void()>> Deletors;
 
-	void Flush()
-	{
-		for (auto it = Deletors.rbegin(); it != Deletors.rend(); it++)
+		void PushFunction(std::function<void()>&& function)
 		{
-			(*it)();
+			Deletors.push_back(function);
 		}
 
-		Deletors.clear();
-	}
-};
+		void Flush()
+		{
+			for (auto it = Deletors.rbegin(); it != Deletors.rend(); it++)
+			{
+				(*it)();
+			}
+
+			Deletors.clear();
+		}
+	};
+}

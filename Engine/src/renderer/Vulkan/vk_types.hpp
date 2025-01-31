@@ -14,91 +14,94 @@
 
 #include <iostream>
 
-class CVkTexture;
-
-#define VK_CHECK(x)                                                 \
-    do                                                              \
-    {                                                               \
-        VkResult err = x;                                           \
-        if (err)                                                    \
-        {                                                           \
-            std::cout <<"Detected Vulkan error: " << err << std::endl; \
-            std::abort();                                                \
-        }                                                           \
-    } while (0)														\
-    
-struct AllocatedBuffer
+namespace Alvar
 {
-	VkBuffer Buffer;
-    VmaAllocation Allocation;
-};
+    class CVkTexture;
 
-struct AllocatedImage 
-{
-    VkImage Image;
-    VmaAllocation Allocation;
-};
+    #define VK_CHECK(x)                                                 \
+        do                                                              \
+        {                                                               \
+            VkResult err = x;                                           \
+            if (err)                                                    \
+            {                                                           \
+                std::cout <<"Detected Vulkan error: " << err << std::endl; \
+                std::abort();                                                \
+            }                                                           \
+        } while (0)														\
+        
+    struct AllocatedBuffer
+    {
+        VkBuffer Buffer;
+        VmaAllocation Allocation;
+    };
 
-struct sVertexInputDescription
-{
-    std::vector<VkVertexInputBindingDescription> Bindings;
-    std::vector<VkVertexInputAttributeDescription> Attributes;
-};
+    struct AllocatedImage 
+    {
+        VkImage Image;
+        VmaAllocation Allocation;
+    };
 
-sVertexInputDescription GetVertexDescription();
+    struct sVertexInputDescription
+    {
+        std::vector<VkVertexInputBindingDescription> Bindings;
+        std::vector<VkVertexInputAttributeDescription> Attributes;
+    };
 
-struct sMaterialResources
-{
-    CVkTexture* pAlbedoTexture;
-    CVkTexture* pMetalRoughnessTexture;
-    CVkTexture* pEmissiveTexture;
-    CVkTexture* pNormalTexture;
-};
+    sVertexInputDescription GetVertexDescription();
 
-struct sMaterialDescriptor
-{
-    CMaterial* pMaterial;
-    sMaterialResources Resources;
-    AllocatedBuffer ConstantsBuffer;
-    VkDescriptorSet DescriptorSet;
-};
+    struct sMaterialResources
+    {
+        CVkTexture* pAlbedoTexture;
+        CVkTexture* pMetalRoughnessTexture;
+        CVkTexture* pEmissiveTexture;
+        CVkTexture* pNormalTexture;
+    };
 
-struct sRenderContext
-{
-    VkPipelineLayout PipelineLayout;
-    VkCommandBuffer CmdBuffer;
-    VkDescriptorSet FrameDescriptorSet;
-    VkDescriptorSet ObjectsDescriptorSet;
-    std::unordered_map<std::string, sMaterialDescriptor*>* MaterialDescriptors; // TODO: This should be get directly from CVulkanBackend.
-    VkDescriptorSet LightSourcesDescriptorSet;
-    size_t NumLights; // TODO: Find a way to link this to the LightSourcesDescriptorSet so they can't go out of sync.
-    uint32_t DrawCallNum;
-};
+    struct sMaterialDescriptor
+    {
+        CMaterial* pMaterial;
+        sMaterialResources Resources;
+        AllocatedBuffer ConstantsBuffer;
+        VkDescriptorSet DescriptorSet;
+    };
 
-struct sLightData
-{
-    glm::vec3 Position;
-    float MaxDist;
-    glm::vec3 TargetPosition;
-    float Intensity;
-    glm::vec3 Color;
-    float Radius;
-    int LightType;
-};
+    struct sRenderContext
+    {
+        VkPipelineLayout PipelineLayout;
+        VkCommandBuffer CmdBuffer;
+        VkDescriptorSet FrameDescriptorSet;
+        VkDescriptorSet ObjectsDescriptorSet;
+        std::unordered_map<std::string, sMaterialDescriptor*>* MaterialDescriptors; // TODO: This should be get directly from CVulkanBackend.
+        VkDescriptorSet LightSourcesDescriptorSet;
+        size_t NumLights; // TODO: Find a way to link this to the LightSourcesDescriptorSet so they can't go out of sync.
+        uint32_t DrawCallNum;
+    };
 
-class CVulkanRenderable : public CRenderable
-{
-public:
-    CVulkanRenderable() = default;
-    CVulkanRenderable(sMeshData* apMeshData);
+    struct sLightData
+    {
+        glm::vec3 Position;
+        float MaxDist;
+        glm::vec3 TargetPosition;
+        float Intensity;
+        glm::vec3 Color;
+        float Radius;
+        int LightType;
+    };
 
-    void Draw(sRenderContext& aRenderContext, bool bBindMaterialDescriptor = false);
-    virtual void UploadToVRAM() override;
+    class CVulkanRenderable : public CRenderable
+    {
+    public:
+        CVulkanRenderable() = default;
+        CVulkanRenderable(sMeshData* apMeshData);
 
-    AllocatedBuffer m_VertexBuffer;
-    AllocatedBuffer m_IndexBuffer;
+        void Draw(sRenderContext& aRenderContext, bool bBindMaterialDescriptor = false);
+        virtual void UploadToVRAM() override;
 
-private:
-    void DrawNode(CMeshNode* apMeshNode, sRenderContext& aRenderContext, bool bBindMaterialDescriptor = false);
-    void DrawSubMesh(CSubMesh* apSubMesh, sRenderContext& aRenderContext, bool bBindMaterialDescriptor = false);
-};
+        AllocatedBuffer m_VertexBuffer;
+        AllocatedBuffer m_IndexBuffer;
+
+    private:
+        void DrawNode(CMeshNode* apMeshNode, sRenderContext& aRenderContext, bool bBindMaterialDescriptor = false);
+        void DrawSubMesh(CSubMesh* apSubMesh, sRenderContext& aRenderContext, bool bBindMaterialDescriptor = false);
+    };
+}

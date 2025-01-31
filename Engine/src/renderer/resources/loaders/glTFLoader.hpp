@@ -2,6 +2,9 @@
 
 #include <string>
 
-class CRenderable;
+namespace Alvar
+{
+    class CRenderable;
 
-CRenderable* LoadGLTF(const std::string& aFilePath, float aScale);
+    CRenderable* LoadGLTF(const std::string& aFilePath, float aScale);
+}

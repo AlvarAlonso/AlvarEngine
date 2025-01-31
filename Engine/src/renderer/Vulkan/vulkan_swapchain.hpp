@@ -2,44 +2,47 @@
 
 #include "vk_types.hpp"
 
-class CVulkanDevice;
-
-class CVulkanSwapchain
+namespace Alvar
 {
-public:
-    CVulkanSwapchain(CVulkanDevice* aVulkanDevice);
-    ~CVulkanSwapchain();
+    class CVulkanDevice;
 
-    void InitVulkanSwapchain();
-    void RecreateSwapchain();
+    class CVulkanSwapchain
+    {
+    public:
+        CVulkanSwapchain(CVulkanDevice* aVulkanDevice);
+        ~CVulkanSwapchain();
 
-private:
-    void InitSwapchain();
-    // TODO: Can we move it to vulkan backend? Swapchain probably should not have info about the render passes and its attachments.
-    void InitRenderPass();
-    void InitDepthBuffer();
-    void InitFramebuffers();
+        void InitVulkanSwapchain();
+        void RecreateSwapchain();
 
-    void CleanupSwapchain();
+    private:
+        void InitSwapchain();
+        // TODO: Can we move it to vulkan backend? Swapchain probably should not have info about the render passes and its attachments.
+        void InitRenderPass();
+        void InitDepthBuffer();
+        void InitFramebuffers();
 
-    CVulkanDevice* m_VulkanDevice;
+        void CleanupSwapchain();
 
-public:
-    // Swapchain.
-    VkSwapchainKHR m_Swapchain;
-    VkFormat m_SwapchainImageFormat;
-    std::vector<VkImage> m_SwapchainImages;
-    std::vector<VkImageView> m_SwapchainImageViews;
-    uint32_t m_ImageIdx;
-    // ------------
+        CVulkanDevice* m_VulkanDevice;
 
-    // Render passes.
-    VkRenderPass m_RenderPass;
-    std::vector<VkFramebuffer> m_Framebuffers;
-    // ------------
+    public:
+        // Swapchain.
+        VkSwapchainKHR m_Swapchain;
+        VkFormat m_SwapchainImageFormat;
+        std::vector<VkImage> m_SwapchainImages;
+        std::vector<VkImageView> m_SwapchainImageViews;
+        uint32_t m_ImageIdx;
+        // ------------
 
-    AllocatedImage m_DepthImage;
-    VkImageView m_DepthImageView;
+        // Render passes.
+        VkRenderPass m_RenderPass;
+        std::vector<VkFramebuffer> m_Framebuffers;
+        // ------------
 
-    VkExtent2D m_WindowExtent = { 800, 600 };
-};
+        AllocatedImage m_DepthImage;
+        VkImageView m_DepthImageView;
+
+        VkExtent2D m_WindowExtent = { 800, 600 };
+    };
+}

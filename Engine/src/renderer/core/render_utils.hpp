@@ -4,7 +4,10 @@
 
 #include <string>
 
-namespace renderutils
+namespace Alvar
 {
-    bool LoadMeshFromFile(const std::string& aFilename, sMeshData& aOutMesh);
-};
+    namespace renderutils
+    {
+        bool LoadMeshFromFile(const std::string& aFilename, sMeshData& aOutMesh);
+    };
+}

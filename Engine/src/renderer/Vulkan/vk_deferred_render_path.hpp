@@ -6,75 +6,78 @@
 #include "vulkan_backend.hpp"
 #include <memory>
 
-class CVulkanDevice;
-class CVulkanSwapchain;
-
-struct sGPUCameraData {
-	glm::mat4 View;
-	glm::mat4 Projection;
-	glm::mat4 Viewproj;
-};
-
-class CVulkanDeferredRenderPath : public IRenderPath
+namespace Alvar
 {
-public:
-    CVulkanDeferredRenderPath(CVulkanBackend* apVulkanBackend, CVulkanDevice* apVulkanDevice, CVulkanSwapchain* apVulkanSwapchain);
-    virtual void CreateResources() override;
-    virtual void DestroyResources() override;
-    virtual void Render(const std::weak_ptr<CCamera> apCamera) override;
-    virtual void UpdateBuffers() override;
-    virtual void HandleSceneChanged() override;
+    class CVulkanDevice;
+    class CVulkanSwapchain;
 
-private:
-    void CreateDeferredQuad();
-    void CreateDeferredAttachments();
-    void CreateGBufferDescriptors();
-    void CreateDeferredRenderPass();
-    void CreateGBufferFramebuffer();
-    void CreateDeferredPipeline();
-    void CreateDeferredCommandStructures();
-    void CreateDeferredSyncrhonizationStructures();
+    struct sGPUCameraData {
+        glm::mat4 View;
+        glm::mat4 Projection;
+        glm::mat4 Viewproj;
+    };
 
-    void RecordLightPassCommands(VkCommandBuffer aCommandBuffer, uint32_t aImageIdx);
-    void RecordGBufferPassCommands();
+    class CVulkanDeferredRenderPath : public IRenderPath
+    {
+    public:
+        CVulkanDeferredRenderPath(CVulkanBackend* apVulkanBackend, CVulkanDevice* apVulkanDevice, CVulkanSwapchain* apVulkanSwapchain);
+        virtual void CreateResources() override;
+        virtual void DestroyResources() override;
+        virtual void Render(const std::weak_ptr<CCamera> apCamera) override;
+        virtual void UpdateBuffers() override;
+        virtual void HandleSceneChanged() override;
 
-    CVulkanBackend* m_pVulkanBackend;
-    CVulkanDevice* m_pVulkanDevice;
-    CVulkanSwapchain* m_pVulkanSwapchain;
+    private:
+        void CreateDeferredQuad();
+        void CreateDeferredAttachments();
+        void CreateGBufferDescriptors();
+        void CreateDeferredRenderPass();
+        void CreateGBufferFramebuffer();
+        void CreateDeferredPipeline();
+        void CreateDeferredCommandStructures();
+        void CreateDeferredSyncrhonizationStructures();
 
-    VkFormat m_PositionFormat;
-    VkFormat m_NormalFormat;
-    VkFormat m_AlbedoFormat;
+        void RecordLightPassCommands(VkCommandBuffer aCommandBuffer, uint32_t aImageIdx);
+        void RecordGBufferPassCommands();
 
-    AllocatedImage m_PositionImage;
-    AllocatedImage m_NormalImage;
-    AllocatedImage m_AlbedoImage;
+        CVulkanBackend* m_pVulkanBackend;
+        CVulkanDevice* m_pVulkanDevice;
+        CVulkanSwapchain* m_pVulkanSwapchain;
 
-    VkImageView m_PositionImageView;
-    VkImageView m_NormalImageView;
-    VkImageView m_AlbedoImageView;
+        VkFormat m_PositionFormat;
+        VkFormat m_NormalFormat;
+        VkFormat m_AlbedoFormat;
 
-    VkFramebuffer m_GBufferFramebuffer;
-    VkRenderPass m_DeferredRenderPass;
+        AllocatedImage m_PositionImage;
+        AllocatedImage m_NormalImage;
+        AllocatedImage m_AlbedoImage;
 
-    VkDescriptorSetLayout m_GBufferSetLayout;
-    VkDescriptorSetLayout m_CameraSetLayout;
-    VkDescriptorPool m_DeferredDescriptorPool;
-    VkDescriptorSet m_GBufferDescriptorSet;
-    VkDescriptorSet m_CameraDescriptorSet;
-    AllocatedBuffer m_CameraBuffer;
+        VkImageView m_PositionImageView;
+        VkImageView m_NormalImageView;
+        VkImageView m_AlbedoImageView;
 
-    VkPipelineLayout m_DeferredPipelineLayout;
-    VkPipelineLayout m_LightPipelineLayout;
-    VkPipeline m_DeferredPipeline;
-    VkPipeline m_LightPipeline;
+        VkFramebuffer m_GBufferFramebuffer;
+        VkRenderPass m_DeferredRenderPass;
 
-    VkCommandPool m_DeferredCommandPool;
-    VkCommandBuffer m_DeferredCommandBuffer;
-    VkSemaphore m_GBufferReadySemaphore;
+        VkDescriptorSetLayout m_GBufferSetLayout;
+        VkDescriptorSetLayout m_CameraSetLayout;
+        VkDescriptorPool m_DeferredDescriptorPool;
+        VkDescriptorSet m_GBufferDescriptorSet;
+        VkDescriptorSet m_CameraDescriptorSet;
+        AllocatedBuffer m_CameraBuffer;
 
-    CVulkanRenderable* m_Quad;
+        VkPipelineLayout m_DeferredPipelineLayout;
+        VkPipelineLayout m_LightPipelineLayout;
+        VkPipeline m_DeferredPipeline;
+        VkPipeline m_LightPipeline;
 
-    // Holds the deletion functions.
-    sDeletionQueue m_MainDeletionQueue;
-};
+        VkCommandPool m_DeferredCommandPool;
+        VkCommandBuffer m_DeferredCommandBuffer;
+        VkSemaphore m_GBufferReadySemaphore;
+
+        CVulkanRenderable* m_Quad;
+
+        // Holds the deletion functions.
+        sDeletionQueue m_MainDeletionQueue;
+    };
+}

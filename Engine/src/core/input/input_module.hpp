@@ -2,13 +2,16 @@
 
 #include <core/IModule.hpp>
 
-class CInputModule : public IModule
+namespace Alvar
 {
-public:
-    CInputModule();
-    CInputModule(const CInputModule&) = delete;
+    class CInputModule : public IModule
+    {
+    public:
+        CInputModule();
+        CInputModule(const CInputModule&) = delete;
 
-    virtual bool Initialize() override;
-    virtual void Update() override;
-    virtual bool Shutdown() override;
-};
+        virtual bool Initialize() override;
+        virtual void Update() override;
+        virtual bool Shutdown() override;
+    };
+}

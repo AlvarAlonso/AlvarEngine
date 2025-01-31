@@ -9,23 +9,26 @@
 #include <vector>
 #include <memory>
 
-/**
- * @brief Class that represents a rendering scene. It includes all the objects to be renderer and will
- * include all lighting configuration.
- */
-class CScene
+namespace Alvar
 {
-public:
-    CScene();
-    ~CScene();
+    /**
+     * @brief Class that represents a rendering scene. It includes all the objects to be renderer and will
+     * include all lighting configuration.
+     */
+    class CScene
+    {
+    public:
+        CScene();
+        ~CScene();
 
-    void AddRenderable(CRenderable* const apRenderable);
-    void AddLightSource(sLightSource* const apLightSource);
+        void AddRenderable(CRenderable* const apRenderable);
+        void AddLightSource(sLightSource* const apLightSource);
 
-    const std::vector<CRenderable*>& GetRenderables() const { return m_Renderables; }
-    const std::vector<sLightSource*>& GetLightSources() const { return m_LightSources; }
+        const std::vector<CRenderable*>& GetRenderables() const { return m_Renderables; }
+        const std::vector<sLightSource*>& GetLightSources() const { return m_LightSources; }
 
-private:
-    std::vector<CRenderable*> m_Renderables;
-    std::vector<sLightSource*> m_LightSources;
-};
+    private:
+        std::vector<CRenderable*> m_Renderables;
+        std::vector<sLightSource*> m_LightSources;
+    };
+}

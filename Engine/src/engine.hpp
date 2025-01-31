@@ -4,47 +4,66 @@
 
 #include "renderer/render_module.hpp"
 
+#include <functional>
+
+// TODO: Remove this from here.
+#define ALVAR_BIND_EVENT_FN(fn) [this](auto&&... args) -> decltype(auto) { return this->fn(std::forward<decltype(args)>(args)...); }
+
 struct GLFWwindow;
 
-class CEngine
+namespace Alvar
 {
-public:
-    static CEngine* Get();
+    class CEvent;
+    class CWindowCloseEvent;
+    class CWindowResizeEvent;
 
-    void StartUp();
+    class CEngine
+    {
+    public:
+        static CEngine* Get();
 
-    void Run();
+        void StartUp();
 
-    void Shutdown();
+        void Run();
 
-    GLFWwindow* GetWindow();
+        void Shutdown();
 
-    // TODO: Show only selected functionalities or find another way to share modules. Engine must have access to initialization and stuff like this
-    // but probably other classes who wants to access a module should not have those kind of functions available.
-    CRenderModule* GetRenderModule(){ return &m_RenderModule; }
+        void OnEvent(CEvent& aEvent);
 
-    float GetDeltaTime();
+        GLFWwindow* GetWindow();
 
-    bool m_bFramebufferResized;
+        // TODO: Show only selected functionalities or find another way to share modules. Engine must have access to initialization and stuff like this
+        // but probably other classes who wants to access a module should not have those kind of functions available.
+        CRenderModule* GetRenderModule(){ return &m_RenderModule; }
 
-private:
-    CEngine();
+        float GetDeltaTime();
 
-    CEngine(const CEngine& aEngine) = delete;
-    bool operator== (const CEngine& aEngine) = delete;
+        bool m_bFramebufferResized;
 
-    void RegisterGLFWCallbacks();
+    private:
+        CEngine();
 
-private:
-    static CEngine* m_pInstance;
+        CEngine(const CEngine& aEngine) = delete;
+        bool operator== (const CEngine& aEngine) = delete;
 
-    GLFWwindow* m_pWindow;
+        void RegisterGLFWCallbacks();
 
-    uint32 m_ClientWidth = 800;
-    uint32 m_ClientHeight = 600;
+        bool OnWindowClose(CWindowCloseEvent& aEvent);
+        bool OnWindowResize(CWindowResizeEvent& aEvent);
 
-    // TODO: Move time related stuff to a Time manager.
-    float m_DeltaTime;
+    private:
+        static CEngine* m_pInstance;
 
-    CRenderModule m_RenderModule;
-};
+        GLFWwindow* m_pWindow;
+
+        uint32 m_ClientWidth = 800;
+        uint32 m_ClientHeight = 600;
+
+        // TODO: Move time related stuff to a Time manager.
+        float m_DeltaTime;
+
+        std::function<void(CEvent&)> m_EventCallback;
+
+        CRenderModule m_RenderModule;
+    };
+}

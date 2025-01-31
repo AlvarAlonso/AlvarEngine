@@ -1,21 +1,24 @@
 #include "input_module.hpp"
 
-CInputModule::CInputModule()
+namespace Alvar
 {
+    CInputModule::CInputModule()
+    {
 
-}
+    }
 
-bool CInputModule::Initialize()
-{
-    return true;
-}
+    bool CInputModule::Initialize()
+    {
+        return true;
+    }
 
-void CInputModule::Update()
-{
+    void CInputModule::Update()
+    {
 
-}
+    }
 
-bool CInputModule::Shutdown()
-{
-    return true;
+    bool CInputModule::Shutdown()
+    {
+        return true;
+    }
 }
