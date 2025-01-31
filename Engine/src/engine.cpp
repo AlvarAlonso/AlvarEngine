@@ -34,18 +34,16 @@ namespace Alvar
         glfwInit();
 
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        
-        m_pWindow = glfwCreateWindow(m_ClientWidth, m_ClientHeight, "AlvarEngine", nullptr, nullptr);
-        glfwSetWindowUserPointer(m_pWindow, this);
-        glfwSetFramebufferSizeCallback(m_pWindow, [](GLFWwindow* aWindow, int aWidth, int aHeight)
-        {
-            auto App = reinterpret_cast<CEngine*>(glfwGetWindowUserPointer(aWindow));
-            App->GetRenderModule()->HandleWindowResize(); // TODO: Refactor this.
-        });
+
+        m_WindowData.Width = m_ClientWidth;
+        m_WindowData.Height = m_ClientHeight;        
+        m_pWindow = glfwCreateWindow(m_WindowData.Width, m_WindowData.Height, "AlvarEngine", nullptr, nullptr);
+
+        glfwSetWindowUserPointer(m_pWindow, &m_WindowData);
 
         RegisterGLFWCallbacks();
 
-        m_EventCallback = ALVAR_BIND_EVENT_FN(OnEvent);
+        m_WindowData.EventCallback = ALVAR_BIND_EVENT_FN(OnEvent);
 
         // Initialize modules.
         m_RenderModule.Initialize();
@@ -88,7 +86,94 @@ namespace Alvar
 
     void CEngine::RegisterGLFWCallbacks()
     {
+        glfwSetWindowSizeCallback(m_pWindow, [](GLFWwindow* aWindow, int aWidth, int aHeight)
+		{
+			sWindowData& Data = *(sWindowData*)glfwGetWindowUserPointer(aWindow);
+			Data.Width = aWidth;
+			Data.Height = aHeight;
 
+			CWindowResizeEvent Event(aWidth, aHeight);
+			Data.EventCallback(Event);
+		});
+
+		glfwSetWindowCloseCallback(m_pWindow, [](GLFWwindow* aWindow)
+		{
+			sWindowData& Data = *(sWindowData*)glfwGetWindowUserPointer(aWindow);
+			CWindowCloseEvent Event;
+			Data.EventCallback(Event);
+		});
+
+		glfwSetKeyCallback(m_pWindow, [](GLFWwindow* aWindow, int aKey, int aScancode, int aAction, int aMods)
+		{
+			sWindowData& Data = *(sWindowData*)glfwGetWindowUserPointer(aWindow);
+
+			switch (aAction)
+			{
+				case GLFW_PRESS:
+				{
+					CKeyPressedEvent Event(aKey, 0);
+					Data.EventCallback(Event);
+					break;
+				}
+				case GLFW_RELEASE:
+				{
+					CKeyReleasedEvent Event(aKey);
+					Data.EventCallback(Event);
+					break;
+				}
+				case GLFW_REPEAT:
+				{
+					CKeyPressedEvent Event(aKey, true);
+					Data.EventCallback(Event);
+					break;
+				}
+			}
+		});
+
+		glfwSetCharCallback(m_pWindow, [](GLFWwindow* aWindow, unsigned int aKeycode)
+		{
+			sWindowData& Data = *(sWindowData*)glfwGetWindowUserPointer(aWindow);
+
+			CKeyTypedEvent Event(aKeycode);
+			Data.EventCallback(Event);
+		});
+
+		glfwSetMouseButtonCallback(m_pWindow, [](GLFWwindow* aWindow, int aButton, int aAction, int aMods)
+		{
+			sWindowData& Data = *(sWindowData*)glfwGetWindowUserPointer(aWindow);
+
+			switch (aAction)
+			{
+				case GLFW_PRESS:
+				{
+					CMouseButtonPressedEvent Event(aButton);
+					Data.EventCallback(Event);
+					break;
+				}
+				case GLFW_RELEASE:
+				{
+					CMouseButtonReleasedEvent Event(aButton);
+					Data.EventCallback(Event);
+					break;
+				}
+			}
+		});
+
+		glfwSetScrollCallback(m_pWindow, [](GLFWwindow* aWindow, double xOffset, double yOffset)
+		{
+			sWindowData& Data = *(sWindowData*)glfwGetWindowUserPointer(aWindow);
+
+			CMouseScrolledEvent Event((float)xOffset, (float)yOffset);
+			Data.EventCallback(Event);
+		});
+
+		glfwSetCursorPosCallback(m_pWindow, [](GLFWwindow* aWindow, double xPos, double yPos)
+		{
+			sWindowData& Data = *(sWindowData*)glfwGetWindowUserPointer(aWindow);
+
+			CMouseMovedEvent Event((float)xPos, (float)yPos);
+			Data.EventCallback(Event);
+		});
     }
 
     bool CEngine::OnWindowClose(CWindowCloseEvent& aEvent)
@@ -99,7 +184,7 @@ namespace Alvar
 
     bool CEngine::OnWindowResize(CWindowResizeEvent& aEvent)
     {
-        // TODO: Forward this to renderer.
+        m_RenderModule.HandleWindowResize();
         return true;
     }
 

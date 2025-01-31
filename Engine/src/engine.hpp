@@ -17,6 +17,14 @@ namespace Alvar
     class CWindowCloseEvent;
     class CWindowResizeEvent;
 
+    struct sWindowData
+    {
+        uint32_t Width;
+        uint32_t Height;
+        bool bVSync;
+        std::function<void(CEvent&)> EventCallback;
+    };
+
     class CEngine
     {
     public:
@@ -55,14 +63,13 @@ namespace Alvar
         static CEngine* m_pInstance;
 
         GLFWwindow* m_pWindow;
+        sWindowData m_WindowData;
 
         uint32 m_ClientWidth = 800;
         uint32 m_ClientHeight = 600;
 
         // TODO: Move time related stuff to a Time manager.
         float m_DeltaTime;
-
-        std::function<void(CEvent&)> m_EventCallback;
 
         CRenderModule m_RenderModule;
     };
