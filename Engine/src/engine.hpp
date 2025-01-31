@@ -2,6 +2,7 @@
 
 #include "core/defines.h"
 
+#include <core/input/input_module.hpp>
 #include "renderer/render_module.hpp"
 
 #include <functional>
@@ -16,6 +17,12 @@ namespace Alvar
     class CEvent;
     class CWindowCloseEvent;
     class CWindowResizeEvent;
+    class CKeyPressedEvent;
+    class CKeyReleasedEvent;
+    class CMouseMovedEvent;
+    class CMouseScrolledEvent;
+    class CMouseButtonPressedEvent;
+    class CMouseButtonReleasedEvent;
 
     struct sWindowData
     {
@@ -44,8 +51,6 @@ namespace Alvar
         // but probably other classes who wants to access a module should not have those kind of functions available.
         CRenderModule* GetRenderModule(){ return &m_RenderModule; }
 
-        float GetDeltaTime();
-
         bool m_bFramebufferResized;
 
     private:
@@ -58,6 +63,12 @@ namespace Alvar
 
         bool OnWindowClose(CWindowCloseEvent& aEvent);
         bool OnWindowResize(CWindowResizeEvent& aEvent);
+        bool OnKeyPressed(CKeyPressedEvent& aEvent);
+        bool OnKeyReleased(CKeyReleasedEvent& aEvent);
+        bool OnMouseMoved(CMouseMovedEvent& aEvent);
+        bool OnMouseScrolled(CMouseScrolledEvent& aEvent);
+        bool OnMouseButtonPressed(CMouseButtonPressedEvent& aEvent);
+        bool OnMouseButtonReleased(CMouseButtonReleasedEvent& aEvent);
 
     private:
         static CEngine* m_pInstance;
@@ -71,6 +82,7 @@ namespace Alvar
         // TODO: Move time related stuff to a Time manager.
         float m_DeltaTime;
 
+        Input::CInputModule m_InputModule; // TODO: Ugly.
         CRenderModule m_RenderModule;
     };
 }

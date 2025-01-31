@@ -25,7 +25,7 @@ namespace Alvar
         CRenderModule(const CRenderModule&) = delete;
 
         virtual bool Initialize() override;
-        virtual void Update() override;
+        virtual void Update(float aDeltaTime) override;
         virtual bool Shutdown() override;
 
         void HandleWindowResize();

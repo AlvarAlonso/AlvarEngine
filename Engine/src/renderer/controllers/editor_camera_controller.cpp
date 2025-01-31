@@ -26,7 +26,7 @@ namespace Alvar
     static double yMouseOld = 0.0;
     static bool MouseLocked = false;
 
-    void CEditorCameraController::Update()
+    void CEditorCameraController::Update(float aDeltaTime)
     {
         glm::vec3 Velocity = glm::vec3(0.0f);
 
@@ -48,11 +48,11 @@ namespace Alvar
         }
         if (glfwGetKey(CEngine::Get()->GetWindow(), GLFW_KEY_E))
         {
-            pCamera.lock()->Rotate(1.0f * m_Sensitivity * CEngine::Get()->GetDeltaTime(), 0.0f);
+            pCamera.lock()->Rotate(1.0f * m_Sensitivity * aDeltaTime, 0.0f);
         }
         if (glfwGetKey(CEngine::Get()->GetWindow(), GLFW_KEY_Q))
         {
-            pCamera.lock()->Rotate(-1.0f * m_Sensitivity * CEngine::Get()->GetDeltaTime(), 0.0f);
+            pCamera.lock()->Rotate(-1.0f * m_Sensitivity * aDeltaTime, 0.0f);
         }
         if (glfwGetKey(CEngine::Get()->GetWindow(), GLFW_KEY_ESCAPE))
         {
@@ -69,8 +69,8 @@ namespace Alvar
             const double yMouseDiff = yMouse - yMouseOld;
 
             pCamera.lock()->Rotate(
-                static_cast<float>(xMouseDiff) * m_Sensitivity * CEngine::Get()->GetDeltaTime(), 
-                -(static_cast<float>(yMouseDiff) * m_Sensitivity * CEngine::Get()->GetDeltaTime()));
+                static_cast<float>(xMouseDiff) * m_Sensitivity * aDeltaTime, 
+                -(static_cast<float>(yMouseDiff) * m_Sensitivity * aDeltaTime));
 
             int WindowWidth, WindowHeight;
             glfwGetWindowSize(CEngine::Get()->GetWindow(), &WindowWidth, &WindowHeight);
@@ -84,7 +84,7 @@ namespace Alvar
         }
 
         glm::normalize(Velocity);
-        Velocity *= m_Speed * CEngine::Get()->GetDeltaTime();
+        Velocity *= m_Speed * aDeltaTime;
 
         const glm::mat4 CameraRotation = pCamera.lock()->GetRotationMatrix();
         pCamera.lock()->m_Position += glm::vec3(CameraRotation * glm::vec4(Velocity, 0.f));

@@ -18,7 +18,7 @@ namespace Alvar
         /**
          * @brief Updates the module with the engine framerate.
          */
-        virtual void Update() = 0;
+        virtual void Update(float aDeltaTime) = 0;
 
         /**
          * @brief Shutdowns the module, cleaning up all resources. Before being used again, Initialize() should be called.

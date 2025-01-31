@@ -21,7 +21,7 @@ namespace Alvar
 
         void SetCamera(std::weak_ptr<CCamera> apCamera);
 
-        virtual void Update() override;
+        virtual void Update(float aDeltaTime) override;
 
     private:
         std::weak_ptr<CCamera> pCamera;

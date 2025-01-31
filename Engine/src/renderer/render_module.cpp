@@ -43,9 +43,9 @@ namespace Alvar
         return true;
     }
 
-    void CRenderModule::Update()
+    void CRenderModule::Update(float aDeltaTime)
     {
-        m_pEditorCameraController->Update();
+        m_pEditorCameraController->Update(aDeltaTime);
         
         // TODO: Release old render path resources.
         // Initialize new render path resources.

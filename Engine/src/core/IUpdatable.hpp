@@ -5,6 +5,6 @@ namespace Alvar
     class IUpdatable
     {
     public:
-        virtual void Update() = 0;
+        virtual void Update(float aDeltaTime) = 0;
     };
 }
