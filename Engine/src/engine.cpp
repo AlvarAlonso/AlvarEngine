@@ -36,8 +36,10 @@ void CEngine::StartUp()
     glfwSetFramebufferSizeCallback(m_pWindow, [](GLFWwindow* aWindow, int aWidth, int aHeight)
     {
         auto App = reinterpret_cast<CEngine*>(glfwGetWindowUserPointer(aWindow));
-        App->GetRenderModule()->HandleWindowResize();
+        App->GetRenderModule()->HandleWindowResize(); // TODO: Refactor this.
     });
+
+    RegisterGLFWCallbacks();
 
     m_RenderModule.Initialize();
 }
@@ -64,6 +66,11 @@ void CEngine::Shutdown()
 
     glfwDestroyWindow(m_pWindow);
     glfwTerminate();
+}
+
+void CEngine::RegisterGLFWCallbacks()
+{
+
 }
 
 GLFWwindow* CEngine::GetWindow()

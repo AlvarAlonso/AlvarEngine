@@ -33,6 +33,8 @@ private:
     CEngine(const CEngine& aEngine) = delete;
     bool operator== (const CEngine& aEngine) = delete;
 
+    void RegisterGLFWCallbacks();
+
 private:
     static CEngine* m_pInstance;
 
