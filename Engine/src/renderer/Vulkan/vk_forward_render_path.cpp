@@ -80,6 +80,10 @@ namespace Alvar
 			Renderable->Draw(RenderContext, true);
 		}
 
+		// TODO: ImGUI Render Calls. Use events in the future? Expose OnBeforeEndRenderPass or something similar.
+		// VulkanBackendCallback.
+		m_OnBeforeRenderEndCallback(aCommandBuffer);
+
 		vkCmdEndRenderPass(aCommandBuffer);
 
 		VK_CHECK(vkEndCommandBuffer(aCommandBuffer));

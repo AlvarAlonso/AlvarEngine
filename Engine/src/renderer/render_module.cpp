@@ -82,6 +82,14 @@ namespace Alvar
         m_pVulkanBackend->Render(m_pMainCamera);
     }
 
+    void CRenderModule::PopulateImGuiDeviceInitInfo(void* apInitInfo)
+    {
+        if (m_RenderAPI == eRenderAPI::VULKAN && m_pVulkanBackend)
+        {
+            m_pVulkanBackend->PopulateImGuiVulkanInitInfo(apInitInfo);
+        }
+    }
+
     void CRenderModule::CreateDefaultScene()
     {
         // Add materials.

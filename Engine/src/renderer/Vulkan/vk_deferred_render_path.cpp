@@ -89,6 +89,8 @@ namespace Alvar
 			Renderable->Draw(RenderContext);
 		}
 
+		m_OnBeforeRenderEndCallback(m_DeferredCommandBuffer);
+
 		vkCmdEndRenderPass(m_DeferredCommandBuffer);
 
 		VK_CHECK(vkEndCommandBuffer(m_DeferredCommandBuffer));

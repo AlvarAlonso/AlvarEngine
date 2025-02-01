@@ -2,6 +2,7 @@
 #include "core/logger.h"
 #include <core/event_system/event_base.hpp>
 #include <core/event_system/application_events.hpp>
+#include <debug/debug_layer.hpp>
 
 #include <GLFW/glfw3.h>
 
@@ -50,6 +51,8 @@ namespace Alvar
         m_RenderModule.Initialize();
 
         // TODO: Initialize layers.
+        m_DebugLayer = new CDebugLayer();
+        PushOverlay(m_DebugLayer);
     }
 
     void CEngine::Run()
@@ -59,6 +62,7 @@ namespace Alvar
             auto Start = std::chrono::system_clock::now();
 
             glfwPollEvents();
+            m_DebugLayer->Begin();
             m_InputModule.Update(m_DeltaTime);
             m_RenderModule.Update(m_DeltaTime);
         
@@ -232,5 +236,17 @@ namespace Alvar
     GLFWwindow* CEngine::GetWindow()
     {
         return  m_pWindow;
+    }
+
+    void CEngine::PushLayer(ILayer* aLayer)
+    {
+		m_LayerStack.PushLayer(aLayer);
+		aLayer->OnAttach();
+    }
+
+    void CEngine::PushOverlay(ILayer* aLayer)
+    {
+		m_LayerStack.PushOverlay(aLayer);
+		aLayer->OnAttach();
     }
 }

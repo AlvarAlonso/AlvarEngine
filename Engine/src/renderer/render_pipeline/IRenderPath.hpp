@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <functional>
 
 namespace Alvar
 {
@@ -38,5 +39,11 @@ namespace Alvar
          * Useful to record new commands to adapt to the change.
          */
         virtual void HandleSceneChanged() = 0;
+
+        // Callbacks.
+        void SetBeforeRenderEndCallback(std::function<void(VkCommandBuffer)> aCallback) { m_OnBeforeRenderEndCallback = aCallback; }
+    protected:
+        // Callbacks.
+        std::function<void(VkCommandBuffer)> m_OnBeforeRenderEndCallback;
     };
 }

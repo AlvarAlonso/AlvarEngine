@@ -4,16 +4,16 @@
 
 #include <core/input/input_module.hpp>
 #include "renderer/render_module.hpp"
+#include <core/layer_stack.hpp>
 
 #include <functional>
-
-// TODO: Remove this from here.
-#define ALVAR_BIND_EVENT_FN(fn) [this](auto&&... args) -> decltype(auto) { return this->fn(std::forward<decltype(args)>(args)...); }
 
 struct GLFWwindow;
 
 namespace Alvar
 {
+    class ILayer;
+    class CDebugLayer;
     class CEvent;
     class CWindowCloseEvent;
     class CWindowResizeEvent;
@@ -51,6 +51,9 @@ namespace Alvar
         // but probably other classes who wants to access a module should not have those kind of functions available.
         CRenderModule* GetRenderModule(){ return &m_RenderModule; }
 
+        void PushLayer(ILayer* aLayer);
+        void PushOverlay(ILayer* aLayer);
+
         bool m_bFramebufferResized;
 
     private:
@@ -84,5 +87,8 @@ namespace Alvar
 
         Input::CInputModule m_InputModule; // TODO: Ugly.
         CRenderModule m_RenderModule;
+
+        CLayerStack m_LayerStack;
+        CDebugLayer* m_DebugLayer;
     };
 }

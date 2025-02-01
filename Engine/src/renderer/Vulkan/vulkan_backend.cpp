@@ -21,6 +21,19 @@
 #include <VulkanBootstrap/VkBootstrap.h>
 #include <glm/gtc/matrix_transform.hpp>
 
+// TODO: Delete imgui references from here.
+#include <imgui/imgui.h>
+#include <imgui/backends/imgui_impl_vulkan.h>
+
+static void check_vk_result(VkResult err)
+{
+    if (err == 0)
+        return;
+    fprintf(stderr, "[vulkan] Error: VkResult = %d\n", err);
+    if (err < 0)
+        abort();
+}
+
 #include <iostream>
 #include <chrono>
 #include <array>
@@ -382,14 +395,19 @@ namespace Alvar
 		ObjectsDataPoolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 		ObjectsDataPoolSize.descriptorCount = 1;
 
-		std::array<VkDescriptorPoolSize, 3> PoolSizes = { UBOPoolSize, SamplerPoolSize, ObjectsDataPoolSize };
+		// TODO: Use callback.
+		VkDescriptorPoolSize ImGuiDataPoolSize = {};
+		ImGuiDataPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		ImGuiDataPoolSize.descriptorCount = IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE;
+
+		std::array<VkDescriptorPoolSize, 4> PoolSizes = { UBOPoolSize, SamplerPoolSize, ObjectsDataPoolSize, ImGuiDataPoolSize };
 
 		VkDescriptorPoolCreateInfo PoolInfo = {};
 		PoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 		PoolInfo.poolSizeCount = static_cast<uint32_t>(PoolSizes.size());
 		PoolInfo.pPoolSizes = PoolSizes.data();
 		// TODO: This does not make sense. The COMBINE_IMAGE_SAMPLER type is not accounted for.
-		PoolInfo.maxSets = static_cast<uint32_t>(FRAME_OVERLAP) + 1; // +1 set for the objects descriptor set.
+		PoolInfo.maxSets = static_cast<uint32_t>(FRAME_OVERLAP) + 2; // +1 set for the objects descriptor set. +1 for ImGui.
 		
 		VK_CHECK(vkCreateDescriptorPool(m_pVulkanDevice->m_Device, &PoolInfo, nullptr, &m_DescriptorPool));
 
@@ -602,6 +620,7 @@ namespace Alvar
 		}
 
 		InitRenderPath(NewRenderPath);
+		NewRenderPath->SetBeforeRenderEndCallback(ALVAR_BIND_EVENT_FN(OnBeforeRenderEnd));
 
 		return NewRenderPath;
 	}
@@ -758,5 +777,11 @@ namespace Alvar
 
 		apBuffer[aIndex].ModelMatrix = apMeshNode->GetWorldTransform();
 		++aIndex;
+	}
+
+	void CVulkanBackend::OnBeforeRenderEnd(VkCommandBuffer aCommandBuffer)
+	{
+		ImGui::Render();
+		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), aCommandBuffer);
 	}
 }

@@ -66,6 +66,8 @@ namespace Alvar
 
         CVulkanDevice *GetDevice() const { return m_pVulkanDevice; }
 
+        void PopulateImGuiVulkanInitInfo(void* aInitInfo);
+
     private:
         void InitCommandPools();
         void InitSyncStructures();
@@ -86,6 +88,8 @@ namespace Alvar
     
         void CreateMaterialDescriptorsFromMeshNodeRecursive(CMeshNode *const &aMeshNode);
         void CreateMaterialDescriptorsFromMeshNode(CMeshNode *const &aMeshNode);
+
+        void OnBeforeRenderEnd(VkCommandBuffer aCommandBuffer);
 
         friend class CVulkanDeferredRenderPath;
         friend class CVulkanForwardRenderPath;
