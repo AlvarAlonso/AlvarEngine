@@ -130,6 +130,8 @@ namespace Alvar
 
 		VK_CHECK(vkQueueSubmit(m_pVulkanDevice->m_GraphicsQueue, 1, &SubmitInfo, m_pVulkanBackend->m_FramesData[m_pVulkanBackend->m_CurrentFrame].RenderFence));
 
+		vkDeviceWaitIdle(m_pVulkanDevice->m_Device);
+
 		VkPresentInfoKHR PresentInfo = vkinit::PresentInfo();
 		PresentInfo.waitSemaphoreCount = 1;
 		PresentInfo.pWaitSemaphores = SignalSemaphores;

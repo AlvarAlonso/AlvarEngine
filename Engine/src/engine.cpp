@@ -59,9 +59,10 @@ namespace Alvar
     {
         while (!glfwWindowShouldClose(m_pWindow))
         {
+            glfwPollEvents();
+
             auto Start = std::chrono::system_clock::now();
 
-            glfwPollEvents();
             m_DebugLayer->Begin();
             m_InputModule.Update(m_DeltaTime);
             m_RenderModule.Update(m_DeltaTime);
@@ -84,19 +85,26 @@ namespace Alvar
 
     void CEngine::OnEvent(CEvent& aEvent)
     {
-        SGSDEBUG(aEvent.ToString().c_str());
         // TODO: Dispatch the events in each module?
         CEventDispatcher Dispatcher(aEvent);
         Dispatcher.Dispatch<CWindowCloseEvent>(ALVAR_BIND_EVENT_FN(CEngine::OnWindowClose));
         Dispatcher.Dispatch<CWindowResizeEvent>(ALVAR_BIND_EVENT_FN(CEngine::OnWindowResize));
+
+        // TODO: If event is unhandled, forward the event to the layers.
+        for (auto it = m_LayerStack.rbegin(); it != m_LayerStack.rend(); ++it)
+        {
+            if (aEvent.bHandled)
+                break;
+            (*it)->OnEvent(aEvent);
+        }
+
+        // TODO: mmm...
         Dispatcher.Dispatch<CKeyPressedEvent>(ALVAR_BIND_EVENT_FN(CEngine::OnKeyPressed));
         Dispatcher.Dispatch<CKeyReleasedEvent>(ALVAR_BIND_EVENT_FN(CEngine::OnKeyReleased));
         Dispatcher.Dispatch<CMouseMovedEvent>(ALVAR_BIND_EVENT_FN(CEngine::OnMouseMoved));
         Dispatcher.Dispatch<CMouseScrolledEvent>(ALVAR_BIND_EVENT_FN(CEngine::OnMouseScrolled));
         Dispatcher.Dispatch<CMouseButtonPressedEvent>(ALVAR_BIND_EVENT_FN(CEngine::OnMouseButtonPressed));
         Dispatcher.Dispatch<CMouseButtonReleasedEvent>(ALVAR_BIND_EVENT_FN(CEngine::OnMouseButtonReleased));
-
-        // TODO: If event is unhandled, forward the event to the layers.
     }
 
     void CEngine::RegisterGLFWCallbacks()

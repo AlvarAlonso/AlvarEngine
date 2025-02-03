@@ -4,6 +4,7 @@
 #include <core/logger.h>
 #include <engine.hpp>
 #include <renderer/render_module.hpp>
+#include <core/event_system/event_base.hpp>
 
 #include <imgui.h>
 #include <imgui/backends/imgui_impl_glfw.h>
@@ -14,7 +15,7 @@
 namespace Alvar
 {
     CDebugLayer::CDebugLayer() :
-        ILayer("Debug Layer")
+        ILayer("Debug Layer"), m_BlockEvents(false)
     {
 
     }
@@ -28,9 +29,10 @@ namespace Alvar
         ImGuiIO& io = ImGui::GetIO();
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+        io.ConfigFlags |= ImGuiConfigFlags_NavEnableSetMousePos;
 
         // Setup Platform/Renderer backends
-        ImGui_ImplGlfw_InitForVulkan(CEngine::Get()->GetWindow(), false);
+        ImGui_ImplGlfw_InitForVulkan(CEngine::Get()->GetWindow(), true);
         
         ImGui_ImplVulkan_InitInfo VulkanInitInfo = {};
         // TODO: Module manager.
@@ -49,7 +51,13 @@ namespace Alvar
 
     void CDebugLayer::OnEvent(CEvent& aEvent)
     {
+        if (!m_BlockEvents)
+        {
+            ImGuiIO& io = ImGui::GetIO();
 
+            aEvent.bHandled |= aEvent.IsInCategory(EVENT_CATEGORY_MOUSE) & io.WantCaptureMouse;
+			aEvent.bHandled |= aEvent.IsInCategory(EVENT_CATEGORY_KEYBOARD) & io.WantCaptureKeyboard;
+        }
     }
 
     void CDebugLayer::Begin()
@@ -62,7 +70,6 @@ namespace Alvar
     
     void CDebugLayer::End()
     {
-        //ImGui::Render();
-        //ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(),);
+        //CEngine::Get()->GetRenderModule()->EndImGui();
     }
 }

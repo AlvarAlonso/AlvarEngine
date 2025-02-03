@@ -1,5 +1,6 @@
 #pragma once
 
+#include <core/defines.h>
 #include <string>
 
 namespace Alvar
@@ -14,14 +15,14 @@ namespace Alvar
         NUM
     };
 
-    enum eEventCategory : int
+    enum eEventCategory
     {
         EVENT_CATEGORY_NONE = 0,
-        EVENT_CATEGORY_APPLICATION       = 0x00001,
-        EVENT_CATEGORY_INPUT             = 0x00010,
-        EVENT_CATEGORY_KEYBOARD          = 0x00100,
-        EVENT_CATEGORY_MOUSE             = 0x01000,
-        EVENT_CATEGORY_MOUSE_BUTTON      = 0x10000,
+        EVENT_CATEGORY_APPLICATION       = BIT(0),
+        EVENT_CATEGORY_INPUT             = BIT(1),
+        EVENT_CATEGORY_KEYBOARD          = BIT(2),
+        EVENT_CATEGORY_MOUSE             = BIT(3),
+        EVENT_CATEGORY_MOUSE_BUTTON      = BIT(4),
         EVENT_CATEGORY_NUM
     };
 
@@ -47,9 +48,9 @@ namespace Alvar
         virtual int GetCategoryFlags() const = 0;
         virtual std::string ToString() const { return GetName(); }
 
-        bool InInCategory(eEventCategory aCategory)
+        bool IsInCategory(eEventCategory aCategory)
         {
-            return GetCategoryFlags() & static_cast<uint8_t>(aCategory);
+            return GetCategoryFlags() & aCategory;
         }
     };
 
