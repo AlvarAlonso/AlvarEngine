@@ -74,8 +74,20 @@ namespace Alvar
             auto Start = std::chrono::system_clock::now();
 
             m_InputModule.Update(m_DeltaTime);
-            m_RenderModule.Update(m_DeltaTime);
         
+            for (ILayer* Layer : m_LayerStack)
+            {
+                Layer->OnUpdate(m_DeltaTime);
+            }
+
+            m_RenderModule.ImGuiBeginFrame();
+            for (ILayer* Layer : m_LayerStack)
+            {
+                Layer->OnImGuiRender();
+            }
+            m_RenderModule.ImGuiEndFrame();
+            m_RenderModule.Update(m_DeltaTime); // Has to be done after all the ImGui render calls.
+
             auto End = std::chrono::system_clock::now();
             auto Elapsed = std::chrono::duration_cast<std::chrono::microseconds>(End - Start);
             m_DeltaTime = Elapsed.count() / 1000.f;

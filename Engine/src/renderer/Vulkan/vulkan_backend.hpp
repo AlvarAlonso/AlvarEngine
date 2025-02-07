@@ -69,6 +69,8 @@ namespace Alvar
         // TODO: Abstract this.
         void InitImGuiBackend();
         void ShutdownImGuiBackend();
+        void ImGuiBeginFrame();
+        void ImGuiEndFrame();
 
     private:
         void InitCommandPools();
@@ -93,9 +95,6 @@ namespace Alvar
 
         void OnBeforeRenderEnd(VkCommandBuffer aCommandBuffer);
 
-        // TODO: Abstract this.
-        void ImGuiBeginFrame();
-        void ImGuiEndFrame();
         uint32_t GetImGuiVulkanPoolSize();
 
         friend class CVulkanDeferredRenderPath;

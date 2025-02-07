@@ -92,6 +92,16 @@ namespace Alvar
         m_pVulkanBackend->ShutdownImGuiBackend();
     }
 
+    void CRenderModule::ImGuiBeginFrame()
+    {
+        m_pVulkanBackend->ImGuiBeginFrame();
+    }
+
+    void CRenderModule::ImGuiEndFrame()
+    {
+        m_pVulkanBackend->ImGuiEndFrame();
+    }
+
     void CRenderModule::CreateDefaultScene()
     {
         // Add materials.

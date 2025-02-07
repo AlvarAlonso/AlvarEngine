@@ -41,6 +41,9 @@ namespace Alvar
         void InitImGuiBackend();
         void ShutdownImGuiBackend();
 
+        void ImGuiBeginFrame();
+        void ImGuiEndFrame();
+
     private:
         void Render();
 

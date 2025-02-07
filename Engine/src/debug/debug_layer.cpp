@@ -30,6 +30,14 @@ namespace Alvar
         CEngine::Get()->RequireImGui(false);
     }
 
+    void CDebugLayer::OnImGuiRender()
+    {
+        ImGui::Begin("Albarranco Engine!");
+        ImGui::Text("This is Albarranco Engine.");
+        ImGui::Text("Delta Time: %f.", CEngine::Get()->GetDeltaTime());
+        ImGui::End();
+    }
+
     void CDebugLayer::OnEvent(CEvent& aEvent)
     {
         if (!m_BlockEvents)

@@ -50,12 +50,11 @@ namespace Alvar
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
-        ImGui::ShowDemoWindow();
-        ImGui::Render();
     }
 
     void CVulkanBackend::ImGuiEndFrame()
     {
+        ImGui::Render();
         ImGui::EndFrame();
     }
 

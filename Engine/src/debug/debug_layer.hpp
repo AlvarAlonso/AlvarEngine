@@ -15,7 +15,7 @@ namespace Alvar
         virtual void OnAttach() override;
         virtual void OnDetach() override;
         virtual void OnUpdate(float aDeltaTime) override {};
-        virtual void OnImGuiRender() {}
+        virtual void OnImGuiRender() override;
         virtual void OnEvent(CEvent& aEvent) override;
     
     private:

@@ -58,6 +58,8 @@ namespace Alvar
         // Right now it is hardcoded so when a layer is detached and no longer needs ImGui the engine may shut it down. The engine should check wether other layers still need imgui before shut it down.
         void RequireImGui(bool aRequire); 
 
+        float GetDeltaTime() const { return m_DeltaTime; }
+
         bool m_bFramebufferResized;
 
     private:

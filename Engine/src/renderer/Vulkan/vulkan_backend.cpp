@@ -97,8 +97,6 @@ namespace Alvar
 			if ( m_pCurrentRenderPath)
 			{
 				m_pCurrentRenderPath->UpdateBuffers();
-				ImGuiBeginFrame();
-				ImGuiEndFrame();
 				m_pCurrentRenderPath->Render(apCamera);
 			}
 			else
