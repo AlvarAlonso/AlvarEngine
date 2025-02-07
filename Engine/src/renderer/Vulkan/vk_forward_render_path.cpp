@@ -93,10 +93,11 @@ namespace Alvar
 	{
 		// TODO: Probably there is a chunk of this code that can go to CVulkanBackend.
 
-		VK_CHECK(vkWaitForFences(m_pVulkanDevice->m_Device, 1, &m_pVulkanBackend->m_FramesData[m_pVulkanBackend->m_CurrentFrame].RenderFence, VK_TRUE, UINT64_MAX));
+		VkSemaphore ImageAcquiredSemaphore = m_pVulkanBackend->m_FramesData[m_pVulkanBackend->m_CurrentFrame].PresentSemaphore;
+		VkSemaphore RenderCompleteSemaphore = m_pVulkanBackend->m_FramesData[m_pVulkanBackend->m_CurrentFrame].RenderSemaphore;
 
 		uint32_t ImageIndex;
-		VkResult Result = vkAcquireNextImageKHR(m_pVulkanDevice->m_Device, m_pVulkanSwapchain->m_Swapchain, UINT64_MAX, m_pVulkanBackend->m_FramesData[m_pVulkanBackend->m_CurrentFrame].PresentSemaphore, VK_NULL_HANDLE, &ImageIndex);
+		VkResult Result = vkAcquireNextImageKHR(m_pVulkanDevice->m_Device, m_pVulkanSwapchain->m_Swapchain, UINT64_MAX, ImageAcquiredSemaphore, VK_NULL_HANDLE, &ImageIndex);
 		if (Result == VK_ERROR_OUT_OF_DATE_KHR || Result == VK_SUBOPTIMAL_KHR || m_pVulkanBackend->m_bWasWindowResized)
 		{
 			m_pVulkanBackend->m_bWasWindowResized = false;
@@ -110,6 +111,7 @@ namespace Alvar
 
 		m_pVulkanBackend->UpdateFrameUBO(apCamera, m_pVulkanBackend->m_CurrentFrame);
 
+		VK_CHECK(vkWaitForFences(m_pVulkanDevice->m_Device, 1, &m_pVulkanBackend->m_FramesData[m_pVulkanBackend->m_CurrentFrame].RenderFence, VK_TRUE, UINT64_MAX));
 		// Delay fence reset to prevent possible deadlock when recreating the swapchain.
 		VK_CHECK(vkResetFences(m_pVulkanDevice->m_Device, 1, &m_pVulkanBackend->m_FramesData[m_pVulkanBackend->m_CurrentFrame].RenderFence));
 
@@ -118,23 +120,18 @@ namespace Alvar
 
 		VkSubmitInfo SubmitInfo = vkinit::SubmitInfo(&m_pVulkanBackend->m_FramesData[m_pVulkanBackend->m_CurrentFrame].MainCommandBuffer);
 
-		VkSemaphore WaitSemaphores[] = {m_pVulkanBackend->m_FramesData[m_pVulkanBackend->m_CurrentFrame].PresentSemaphore};
 		VkPipelineStageFlags WaitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 		SubmitInfo.waitSemaphoreCount = 1;
-		SubmitInfo.pWaitSemaphores = WaitSemaphores;
+		SubmitInfo.pWaitSemaphores = &ImageAcquiredSemaphore;
 		SubmitInfo.pWaitDstStageMask = WaitStages;
-
-		VkSemaphore SignalSemaphores[] = {m_pVulkanBackend->m_FramesData[m_pVulkanBackend->m_CurrentFrame].RenderSemaphore};
 		SubmitInfo.signalSemaphoreCount = 1;
-		SubmitInfo.pSignalSemaphores = SignalSemaphores;
+		SubmitInfo.pSignalSemaphores = &RenderCompleteSemaphore;
 
 		VK_CHECK(vkQueueSubmit(m_pVulkanDevice->m_GraphicsQueue, 1, &SubmitInfo, m_pVulkanBackend->m_FramesData[m_pVulkanBackend->m_CurrentFrame].RenderFence));
 
-		vkDeviceWaitIdle(m_pVulkanDevice->m_Device);
-
 		VkPresentInfoKHR PresentInfo = vkinit::PresentInfo();
 		PresentInfo.waitSemaphoreCount = 1;
-		PresentInfo.pWaitSemaphores = SignalSemaphores;
+		PresentInfo.pWaitSemaphores = &RenderCompleteSemaphore;
 		VkSwapchainKHR SwapChains[] = {m_pVulkanSwapchain->m_Swapchain};
 		PresentInfo.swapchainCount = 1;
 		PresentInfo.pSwapchains = SwapChains;

@@ -7,8 +7,6 @@
 #include <core/event_system/event_base.hpp>
 
 #include <imgui.h>
-#include <imgui/backends/imgui_impl_glfw.h>
-#include <imgui/backends/imgui_impl_vulkan.h>
 
 // TODO: Abstract the render API from here. There shouldn't be any Vulkan mentions in here.
 
@@ -23,30 +21,13 @@ namespace Alvar
     void CDebugLayer::OnAttach()
     {
         SGSINFO("On Attach: %s.", m_DebugName.c_str());
-        // Setup Dear ImGui context
-        IMGUI_CHECKVERSION();
-        ImGui::CreateContext();
-        ImGuiIO& io = ImGui::GetIO();
-        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-        io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-        io.ConfigFlags |= ImGuiConfigFlags_NavEnableSetMousePos;
-
-        // Setup Platform/Renderer backends
-        ImGui_ImplGlfw_InitForVulkan(CEngine::Get()->GetWindow(), true);
-        
-        ImGui_ImplVulkan_InitInfo VulkanInitInfo = {};
-        // TODO: Module manager.
-        CEngine::Get()->GetRenderModule()->PopulateImGuiDeviceInitInfo(&VulkanInitInfo);
-        ImGui_ImplVulkan_Init(&VulkanInitInfo);
-        ImGui_ImplVulkan_CreateFontsTexture();
+        CEngine::Get()->RequireImGui(true); 
     }
 
     void CDebugLayer::OnDetach()
     {
         SGSINFO("On Detach: %s.", m_DebugName.c_str());
-        ImGui_ImplVulkan_Shutdown();
-        ImGui_ImplGlfw_Shutdown();
-        ImGui::DestroyContext();
+        CEngine::Get()->RequireImGui(false);
     }
 
     void CDebugLayer::OnEvent(CEvent& aEvent)
@@ -58,18 +39,5 @@ namespace Alvar
             aEvent.bHandled |= aEvent.IsInCategory(EVENT_CATEGORY_MOUSE) & io.WantCaptureMouse;
 			aEvent.bHandled |= aEvent.IsInCategory(EVENT_CATEGORY_KEYBOARD) & io.WantCaptureKeyboard;
         }
-    }
-
-    void CDebugLayer::Begin()
-    {
-        ImGui_ImplVulkan_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-        ImGui::ShowDemoWindow();
-    }
-    
-    void CDebugLayer::End()
-    {
-        //CEngine::Get()->GetRenderModule()->EndImGui();
     }
 }

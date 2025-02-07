@@ -82,12 +82,14 @@ namespace Alvar
         m_pVulkanBackend->Render(m_pMainCamera);
     }
 
-    void CRenderModule::PopulateImGuiDeviceInitInfo(void* apInitInfo)
+    void CRenderModule::InitImGuiBackend()
     {
-        if (m_RenderAPI == eRenderAPI::VULKAN && m_pVulkanBackend)
-        {
-            m_pVulkanBackend->PopulateImGuiVulkanInitInfo(apInitInfo);
-        }
+        m_pVulkanBackend->InitImGuiBackend();
+    }
+
+    void CRenderModule::ShutdownImGuiBackend()
+    {
+        m_pVulkanBackend->ShutdownImGuiBackend();
     }
 
     void CRenderModule::CreateDefaultScene()

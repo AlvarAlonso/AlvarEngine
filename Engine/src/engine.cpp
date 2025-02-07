@@ -6,13 +6,23 @@
 
 #include <GLFW/glfw3.h>
 
+#include <imgui.h>
+#include <imgui/backends/imgui_impl_glfw.h>
+#include <imgui/backends/imgui_impl_vulkan.h>
+
 #include <chrono>
 
 namespace Alvar
 {
     CEngine* CEngine::m_pInstance = nullptr;
 
-    CEngine::CEngine() : m_bFramebufferResized(false), m_pWindow(nullptr), m_DeltaTime(0.0f)
+    CEngine::CEngine() : 
+        m_bFramebufferResized(false), m_pWindow(nullptr), m_WindowData(), 
+        m_ClientWidth(800), m_ClientHeight(600),
+        m_DeltaTime(0.0f), m_InputModule(), m_RenderModule(),
+        m_LayerStack(), m_DebugLayer(nullptr),
+        m_IsImGuiInitialized(false)
+
     {
         SGSINFO("Engine object created!");
     }
@@ -63,7 +73,6 @@ namespace Alvar
 
             auto Start = std::chrono::system_clock::now();
 
-            m_DebugLayer->Begin();
             m_InputModule.Update(m_DeltaTime);
             m_RenderModule.Update(m_DeltaTime);
         
@@ -76,6 +85,9 @@ namespace Alvar
     void CEngine::Shutdown()
     {
         SGSINFO("Shutdown!");
+
+        // TODO: Pop layers.
+
         m_RenderModule.Shutdown();
         m_InputModule.Shutdown();
 
@@ -256,5 +268,31 @@ namespace Alvar
     {
 		m_LayerStack.PushOverlay(aLayer);
 		aLayer->OnAttach();
+    }
+
+    void CEngine::RequireImGui(bool aRequire)
+    {
+        if (aRequire && !m_IsImGuiInitialized)
+        {
+            // Setup Dear ImGui context
+            IMGUI_CHECKVERSION();
+            ImGui::CreateContext();
+            ImGuiIO& io = ImGui::GetIO();
+            io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+            io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+            io.ConfigFlags |= ImGuiConfigFlags_NavEnableSetMousePos;
+
+            m_RenderModule.InitImGuiBackend();
+
+            m_IsImGuiInitialized = true;
+        }
+        else if (!aRequire && m_IsImGuiInitialized)
+        {
+            m_RenderModule.ShutdownImGuiBackend();
+            ImGui_ImplGlfw_Shutdown();
+            ImGui::DestroyContext();
+
+            m_IsImGuiInitialized = false;
+        }
     }
 }

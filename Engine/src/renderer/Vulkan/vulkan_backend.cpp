@@ -21,10 +21,6 @@
 #include <VulkanBootstrap/VkBootstrap.h>
 #include <glm/gtc/matrix_transform.hpp>
 
-// TODO: Delete imgui references from here.
-#include <imgui/imgui.h>
-#include <imgui/backends/imgui_impl_vulkan.h>
-
 static void check_vk_result(VkResult err)
 {
     if (err == 0)
@@ -101,6 +97,8 @@ namespace Alvar
 			if ( m_pCurrentRenderPath)
 			{
 				m_pCurrentRenderPath->UpdateBuffers();
+				ImGuiBeginFrame();
+				ImGuiEndFrame();
 				m_pCurrentRenderPath->Render(apCamera);
 			}
 			else
@@ -398,7 +396,7 @@ namespace Alvar
 		// TODO: Use callback.
 		VkDescriptorPoolSize ImGuiDataPoolSize = {};
 		ImGuiDataPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		ImGuiDataPoolSize.descriptorCount = IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE;
+		ImGuiDataPoolSize.descriptorCount = GetImGuiVulkanPoolSize();
 
 		std::array<VkDescriptorPoolSize, 4> PoolSizes = { UBOPoolSize, SamplerPoolSize, ObjectsDataPoolSize, ImGuiDataPoolSize };
 
@@ -777,11 +775,5 @@ namespace Alvar
 
 		apBuffer[aIndex].ModelMatrix = apMeshNode->GetWorldTransform();
 		++aIndex;
-	}
-
-	void CVulkanBackend::OnBeforeRenderEnd(VkCommandBuffer aCommandBuffer)
-	{
-		ImGui::Render();
-		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), aCommandBuffer);
 	}
 }

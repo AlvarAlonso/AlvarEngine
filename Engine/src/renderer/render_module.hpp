@@ -38,8 +38,9 @@ namespace Alvar
         // TODO: Find a better way to do this. RenderModule should not have any reference to vulkan.
         CVulkanDevice*  GetVulkanDevice() const { return m_pVulkanBackend->GetDevice(); }
 
-        void PopulateImGuiDeviceInitInfo(void* apInitInfo);
-        
+        void InitImGuiBackend();
+        void ShutdownImGuiBackend();
+
     private:
         void Render();
 

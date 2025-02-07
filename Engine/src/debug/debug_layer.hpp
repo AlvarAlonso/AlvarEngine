@@ -17,10 +17,6 @@ namespace Alvar
         virtual void OnUpdate(float aDeltaTime) override {};
         virtual void OnImGuiRender() {}
         virtual void OnEvent(CEvent& aEvent) override;
-
-
-        void Begin();
-        void End();
     
     private:
         bool m_BlockEvents;

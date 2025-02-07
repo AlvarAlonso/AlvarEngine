@@ -54,6 +54,10 @@ namespace Alvar
         void PushLayer(ILayer* aLayer);
         void PushOverlay(ILayer* aLayer);
 
+        // TODO: Maybe this can go to some Layer::sProperties struct so layers can ask for specific features from the engine when the engine pushes a layer.
+        // Right now it is hardcoded so when a layer is detached and no longer needs ImGui the engine may shut it down. The engine should check wether other layers still need imgui before shut it down.
+        void RequireImGui(bool aRequire); 
+
         bool m_bFramebufferResized;
 
     private:
@@ -73,14 +77,16 @@ namespace Alvar
         bool OnMouseButtonPressed(CMouseButtonPressedEvent& aEvent);
         bool OnMouseButtonReleased(CMouseButtonReleasedEvent& aEvent);
 
+        void InitImGui();
+
     private:
         static CEngine* m_pInstance;
 
         GLFWwindow* m_pWindow;
         sWindowData m_WindowData;
 
-        uint32 m_ClientWidth = 800;
-        uint32 m_ClientHeight = 600;
+        uint32 m_ClientWidth;
+        uint32 m_ClientHeight;
 
         // TODO: Move time related stuff to a Time manager.
         float m_DeltaTime;
@@ -90,5 +96,7 @@ namespace Alvar
 
         CLayerStack m_LayerStack;
         CDebugLayer* m_DebugLayer;
+
+        bool m_IsImGuiInitialized;
     };
 }
