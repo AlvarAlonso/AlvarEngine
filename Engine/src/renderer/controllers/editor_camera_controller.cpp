@@ -3,8 +3,7 @@
 #include <renderer/core/camera.hpp>
 #include <engine.hpp>
 #include <core/logger.h>
-
-#include <GLFW/glfw3.h>
+#include <core/input/input_module.hpp>
 
 namespace Alvar
 {
@@ -22,71 +21,69 @@ namespace Alvar
     }
 
     // TODO: Remove this and create an input/poll system.
-    static double xMouseOld = 0.0;
-    static double yMouseOld = 0.0;
+    static int32_t xMouseOld = 0.0;
+    static int32_t yMouseOld = 0.0;
     static bool MouseLocked = false;
 
     void CEditorCameraController::Update(float aDeltaTime)
     {
+        Input::CInputModule* pInput = CEngine::Get()->GetInputModule();
+
         glm::vec3 Velocity = glm::vec3(0.0f);
 
-        if (glfwGetKey(CEngine::Get()->GetWindow(), GLFW_KEY_UP))
+        if (pInput->GetButton(Key::Up))
         {
             Velocity.z = -1.0f;
         }
-        if (glfwGetKey(CEngine::Get()->GetWindow(), GLFW_KEY_DOWN))
+        if (pInput->GetButton(Key::Down))
         {
             Velocity.z = 1.0f;
         }
-        if (glfwGetKey(CEngine::Get()->GetWindow(), GLFW_KEY_LEFT))
+        if (pInput->GetButton(Key::Left))
         {
             Velocity.x = -1.0f;
         }
-        if (glfwGetKey(CEngine::Get()->GetWindow(), GLFW_KEY_RIGHT))
+        if (pInput->GetButton(Key::Right))
         {
             Velocity.x = 1.0f;
         }
-        if (glfwGetKey(CEngine::Get()->GetWindow(), GLFW_KEY_E))
+        if (pInput->GetButton(Key::E))
         {
             pCamera.lock()->Rotate(1.0f * m_Sensitivity * aDeltaTime, 0.0f);
         }
-        if (glfwGetKey(CEngine::Get()->GetWindow(), GLFW_KEY_Q))
+        if (pInput->GetButton(Key::Q))
         {
             pCamera.lock()->Rotate(-1.0f * m_Sensitivity * aDeltaTime, 0.0f);
         }
-        if (glfwGetKey(CEngine::Get()->GetWindow(), GLFW_KEY_ESCAPE))
-        {
-            MouseLocked = !MouseLocked;
-        }
+
+        MouseLocked = pInput->GetMouseButton(1) ? true : false;
         
         if (MouseLocked)
         {
-            SGSINFO("MOUSE LOCKED");
-            double xMouse, yMouse;
-            glfwGetCursorPos(CEngine::Get()->GetWindow(), &xMouse, &yMouse);
+            const glm::vec2 CurrentMousePos = pInput->GetMousePosition();
 
-            const double xMouseDiff = xMouse - xMouseOld;
-            const double yMouseDiff = yMouse - yMouseOld;
+            const glm::vec2 MouseDiff = glm::vec2(CurrentMousePos.x - xMouseOld, CurrentMousePos.y - yMouseOld);
 
-            pCamera.lock()->Rotate(
-                static_cast<float>(xMouseDiff) * m_Sensitivity * aDeltaTime, 
-                -(static_cast<float>(yMouseDiff) * m_Sensitivity * aDeltaTime));
+            const float MouseDiffLength = glm::length(MouseDiff);
 
-            int WindowWidth, WindowHeight;
-            glfwGetWindowSize(CEngine::Get()->GetWindow(), &WindowWidth, &WindowHeight);
+            if (MouseDiffLength > 3.0f)
+            {
+                pCamera.lock()->Rotate(
+                    -MouseDiff.x * m_Sensitivity * aDeltaTime, 
+                    -MouseDiff.y * m_Sensitivity * aDeltaTime);
+            }
 
-            const int CenterX = static_cast<int>(floor(WindowWidth * 0.5f));
-            const int CenterY = static_cast<int>(floor(WindowHeight * 0.5f));
-
-            glfwSetCursorPos(CEngine::Get()->GetWindow(), CenterX, CenterY);
-            xMouseOld = CenterX;
-            yMouseOld = CenterY;
+            const glm::vec2 WindowCenter = CEngine::Get()->GetWindowCenter();
+            CEngine::Get()->SetMouseCursor(WindowCenter);
+            xMouseOld = WindowCenter.x;
+            yMouseOld = WindowCenter.y;
         }
 
         glm::normalize(Velocity);
         Velocity *= m_Speed * aDeltaTime;
 
         const glm::mat4 CameraRotation = pCamera.lock()->GetRotationMatrix();
-        pCamera.lock()->m_Position += glm::vec3(CameraRotation * glm::vec4(Velocity, 0.f));
+        const glm::vec3 CameraMovement = glm::vec3(CameraRotation * glm::vec4(Velocity, 0.f));
+        pCamera.lock()->m_Position += CameraMovement;
     }
 }

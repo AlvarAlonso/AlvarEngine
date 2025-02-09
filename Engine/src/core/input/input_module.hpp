@@ -68,7 +68,7 @@ namespace Alvar
             int WheelSteps = 0;
         };
 
-        constexpr int NUM_KEYBOARD_KEYS = 256;
+        constexpr int NUM_KEYBOARD_KEYS = 350;
         using KeyboardKey = int;
 
         struct sKeyboardData
@@ -82,12 +82,6 @@ namespace Alvar
                     Key.Update(aDeltaTime);
                 }
             }
-
-            sButtonState& GetButtonState(KeyCode aKeyCode)
-            {
-                const int Index = Key::KeyCodeMap[aKeyCode].second;
-                return Keys[Index];
-            }
         };
 
         class CInputModule : public IModule
@@ -100,14 +94,14 @@ namespace Alvar
             virtual void Update(float aDeltaTime) override;
             virtual bool Shutdown() override;
 
-            bool GetButtonDown(KeyCode aKeyCode) const { m_KeyboardData.Keys[aKeyCode].GetsPressed(); }
-            bool GetButton(KeyCode aKeyCode) const { m_KeyboardData.Keys[aKeyCode].IsPressed(); }
-            bool GetButtonUp(KeyCode aKeyCode) const { m_KeyboardData.Keys[aKeyCode].GetsReleased(); }
+            bool GetButtonDown(KeyCode aKeyCode) const { return m_KeyboardData.Keys[aKeyCode].GetsPressed(); }
+            bool GetButtonUp(KeyCode aKeyCode) const { return m_KeyboardData.Keys[aKeyCode].GetsReleased(); }
+            bool GetButton(KeyCode aKeyCode) const { return m_KeyboardData.Keys[aKeyCode].IsPressed(); }
 
-            bool GetMouseButtonDown(MouseCode aMouseCode) const { m_MouseData.Buttons[aMouseCode].GetsPressed(); }
-            bool GetMouseButton(MouseCode aMouseCode) const { m_MouseData.Buttons[aMouseCode].IsPressed(); }
-            bool GetMouseButtonUp(MouseCode aMouseCode) const { m_MouseData.Buttons[aMouseCode].GetsReleased(); }
-            glm::vec2 GetMousePosition() const { m_MouseData.Position; }
+            bool GetMouseButtonDown(MouseCode aMouseCode) const { return m_MouseData.Buttons[aMouseCode].GetsPressed(); }
+            bool GetMouseButton(MouseCode aMouseCode) const { return m_MouseData.Buttons[aMouseCode].IsPressed(); }
+            bool GetMouseButtonUp(MouseCode aMouseCode) const { return m_MouseData.Buttons[aMouseCode].GetsReleased(); }
+            glm::vec2 GetMousePosition() const { return m_MouseData.Position; }
 
             // TODO: This should not be public. Should only accessible by the class that manages the events. Use friend class?
             bool HandleKeyPressed(CKeyPressedEvent& aEvent);

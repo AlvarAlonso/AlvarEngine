@@ -144,22 +144,6 @@ namespace Alvar
 			RightSuper          = 347,
 			Menu                = 348
 		};
-
-	constexpr std::array<std::pair<uint16_t, int>, 97> KeyCodeMap = {{
-		{Space, 0}, {Apostrophe, 1}, {Comma, 2}, {Minus, 3}, {Period, 4}, {Slash, 5},
-		{D0, 6}, {D1, 7}, {D2, 8}, {D3, 9}, {D4, 10}, {D5, 11}, {D6, 12}, {D7, 13}, {D8, 14}, {D9, 15},
-		{Semicolon, 16}, {Equal, 17}, {A, 18}, {B, 19}, {C, 20}, {D, 21}, {E, 22}, {F, 23}, {G, 24}, {H, 25}, 
-		{I, 26}, {J, 27}, {K, 28}, {L, 29}, {M, 30}, {N, 31}, {O, 32}, {P, 33}, {Q, 34}, {R, 35}, {S, 36}, 
-		{T, 37}, {U, 38}, {V, 39}, {W, 40}, {X, 41}, {Y, 42}, {Z, 43}, {LeftBracket, 44}, {Backslash, 45}, 
-		{RightBracket, 46}, {GraveAccent, 47}, {World1, 48}, {World2, 49}, {Escape, 50}, {Enter, 51}, 
-		{Tab, 52}, {Backspace, 53}, {Insert, 54}, {Delete, 55}, {Right, 56}, {Left, 57}, {Down, 58}, 
-		{Up, 59}, {PageUp, 60}, {PageDown, 61}, {Home, 62}, {End, 63}, {CapsLock, 64}, {ScrollLock, 65}, 
-		{NumLock, 66}, {PrintScreen, 67}, {Pause, 68}, {F1, 69}, {F2, 70}, {F3, 71}, {F4, 72}, {F5, 73}, 
-		{F6, 74}, {F7, 75}, {F8, 76}, {F9, 77}, {F10, 78}, {F11, 79}, {F12, 80}, {F13, 81}, {F14, 82}, 
-		{F15, 83}, {F16, 84}, {F17, 85}, {F18, 86}, {F19, 87}, {F20, 88}, {F21, 89}, {F22, 90}, 
-		{F23, 91}, {F24, 92}, {F25, 93}, {LeftShift, 94}, {LeftControl, 95}, {LeftAlt, 96}
-	}};
-
 	}
 
 	using MouseCode = uint16_t;

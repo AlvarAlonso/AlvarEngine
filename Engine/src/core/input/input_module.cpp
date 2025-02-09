@@ -27,13 +27,13 @@ namespace Alvar
         // TODO: Check validity of Keycode?
         bool CInputModule::HandleKeyPressed(CKeyPressedEvent& aEvent)
         {
-            m_KeyboardData.GetButtonState(aEvent.GetKeyCode()).Value = 1.0f; // TODO: Add sensitivity.
+            m_KeyboardData.Keys[aEvent.GetKeyCode()].Value = 1.0f; // TODO: Add sensitivity.
             return true;
         }
 
         bool CInputModule::HandleKeyReleased(CKeyReleasedEvent& aEvent)
         {
-            m_KeyboardData.GetButtonState(aEvent.GetKeyCode()).Value = 0.0f;
+            m_KeyboardData.Keys[aEvent.GetKeyCode()].Value = 0.0f;
             return true;
         }
 

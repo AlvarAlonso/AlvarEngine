@@ -307,4 +307,20 @@ namespace Alvar
             m_IsImGuiInitialized = false;
         }
     }
+
+    glm::vec2 CEngine::GetWindowCenter() const
+    {
+        int WindowWidth, WindowHeight;
+        glfwGetWindowSize(CEngine::Get()->GetWindow(), &WindowWidth, &WindowHeight);
+
+        const int CenterX = static_cast<int>(floor(WindowWidth * 0.5f));
+        const int CenterY = static_cast<int>(floor(WindowHeight * 0.5f));
+
+        return glm::vec2(CenterX, CenterY);
+    }
+
+    void CEngine::SetMouseCursor(const glm::vec2 aNewMousePosition)
+    {
+        glfwSetCursorPos(CEngine::Get()->GetWindow(), static_cast<double>(aNewMousePosition.x), static_cast<double>(aNewMousePosition.y));
+    }
 }

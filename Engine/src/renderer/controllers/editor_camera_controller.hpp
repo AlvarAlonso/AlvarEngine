@@ -8,8 +8,9 @@ namespace Alvar
 {
     class CCamera;
 
-    const float DEFAULT_CAMERA_SENSITIVITY = 0.01f;
-    const float DEFAULT_CAMERA_SPEED = 0.01f;
+    // TODO: Expose this in ImGui.
+    const float DEFAULT_CAMERA_SENSITIVITY = 0.001f;
+    const float DEFAULT_CAMERA_SPEED = 0.05f;
 
     class CEditorCameraController : public IUpdatable, std::enable_shared_from_this<CEditorCameraController>
     {

@@ -50,6 +50,7 @@ namespace Alvar
         // TODO: Show only selected functionalities or find another way to share modules. Engine must have access to initialization and stuff like this
         // but probably other classes who wants to access a module should not have those kind of functions available.
         CRenderModule* GetRenderModule(){ return &m_RenderModule; }
+        Input::CInputModule* GetInputModule(){ return &m_InputModule; }
 
         void PushLayer(ILayer* aLayer);
         void PushOverlay(ILayer* aLayer);
@@ -59,6 +60,10 @@ namespace Alvar
         void RequireImGui(bool aRequire); 
 
         float GetDeltaTime() const { return m_DeltaTime; }
+
+        // TODO: Move to window class.
+        glm::vec2 GetWindowCenter() const;
+        void SetMouseCursor(const glm::vec2 aNewMousePosition);
 
         bool m_bFramebufferResized;
 
