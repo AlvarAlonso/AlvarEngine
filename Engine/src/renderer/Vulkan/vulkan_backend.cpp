@@ -64,21 +64,6 @@ namespace Alvar
 
 		InitTextureSamplers();
 
-		vkutils::LoadImageFromFile(m_pVulkanDevice, "../Resources/Images/viking_room.png", m_Image);
-		m_MainDeletionQueue.PushFunction([=]
-		{
-			vmaDestroyImage(m_pVulkanDevice->m_Allocator, m_Image.Image, m_Image.Allocation);
-		});
-
-		// TODO: Placeholder for testing purposes. TO BE REMOVED.
-		VkImageViewCreateInfo ViewInfo = vkinit::ImageViewCreateInfo(VK_FORMAT_R8G8B8A8_SRGB, m_Image.Image, VK_IMAGE_ASPECT_COLOR_BIT);
-		VK_CHECK(vkCreateImageView(m_pVulkanDevice->m_Device, &ViewInfo, nullptr, &m_ImageView));
-
-		m_MainDeletionQueue.PushFunction([=]
-		{
-			vkDestroyImageView(m_pVulkanDevice->m_Device, m_ImageView, nullptr);
-		});
-
 		InitDescriptorSets();
 
 		m_pCurrentRenderPath = CreateRenderPath();
@@ -280,10 +265,10 @@ namespace Alvar
 				CVkTexture *pNormalTexture = nullptr;
 
 				// TODO: Refactor this into a function where, in case of nullptr, it places a default texture.
-				pAlbedoTexture = Props.pAlbedoTexture ? CTexture::Get<CVkTexture>(Props.pAlbedoTexture->GetID()) : CTexture::Get<CVkTexture>("../Resources/Images/default_texture.png");
-				pMetalRoughnessTexture = Props.pMetallicRoughnessTexture ? CTexture::Get<CVkTexture>(Props.pMetallicRoughnessTexture->GetID()) : CTexture::Get<CVkTexture>("../Resources/Images/default_texture.png");
-				pEmissiveTexture = Props.pEmissiveTexture ?  CTexture::Get<CVkTexture>(Props.pEmissiveTexture->GetID()) : CTexture::Get<CVkTexture>("../Resources/Images/default_texture.png");
-				pNormalTexture = Props.pNormalTexture ? CTexture::Get<CVkTexture>(Props.pNormalTexture->GetID()) : CTexture::Get<CVkTexture>("../Resources/Images/default_texture.png");
+				pAlbedoTexture = Props.pAlbedoTexture ? CTexture::Get<CVkTexture>(Props.pAlbedoTexture->GetID()) : CTexture::Get<CVkTexture>("../../Resources/Images/default_texture.png");
+				pMetalRoughnessTexture = Props.pMetallicRoughnessTexture ? CTexture::Get<CVkTexture>(Props.pMetallicRoughnessTexture->GetID()) : CTexture::Get<CVkTexture>("../../Resources/Images/default_texture.png");
+				pEmissiveTexture = Props.pEmissiveTexture ?  CTexture::Get<CVkTexture>(Props.pEmissiveTexture->GetID()) : CTexture::Get<CVkTexture>("../../Resources/Images/default_texture.png");
+				pNormalTexture = Props.pNormalTexture ? CTexture::Get<CVkTexture>(Props.pNormalTexture->GetID()) : CTexture::Get<CVkTexture>("../../Resources/Images/default_texture.png");
 
 				MaterialDescriptor->Resources.pAlbedoTexture = pAlbedoTexture;
 				MaterialDescriptor->Resources.pMetalRoughnessTexture = pMetalRoughnessTexture;

@@ -136,10 +136,6 @@ namespace Alvar
         std::unordered_map<std::string, sMaterialDescriptor*> m_MaterialDescriptors;
         // ------------------------------------
 
-        // TODO: To be removed.
-        VkImageView m_ImageView;
-        AllocatedImage m_Image;
-
         // Holds the deletion functions.
         sDeletionQueue m_MainDeletionQueue;
     };

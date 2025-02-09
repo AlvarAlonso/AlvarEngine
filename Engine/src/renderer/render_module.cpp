@@ -105,7 +105,7 @@ namespace Alvar
     void CRenderModule::CreateDefaultScene()
     {
         // Add materials.
-        const auto& DefaultTexture = CTexture::Get<CTexture>("../Resources/Images/default_texture.png");
+        const auto& DefaultTexture = CTexture::Get<CTexture>("../../Resources/Images/default_texture.png");
 
         CMaterial* pDefaultMaterial = new CMaterial();
         sMaterialProperties Props;
@@ -124,10 +124,10 @@ namespace Alvar
         Props.MaterialConstants.MetallicFactor = 0.5f;
         Props.MaterialConstants.RoughnessFactor = 0.5f;
         Props.MaterialConstants.TillingFactor = 1.0f;
-        Props.pAlbedoTexture = CTexture::Get<CTexture>("../Resources/Images/Material_33_baseColor.png");
-        Props.pMetallicRoughnessTexture = CTexture::Get<CTexture>("../Resources/Images/Material_33_metallicRoughness.png");
-        Props.pEmissiveTexture = CTexture::Get<CTexture>("../Resources/Images/Material_33_emissive.png");
-        Props.pNormalTexture = CTexture::Get<CTexture>("../Resources/Images/Material_33_normal.png");
+        Props.pAlbedoTexture = CTexture::Get<CTexture>("../../Resources/Images/Material_33_baseColor.png");
+        Props.pMetallicRoughnessTexture = CTexture::Get<CTexture>("../../Resources/Images/Material_33_metallicRoughness.png");
+        Props.pEmissiveTexture = CTexture::Get<CTexture>("../../Resources/Images/Material_33_emissive.png");
+        Props.pNormalTexture = CTexture::Get<CTexture>("../../Resources/Images/Material_33_normal.png");
         pTestMaterial->SetMaterialProperties(Props);
         pTestMaterial->SetID("test_material");
 
@@ -144,7 +144,7 @@ namespace Alvar
         // pSphere->UploadToVRAM();
         // pSphere->m_pRoots.push_back(pSphereNode);
 
-        CRenderable* pPato = LoadGLTF("../Resources/Prefabs/Duck.glb", 0.1f);
+        CRenderable* pPato = LoadGLTF("../../Resources/Prefabs/Duck.glb", 0.1f);
         pPato->UploadToVRAM();
 
         m_pDefaultScene = new CScene();
