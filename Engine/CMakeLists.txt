@@ -37,34 +37,52 @@ target_link_libraries(engine PRIVATE
     ${CMAKE_SOURCE_DIR}/ThirdParty/glfw/lib-vc2022/glfw3.lib
 )
 
+# Manually define Vulkan SDK path if it's not set
+if(NOT DEFINED VULKAN_SDK)
+    set(VULKAN_SDK "C:/VulkanSDK/1.3.250.1")
+endif()
+message(STATUS "CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}")
+message(STATUS "CMAKE_SOURCE_DIR: ${CMAKE_SOURCE_DIR}")
+message(STATUS "VULKAN_SDK: ${VULKAN_SDK}")
+
 # 🔹 Shader Compilation Rules
-file(GLOB FRAGMENT_SHADERS ${CMAKE_SOURCE_DIR}../Engine/shaders/*.frag)
-file(GLOB VERTEX_SHADERS ${CMAKE_SOURCE_DIR}../Engine/shaders/*.vert)
+file(GLOB FRAGMENT_SHADERS "${CMAKE_SOURCE_DIR}/Engine/shaders/*.frag")
+file(GLOB VERTEX_SHADERS "${CMAKE_SOURCE_DIR}/Engine/shaders/*.vert")
 
 set(SHADER_SPV_FILES "")
 
 foreach(SHADER ${FRAGMENT_SHADERS})
     get_filename_component(SHADER_NAME ${SHADER} NAME_WE)
-    set(OUTPUT_FILE ${CMAKE_BINARY_DIR}/shaders/${SHADER_NAME}_frag.spv)
+    set(OUTPUT_FILE "${CMAKE_BINARY_DIR}/shaders/${SHADER_NAME}_frag.spv")
+
+    file(TO_NATIVE_PATH "${SHADER}" SHADER_NATIVE)
+    file(TO_NATIVE_PATH "${OUTPUT_FILE}" OUTPUT_NATIVE)
 
     add_custom_command(
-        OUTPUT ${OUTPUT_FILE}
-        COMMAND ${VULKAN_SDK}/Bin/glslc.exe ${SHADER} -o ${OUTPUT_FILE}
-        DEPENDS ${SHADER}
+        OUTPUT ${OUTPUT_NATIVE}
+        COMMAND ${CMAKE_COMMAND} -E echo "Compiling shader: ${SHADER_NATIVE}"
+        COMMAND "${VULKAN_SDK}/Bin/glslc.exe" "${SHADER_NATIVE}" -o "${OUTPUT_NATIVE}"
+        DEPENDS ${SHADER_NATIVE}
+        VERBATIM
     )
-    list(APPEND SHADER_SPV_FILES ${OUTPUT_FILE})
+    list(APPEND SHADER_SPV_FILES ${OUTPUT_NATIVE})
 endforeach()
 
 foreach(SHADER ${VERTEX_SHADERS})
     get_filename_component(SHADER_NAME ${SHADER} NAME_WE)
-    set(OUTPUT_FILE ${CMAKE_BINARY_DIR}/shaders/${SHADER_NAME}_vert.spv)
+    set(OUTPUT_FILE "${CMAKE_BINARY_DIR}/shaders/${SHADER_NAME}_vert.spv")
+
+    file(TO_NATIVE_PATH "${SHADER}" SHADER_NATIVE)
+    file(TO_NATIVE_PATH "${OUTPUT_FILE}" OUTPUT_NATIVE)
 
     add_custom_command(
-        OUTPUT ${OUTPUT_FILE}
-        COMMAND ${VULKAN_SDK}/Bin/glslc.exe ${SHADER} -o ${OUTPUT_FILE}
-        DEPENDS ${SHADER}
+        OUTPUT ${OUTPUT_NATIVE}
+        COMMAND ${CMAKE_COMMAND} -E echo "Compiling shader: ${SHADER_NATIVE}"
+        COMMAND "${VULKAN_SDK}/Bin/glslc.exe" "${SHADER_NATIVE}" -o "${OUTPUT_NATIVE}"
+        DEPENDS ${SHADER_NATIVE}
+        VERBATIM
     )
-    list(APPEND SHADER_SPV_FILES ${OUTPUT_FILE})
+    list(APPEND SHADER_SPV_FILES ${OUTPUT_NATIVE})
 endforeach()
 
 # 🔹 Create Shader Build Target

@@ -536,7 +536,7 @@ namespace Alvar
 	{
 		VkShaderModule DeferredVertShader;
 		// TODO: Do not hardcode this.
-		if (!vkutils::LoadShaderModule(m_pVulkanDevice->m_Device, "../Engine/shaders/deferred_vert.spv", &DeferredVertShader))
+		if (!vkutils::LoadShaderModule(m_pVulkanDevice->m_Device, "../shaders/deferred_vert.spv", &DeferredVertShader))
 		{
 			std::cout << "Error when building the deferred vertex shader module" << std::endl;
 		}
@@ -546,7 +546,7 @@ namespace Alvar
 		}
 
 		VkShaderModule DeferredFragShader;
-		if (!vkutils::LoadShaderModule(m_pVulkanDevice->m_Device, "../Engine/shaders/deferred_frag.spv", &DeferredFragShader))
+		if (!vkutils::LoadShaderModule(m_pVulkanDevice->m_Device, "../shaders/deferred_frag.spv", &DeferredFragShader))
 		{
 			std::cout << "Error when building the deferred fragment shader module" << std::endl;
 		}
@@ -556,7 +556,7 @@ namespace Alvar
 		}
 
 		VkShaderModule LightVertexShader;
-		if (!vkutils::LoadShaderModule(m_pVulkanDevice->m_Device, "../Engine/shaders/light_vert.spv", &LightVertexShader))
+		if (!vkutils::LoadShaderModule(m_pVulkanDevice->m_Device, "../shaders/light_vert.spv", &LightVertexShader))
 		{
 			std::cout << "Error when building the light vertex shader module" << std::endl;
 		}
@@ -566,7 +566,7 @@ namespace Alvar
 		}
 
 		VkShaderModule LightFragShader;
-		if (!vkutils::LoadShaderModule(m_pVulkanDevice->m_Device, "../Engine/shaders/light_frag.spv", &LightFragShader))
+		if (!vkutils::LoadShaderModule(m_pVulkanDevice->m_Device, "../shaders/light_frag.spv", &LightFragShader))
 		{
 			std::cout << "Error when building the light fragment shader module" << std::endl;
 		}

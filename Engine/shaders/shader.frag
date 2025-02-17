@@ -108,6 +108,7 @@ void main()
         totalLight += currentLight;
     }
 
-    outColor = vec4(totalLight * color_texture, 1.0);
-    outColor = vec4(1.0, 0.0, 0.0, 1.0);
+    //outColor = vec4(totalLight * color_texture, 1.0);
+    outColor = vec4(color_texture, 1.0);
+    //outColor = vec4(1.0, 0.0, 0.0, 1.0);
 }

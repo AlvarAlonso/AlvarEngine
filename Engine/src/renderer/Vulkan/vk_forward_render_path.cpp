@@ -150,7 +150,7 @@ namespace Alvar
 	{
 		VkShaderModule VertShader;
 		// TODO: Do not hardcode this.
-		if (!vkutils::LoadShaderModule(m_pVulkanDevice->m_Device, "../../Engine/shaders/vert.spv", &VertShader))
+		if (!vkutils::LoadShaderModule(m_pVulkanDevice->m_Device, "../shaders/shader_vert.spv", &VertShader))
 		{
 			std::cout << "Error when building the vertex shader module" << std::endl;
 		}
@@ -160,7 +160,7 @@ namespace Alvar
 		}
 
 		VkShaderModule FragShader;
-		if (!vkutils::LoadShaderModule(m_pVulkanDevice->m_Device, "../../Engine/shaders/frag.spv", &FragShader))
+		if (!vkutils::LoadShaderModule(m_pVulkanDevice->m_Device, "../shaders/shader_frag.spv", &FragShader))
 		{
 			std::cout << "Error when building the fragment shader module" << std::endl;
 		}
