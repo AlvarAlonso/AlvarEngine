@@ -7,6 +7,7 @@
 #include <renderer/resources/loaders/glTFLoader.hpp>
 #include <renderer/controllers/editor_camera_controller.hpp>
 #include <renderer/core/camera.hpp>
+#include <renderer/core/render_utils.hpp>
 
 #include <glm/gtx/transform.hpp>
 #include <GLFW/glfw3.h>
@@ -147,9 +148,15 @@ namespace Alvar
         CRenderable* pPato = LoadGLTF("../../Resources/Prefabs/Duck.glb", 0.1f);
         pPato->UploadToVRAM();
 
+        sMeshData* pLostEmpireMeshData = new sMeshData();
+        renderutils::LoadMeshFromFile("../../Resources/Meshes/lost_empire.obj", *pLostEmpireMeshData);
+
+        CRenderable* pLostEmpire = CRenderable::Create(pLostEmpireMeshData);
+        pLostEmpire->UploadToVRAM();
+
         m_pDefaultScene = new CScene();
-        //m_pDefaultScene->AddRenderable(pSphere);
         m_pDefaultScene->AddRenderable(pPato);
+        m_pDefaultScene->AddRenderable(pLostEmpire);
 
         sLightSource* LightSource = new sLightSource();
         //LightSource->Properties.Model = glm::translate(glm::vec3{2.0f, 0.0f, 4.0f});

@@ -232,13 +232,13 @@ namespace Alvar
 		{
 			for (const auto &SubMesh : aMeshNode->m_pMeshData->SubMeshes)
 			{
-				CMaterial *pMaterial = SubMesh->m_Material;
 				if (SubMesh->m_Material == nullptr)
 				{
 					SGSWARN("The SubMesh from the MeshNode %s does not have a material. Using default material.", aMeshNode->m_Name.c_str());
-					pMaterial = CMaterial::Get("default_material");
+					SubMesh->m_Material = CMaterial::Get("default_material");
 				}
 				
+				CMaterial* pMaterial = SubMesh->m_Material;
 				assert(pMaterial);
 
 				if (m_MaterialDescriptors.find(pMaterial->GetID()) != m_MaterialDescriptors.cend())
@@ -731,7 +731,7 @@ namespace Alvar
 			sCameraFrameUBO FrameUBO = {};
 			FrameUBO.View = Camera->GetViewMatrix();
 			// TODO: Do not hardcode this.
-			FrameUBO.Proj = glm::perspective(glm::radians(90.0f), m_pVulkanSwapchain->m_WindowExtent.width / (float)m_pVulkanSwapchain->m_WindowExtent.height, 0.1f, 1000.0f);
+			FrameUBO.Proj = glm::perspective(glm::radians(90.0f), m_pVulkanSwapchain->m_WindowExtent.width / (float)m_pVulkanSwapchain->m_WindowExtent.height, 0.1f, 10000.0f);
 			FrameUBO.Proj[1][1] *= -1;
 			FrameUBO.ViewProj = FrameUBO.Proj * FrameUBO.View;
 			FrameUBO.Pos = Camera->GetPosition();
