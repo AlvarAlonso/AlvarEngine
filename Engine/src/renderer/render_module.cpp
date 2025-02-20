@@ -106,14 +106,15 @@ namespace Alvar
     void CRenderModule::CreateDefaultScene()
     {
         // Add materials.
-        const auto& DefaultTexture = CTexture::Get<CTexture>("../../Resources/Images/default_texture.png");
+        const auto& WhiteTexture = CTexture::Get<CTexture>("../../Resources/Images/white_texture.png");
+        const auto& BlackTexture = CTexture::Get<CTexture>("../../Resources/Images/black_texture.png");
 
         CMaterial* pDefaultMaterial = new CMaterial();
         sMaterialProperties Props;
-        Props.pAlbedoTexture = DefaultTexture;
-        Props.pMetallicRoughnessTexture = DefaultTexture;
-        Props.pEmissiveTexture = DefaultTexture;
-        Props.pNormalTexture = DefaultTexture;
+        Props.pAlbedoTexture = WhiteTexture;
+        Props.pMetallicRoughnessTexture = BlackTexture;
+        Props.pEmissiveTexture = BlackTexture;
+        Props.pNormalTexture = BlackTexture;
         pDefaultMaterial->SetMaterialProperties(Props);
         pDefaultMaterial->SetID("default_material");
 
@@ -159,8 +160,8 @@ namespace Alvar
         m_pDefaultScene->AddRenderable(pLostEmpire);
 
         sLightSource* LightSource = new sLightSource();
-        //LightSource->Properties.Model = glm::translate(glm::vec3{2.0f, 0.0f, 4.0f});
-        LightSource->Properties.Color = {0.0f, 255.0f, 0.0f};
+        LightSource->Properties.Model = glm::translate(glm::vec3{2.0f, 10.0f, 1.0f});
+        LightSource->Properties.Color = {1.0f, 1.0f, 1.0f};
         LightSource->Properties.Intensity = 1.0f;
         LightSource->Properties.LightType = eLightType::DIRECTIONAL;
         LightSource->Properties.TargetPosition = {0.0f, 0.0f, 0.0f};
@@ -175,6 +176,6 @@ namespace Alvar
         LightSource2->Properties.MaxDist = 30.0f;
 
         m_pDefaultScene->AddLightSource(LightSource);
-        m_pDefaultScene->AddLightSource(LightSource2);
+        //m_pDefaultScene->AddLightSource(LightSource2);
     }
 }
