@@ -9,6 +9,11 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/Engine/src
 )
 
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Zi")
+set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /DEBUG")
+set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} /DEBUG")
+set(CMAKE_PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/pdbs")
+
 # Collect Engine and Third-Party Source Files
 file(GLOB_RECURSE ENGINE_SOURCES ${CMAKE_SOURCE_DIR}/Engine/src/*.cpp)
 file(GLOB_RECURSE VULKAN_BOOTSTRAP ${CMAKE_SOURCE_DIR}/ThirdParty/VulkanBootstrap/*.cpp)
@@ -41,9 +46,6 @@ target_link_libraries(engine PRIVATE
 if(NOT DEFINED VULKAN_SDK)
     set(VULKAN_SDK "C:/VulkanSDK/1.3.250.1")
 endif()
-message(STATUS "CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}")
-message(STATUS "CMAKE_SOURCE_DIR: ${CMAKE_SOURCE_DIR}")
-message(STATUS "VULKAN_SDK: ${VULKAN_SDK}")
 
 # 🔹 Shader Compilation Rules
 file(GLOB FRAGMENT_SHADERS "${CMAKE_SOURCE_DIR}/Engine/shaders/*.frag")
