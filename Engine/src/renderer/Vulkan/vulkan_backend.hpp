@@ -88,7 +88,8 @@ namespace Alvar
         
         bool HasStencilComponent(VkFormat aFormat);
 
-        void AddTransformsToBuffer(sGPURenderObjectData* apBuffer, size_t& aIndex, CMeshNode* apMeshNode);
+        void AddRenderableTransformsToBuffer(Alvar::CRenderable *const &Renderable, Alvar::sGPURenderObjectData *GPURenderObjectData, size_t &Index);
+        void AddNodeTransformsToBuffer(sGPURenderObjectData* apBuffer, size_t& aIndex, CMeshNode* apMeshNode);
     
         void CreateMaterialDescriptorsFromMeshNodeRecursive(CMeshNode *const &aMeshNode);
         void CreateMaterialDescriptorsFromMeshNode(CMeshNode *const &aMeshNode);

@@ -67,14 +67,18 @@ namespace Alvar
 		vkCmdBindVertexBuffers(aRenderContext.CmdBuffer, 0, 1, &m_VertexBuffer.Buffer, &Offset);
 		vkCmdBindIndexBuffer(aRenderContext.CmdBuffer, m_IndexBuffer.Buffer, 0, VK_INDEX_TYPE_UINT32);
 
+		SGSDEBUG("Draw");
+
 		for (const auto& Root : m_pRoots)
 		{
+			SGSDEBUG("Draw Root");
 			DrawNode(Root, aRenderContext, bBindMaterialDescriptor);
 		}
 	}
 		
 	void CVulkanRenderable::DrawNode(CMeshNode* apMeshNode, sRenderContext& aRenderContext, bool bBindMaterialDescriptor)
 	{
+		SGSDEBUG("Draw Node");
 		// Draw children.
 		for (auto* pMeshNode : apMeshNode->m_Children)
 		{
@@ -93,11 +97,13 @@ namespace Alvar
 
 	void CVulkanRenderable::DrawSubMesh(CSubMesh* apSubMesh, sRenderContext& aRenderContext, bool bBindMaterialDescriptor)
 	{
+		SGSDEBUG("DrawSubMesh. Draw call num: %d.", aRenderContext.DrawCallNum);
+
 		if (bBindMaterialDescriptor)
 		{
 			const std::array<VkDescriptorSet, 4> DescriptorSets = 
-				{ 	aRenderContext.FrameDescriptorSet, 
-					aRenderContext.ObjectsDescriptorSet, 
+				{ 	aRenderContext.FrameDescriptorSet,
+					aRenderContext.ObjectsDescriptorSet,
 					aRenderContext.MaterialDescriptors->at(apSubMesh->m_Material->GetID())->DescriptorSet,
 					aRenderContext.LightSourcesDescriptorSet
 				};

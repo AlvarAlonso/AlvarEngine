@@ -166,7 +166,7 @@ namespace Alvar
 
 		{
 			void* Data;
-			vmaMapMemory(m_pVulkanDevice->m_Allocator, m_ObjectsDataBuffer.Allocation, &Data);
+			VK_CHECK(vmaMapMemory(m_pVulkanDevice->m_Allocator, m_ObjectsDataBuffer.Allocation, &Data));
 
 			// There will be a draw call per CMeshNode, hence, we need a transform for each CMeshNode.
 			sGPURenderObjectData* GPURenderObjectData = static_cast<sGPURenderObjectData*>(Data);
@@ -174,11 +174,8 @@ namespace Alvar
 
 			for (const auto& Renderable : SceneRenderables)
 			{
-				for (const auto& Root : Renderable->m_pRoots)
-				{
-					AddTransformsToBuffer(GPURenderObjectData, Index, Root);
-				}
-			}
+                AddRenderableTransformsToBuffer(Renderable, GPURenderObjectData, Index);
+            }
 
 			vmaUnmapMemory(m_pVulkanDevice->m_Allocator, m_ObjectsDataBuffer.Allocation);
 		}
@@ -214,9 +211,9 @@ namespace Alvar
 		{
 			m_pCurrentRenderPath->HandleSceneChanged();
 		}
-	}
+    }
 
-	void CVulkanBackend::CreateMaterialDescriptorsFromMeshNodeRecursive(CMeshNode *const &aMeshNode)
+    void CVulkanBackend::CreateMaterialDescriptorsFromMeshNodeRecursive(CMeshNode *const &aMeshNode)
 	{
 		for (const auto& Child : aMeshNode->m_Children)
 		{
@@ -749,14 +746,29 @@ namespace Alvar
 		return aFormat == VK_FORMAT_D32_SFLOAT_S8_UINT || aFormat == VK_FORMAT_D24_UNORM_S8_UINT;
 	}
 
-	void CVulkanBackend::AddTransformsToBuffer(sGPURenderObjectData* apBuffer, size_t& aIndex, CMeshNode* apMeshNode)
+	void CVulkanBackend::AddRenderableTransformsToBuffer(Alvar::CRenderable *const &Renderable, Alvar::sGPURenderObjectData *GPURenderObjectData, size_t &Index)
+    {
+        for (const auto &Root : Renderable->m_pRoots)
+        {
+            AddNodeTransformsToBuffer(GPURenderObjectData, Index, Root);
+        }
+    }
+
+	void CVulkanBackend::AddNodeTransformsToBuffer(sGPURenderObjectData* apBuffer, size_t& aIndex, CMeshNode* apMeshNode)
 	{
 		for (const auto& MeshNode : apMeshNode->m_Children)
 		{
-			AddTransformsToBuffer(apBuffer, aIndex, MeshNode);
+			AddNodeTransformsToBuffer(apBuffer, aIndex, MeshNode);
 		}
 
-		apBuffer[aIndex].ModelMatrix = apMeshNode->GetWorldTransform();
-		++aIndex;
+		if (apMeshNode->m_pMeshData)
+		{
+			for (const auto& SubMesh : apMeshNode->m_pMeshData->SubMeshes)
+			{
+				auto Transform = apMeshNode->GetWorldTransform();
+				apBuffer[aIndex].ModelMatrix = apMeshNode->GetWorldTransform();
+				++aIndex;
+			}
+		}
 	}
 }

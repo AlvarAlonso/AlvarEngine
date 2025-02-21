@@ -172,7 +172,7 @@ namespace Alvar
         pLostEmpire->UploadToVRAM();
 
         m_pDefaultScene = new CScene();
-        //m_pDefaultScene->AddRenderable(pPato);
+        m_pDefaultScene->AddRenderable(pPato);
         m_pDefaultScene->AddRenderable(pLostEmpire);
 
         sLightSource* LightSource = new sLightSource();
