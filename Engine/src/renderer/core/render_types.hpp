@@ -131,9 +131,10 @@ namespace Alvar
         /**
          * @brief Creates a CRenderable with a node containing the info passed as sMeshData.
          * @param apMeshData The apMeshData to create the node from.
+         * @param apMaterial The material to apply to the mesh.
          * @return The new renderable.
          */
-        static CRenderable* Create(sMeshData* apMeshData);
+        static CRenderable* Create(sMeshData* apMeshData, CMaterial* apMaterial);
 
         CRenderable() = default;
         CRenderable(sMeshData* apMeshData);

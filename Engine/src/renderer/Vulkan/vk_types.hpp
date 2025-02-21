@@ -86,13 +86,14 @@ namespace Alvar
         glm::vec3 Color;
         float Radius;
         int LightType;
+        int _padding[3];
     };
 
     class CVulkanRenderable : public CRenderable
     {
     public:
         CVulkanRenderable() = default;
-        CVulkanRenderable(sMeshData* apMeshData);
+        CVulkanRenderable(sMeshData* apMeshData, CMaterial* apMaterial);
 
         void Draw(sRenderContext& aRenderContext, bool bBindMaterialDescriptor = false);
         virtual void UploadToVRAM() override;

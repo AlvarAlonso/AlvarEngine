@@ -50,13 +50,13 @@ namespace Alvar
 		return Description;
 	}
 
-	CVulkanRenderable::CVulkanRenderable(sMeshData* apMeshData)
+	CVulkanRenderable::CVulkanRenderable(sMeshData* apMeshData, CMaterial* apMaterial)
 	{
 		m_pRoots.push_back(new CMeshNode());
 		m_pRoots[0]->m_pMeshData = apMeshData;
 		m_Vertices = apMeshData->Vertices;
 		m_Indices = apMeshData->Indices32;
-		CSubMesh* pSubMesh = new CSubMesh(0, 0, m_Indices.size(), m_Vertices.size(), nullptr);
+		CSubMesh* pSubMesh = new CSubMesh(0, 0, m_Indices.size(), m_Vertices.size(), apMaterial);
 		m_pRoots[0]->m_pMeshData->SubMeshes.push_back(pSubMesh);
 	}
 		

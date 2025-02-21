@@ -154,7 +154,7 @@ namespace Alvar
         return nullptr;
     }
 
-    CRenderable* CRenderable::Create(sMeshData* apMeshData)
+    CRenderable* CRenderable::Create(sMeshData* apMeshData, CMaterial* apMaterial)
     {
         const eRenderAPI RenderAPI = CEngine::Get()->GetRenderModule()->GetRenderAPI();
         switch (RenderAPI)
@@ -167,7 +167,7 @@ namespace Alvar
 
             case eRenderAPI::VULKAN:
             {
-                return new CVulkanRenderable(apMeshData);
+                return new CVulkanRenderable(apMeshData, apMaterial);
             }
             break;
         

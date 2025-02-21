@@ -149,10 +149,26 @@ namespace Alvar
         CRenderable* pPato = LoadGLTF("../../Resources/Prefabs/Duck.glb", 0.1f);
         pPato->UploadToVRAM();
 
+        const auto& LostEmpireTexture = CTexture::Get<CTexture>("../../Resources/Meshes/lost_empire-RGB.png");
+
+        CMaterial* pLostEmpireMaterial = new CMaterial();
+        Props.MaterialConstants.Color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+        Props.MaterialConstants.EmissiveFactor = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
+        Props.MaterialConstants.MetallicFactor = 0.0f;
+        Props.MaterialConstants.RoughnessFactor = 0.0f;
+        Props.MaterialConstants.TillingFactor = 1.0f;
+        Props.pAlbedoTexture = LostEmpireTexture;
+        Props.pMetallicRoughnessTexture = nullptr;
+        Props.pEmissiveTexture = nullptr;
+        Props.pNormalTexture = nullptr;
+        pLostEmpireMaterial->SetMaterialProperties(Props);
+        pLostEmpireMaterial->SetID("lost_empire_material");
+        CMaterial::RegisterMaterial(pLostEmpireMaterial);
+
         sMeshData* pLostEmpireMeshData = new sMeshData();
         renderutils::LoadMeshFromFile("../../Resources/Meshes/lost_empire.obj", *pLostEmpireMeshData);
 
-        CRenderable* pLostEmpire = CRenderable::Create(pLostEmpireMeshData);
+        CRenderable* pLostEmpire = CRenderable::Create(pLostEmpireMeshData, pLostEmpireMaterial);
         pLostEmpire->UploadToVRAM();
 
         m_pDefaultScene = new CScene();
@@ -160,8 +176,8 @@ namespace Alvar
         m_pDefaultScene->AddRenderable(pLostEmpire);
 
         sLightSource* LightSource = new sLightSource();
-        LightSource->Properties.Model = glm::translate(glm::vec3{2.0f, 10.0f, 1.0f});
-        LightSource->Properties.Color = {0.2f, 0.2f, 0.2f};
+        LightSource->Properties.Model = glm::translate(glm::vec3{200.0f, 1000.0f, 1.0f});
+        LightSource->Properties.Color = {1.0f, 1.0f, 1.0f};
         LightSource->Properties.Intensity = 1.0f;
         LightSource->Properties.LightType = eLightType::DIRECTIONAL;
         LightSource->Properties.TargetPosition = {0.0f, 0.0f, 0.0f};
@@ -175,7 +191,7 @@ namespace Alvar
         LightSource2->Properties.TargetPosition = {0.0f, 0.0f, 0.0f};
         LightSource2->Properties.MaxDist = 30.0f;
 
-        //m_pDefaultScene->AddLightSource(LightSource);
+        m_pDefaultScene->AddLightSource(LightSource);
         m_pDefaultScene->AddLightSource(LightSource2);
     }
 }

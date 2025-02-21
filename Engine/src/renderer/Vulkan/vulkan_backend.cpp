@@ -185,7 +185,7 @@ namespace Alvar
 
 		{
 			void* Data;
-			vmaMapMemory(m_pVulkanDevice->m_Allocator, m_LightSourcesBuffer.Allocation, &Data);
+			VK_CHECK(vmaMapMemory(m_pVulkanDevice->m_Allocator, m_LightSourcesBuffer.Allocation, &Data));
 			
 			sLightData* LightSourcesData = static_cast<sLightData*>(Data);
 			size_t Index = 0;

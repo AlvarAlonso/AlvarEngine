@@ -252,7 +252,7 @@ namespace Alvar
 		*Quad = CGeometryGenerator::CreateQuad(-1.0f, 1.0f, 2.0f, 2.0f, 0.0f);
 		Quad->ID = "DeferredQuad"; //TODO: Improve this.
 
-		m_Quad = new CVulkanRenderable(Quad);
+		m_Quad = new CVulkanRenderable(Quad, nullptr);
 		m_Quad->UploadToVRAM();
 	}
 

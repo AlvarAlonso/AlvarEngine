@@ -27,6 +27,7 @@ struct LightData {
     vec3 Color;
     float Radius;
     int LightType;
+    int _padding[3];
 };
 
 layout(push_constant) uniform PushConstants 
@@ -60,9 +61,10 @@ void main()
 	vec3 f0 = color_texture * metal + (vec3( 0.5 ) * ( 1.0 - metal ));
 
 	//Normal has to be converted to clip space again
-	vec3 N = texture( normalSampler, fragTexCoord ).xyz;
-    N = normalize( N * 2.0 - 1.0 );
-    
+	//vec3 N = texture( normalSampler, fragTexCoord ).xyz;
+    //N = normalize( N * 2.0 - 1.0 );
+    vec3 N = fragNormal;
+
     vec3 totalLight = vec3(0.0);
     for (int i = 0; i < pushConstants.numLights; ++i)
     {
@@ -108,6 +110,6 @@ void main()
         totalLight += currentLight;
     }
 
-    vec3 ambient_light = vec3(0.03);
-    outColor = vec4(totalLight * color_texture + ambient_light, 1.0);
+    vec3 ambient_light = vec3(0.0);
+    outColor = vec4(totalLight * color_texture + ambient_light * color_texture, 1.0);
 }
