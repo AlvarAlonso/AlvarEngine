@@ -26,8 +26,9 @@ struct LightData {
     float Intensity;
     vec3 Color;
     float Radius;
+    float SpotCosine;
     int LightType;
-    int _padding[3];
+    int _padding[2];
 };
 
 layout(push_constant) uniform PushConstants 
@@ -98,8 +99,10 @@ void main()
         else if (lightData.LightType == 3) // Spot
         {
             // Determine if it's inside light's cone.
-            //direct *= SpotDirection(fragWorldPos);
-		    //light = direct * intensity * att_factor;
+            vec3 LightDirection = lightData.TargetPosition - lightData.Position; 
+            direct *= SpotDirection(lightData.SpotCosine, LightDirection, lightData.Position, 
+                fragWorldPos, N, lightData.Color, 1.0, lightData.Intensity);
+		    currentLight = direct * lightData.Intensity * att_factor;
         }
         else
         {

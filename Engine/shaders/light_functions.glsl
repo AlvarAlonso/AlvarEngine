@@ -21,11 +21,11 @@ float GetSpotFactor( in float aCosine, in float aExponent)
 	return pow(aCosine, aExponent);
 }
 
-vec3 SpotDirection( in float aSpotCosine, in vec3 aSpotDirection, in vec3 aLightPosition, 
+vec3 SpotDirection( in float aSpotCosine, in vec3 aLightDirection, in vec3 aLightPosition, 
     in vec3 aWorldPosition, in vec3 aNormal, in vec3 aLightColor, in float aSpotExponent, in float aIntensity )
 {
 	vec3 L = normalize( aLightPosition - aWorldPosition );
-	float theta = dot( -L, normalize(aSpotDirection) );
+	float theta = dot( -L, normalize(aLightDirection) );
 	if(theta >= aSpotCosine)
 	{
 		vec3 final_color = Phong( aNormal, world_position ) * GetSpotFactor( aSpotCosine, aSpotExponent );

@@ -200,6 +200,7 @@ namespace Alvar
 				LightSourcesData[Index].Intensity = LightProps.Intensity;
 				LightSourcesData[Index].Color = LightProps.Color;
 				LightSourcesData[Index].Radius = LightProps.Radius;
+				LightSourcesData[Index].SpotCosine = LightProps.SpotCosine;
 				LightSourcesData[Index].LightType = static_cast<int32_t>(LightProps.LightType);
 				++Index;
 			}

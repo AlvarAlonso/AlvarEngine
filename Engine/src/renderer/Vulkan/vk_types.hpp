@@ -85,8 +85,9 @@ namespace Alvar
         float Intensity;
         glm::vec3 Color;
         float Radius;
+        float SpotCosine;
         int LightType;
-        int _padding[3];
+        int _padding[2];
     };
 
     class CVulkanRenderable : public CRenderable

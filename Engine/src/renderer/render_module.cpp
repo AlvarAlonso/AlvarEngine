@@ -172,7 +172,7 @@ namespace Alvar
         pLostEmpire->UploadToVRAM();
 
         m_pDefaultScene = new CScene();
-        m_pDefaultScene->AddRenderable(pPato);
+        //m_pDefaultScene->AddRenderable(pPato);
         m_pDefaultScene->AddRenderable(pLostEmpire);
 
         sLightSource* LightSource = new sLightSource();
@@ -191,7 +191,17 @@ namespace Alvar
         LightSource2->Properties.TargetPosition = {0.0f, 0.0f, 0.0f};
         LightSource2->Properties.MaxDist = 30.0f;
 
+        sLightSource* LightSource3 = new sLightSource();
+        LightSource3->Properties.Model = glm::translate(glm::vec3(20.0f, 50.0f, 0.0f));
+        LightSource3->Properties.Color = {0.0f, 0.0f, 255.0f};
+        LightSource3->Properties.Intensity = 10.0f;
+        LightSource3->Properties.LightType = eLightType::SPOT;
+        LightSource3->Properties.TargetPosition = {0.0f, 0.0f, 0.0f};
+        LightSource3->Properties.MaxDist = 30.0f;
+        LightSource3->Properties.SpotCosine = 0.5f;
+
         m_pDefaultScene->AddLightSource(LightSource);
         m_pDefaultScene->AddLightSource(LightSource2);
+        m_pDefaultScene->AddLightSource(LightSource3);
     }
 }

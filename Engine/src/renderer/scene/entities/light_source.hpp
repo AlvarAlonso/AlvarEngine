@@ -32,6 +32,7 @@ namespace Alvar
             float MaxDist;
             float Intensity;
             float Radius;
+            float SpotCosine;
             eLightType LightType;
         } Properties;
     };
