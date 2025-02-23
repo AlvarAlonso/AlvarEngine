@@ -1,4 +1,5 @@
 #include "scene.hpp"
+#include "entity.hpp"
 
 namespace Alvar
 {

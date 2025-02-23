@@ -7,6 +7,7 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/ThirdParty/glfw/include
     ${CMAKE_SOURCE_DIR}/ThirdParty/imgui
     ${CMAKE_SOURCE_DIR}/Engine/src
+    ${CMAKE_SOURCE_DIR}/ThirdParty/entt/src
 )
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Zi")
