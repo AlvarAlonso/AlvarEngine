@@ -4,6 +4,7 @@
 #include <renderer/scene/entities/light_source.hpp>
 
 #include <glm/mat4x4.hpp>
+#include <entt/src/entt/entt.hpp> // TODO: wtf.
 
 #include <string>
 #include <vector>
@@ -30,5 +31,9 @@ namespace Alvar
     private:
         std::vector<CRenderable*> m_Renderables;
         std::vector<sLightSource*> m_LightSources;
+
+        entt::registry m_Registry;
+
+        friend class CEntity;
     };
 }
