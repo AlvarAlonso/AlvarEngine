@@ -4,6 +4,7 @@
 #include <core/logger.h>
 #include <engine.hpp>
 #include <renderer/vulkan/vk_types.hpp>
+#include <renderer/render_module.hpp>
 
 #include <unordered_map>
 

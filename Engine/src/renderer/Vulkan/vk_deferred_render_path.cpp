@@ -7,6 +7,7 @@
 #include <renderer/core/geometry_generator.hpp>
 #include <core/logger.h>
 #include <renderer/core/camera.hpp>
+#include <renderer/render_module.hpp>
 
 #include <iostream>
 #include <array>

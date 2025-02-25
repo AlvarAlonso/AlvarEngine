@@ -1,6 +1,7 @@
 #include "vulkan_device.hpp"
 #include "vk_initializers.hpp"
 #include <engine.hpp>
+#include <renderer/render_module.hpp>
 
 #include <VulkanBootstrap/VkBootstrap.h>
 #include <GLFW/glfw3.h>

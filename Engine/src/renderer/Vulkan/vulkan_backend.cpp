@@ -17,6 +17,7 @@
 #include <renderer/resources/material.hpp>
 #include <renderer/resources/texture.hpp>
 #include "resources/vk_texture.hpp"
+#include <renderer/render_module.hpp>
 
 #include <VulkanBootstrap/VkBootstrap.h>
 #include <glm/gtc/matrix_transform.hpp>

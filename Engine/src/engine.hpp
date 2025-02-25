@@ -1,10 +1,11 @@
 #pragma once
 
 #include "core/defines.h"
-
-#include <core/input/input_module.hpp>
-#include "renderer/render_module.hpp"
+#include <core/module_manager.hpp>
 #include <core/layer_stack.hpp>
+
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/vec2.hpp>
 
 #include <functional>
 
@@ -23,6 +24,12 @@ namespace Alvar
     class CMouseScrolledEvent;
     class CMouseButtonPressedEvent;
     class CMouseButtonReleasedEvent;
+    class CRenderModule;
+
+    namespace Input 
+    {
+        class CInputModule;
+    }
 
     struct sWindowData
     {
@@ -49,8 +56,8 @@ namespace Alvar
 
         // TODO: Show only selected functionalities or find another way to share modules. Engine must have access to initialization and stuff like this
         // but probably other classes who wants to access a module should not have those kind of functions available.
-        CRenderModule* GetRenderModule(){ return &m_RenderModule; }
-        Input::CInputModule* GetInputModule(){ return &m_InputModule; }
+        CRenderModule* GetRenderModule(){ return m_pRenderModule; }
+        Input::CInputModule* GetInputModule(){ return m_pInputModule; }
 
         void PushLayer(ILayer* aLayer);
         void PushOverlay(ILayer* aLayer);
@@ -89,6 +96,7 @@ namespace Alvar
     private:
         static CEngine* m_pInstance;
 
+        // TODO: Separate engine from application/window.
         GLFWwindow* m_pWindow;
         sWindowData m_WindowData;
 
@@ -98,8 +106,10 @@ namespace Alvar
         // TODO: Move time related stuff to a Time manager.
         float m_DeltaTime;
 
-        Input::CInputModule m_InputModule; // TODO: Ugly.
-        CRenderModule m_RenderModule;
+        CModuleManager m_ModuleManager;
+
+        Input::CInputModule* m_pInputModule; // TODO: Ugly.
+        CRenderModule* m_pRenderModule;
 
         CLayerStack m_LayerStack;
         CDebugLayer* m_DebugLayer;

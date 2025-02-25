@@ -2,6 +2,8 @@
 #include "core/logger.h"
 #include <core/event_system/event_base.hpp>
 #include <core/event_system/application_events.hpp>
+#include <core/input/input_module.hpp>
+#include "renderer/render_module.hpp"
 #include <debug/debug_layer.hpp>
 
 #include <GLFW/glfw3.h>
@@ -19,7 +21,7 @@ namespace Alvar
     CEngine::CEngine() : 
         m_bFramebufferResized(false), m_pWindow(nullptr), m_WindowData(), 
         m_ClientWidth(800), m_ClientHeight(600),
-        m_DeltaTime(0.0f), m_InputModule(), m_RenderModule(),
+        m_DeltaTime(0.0f), m_pInputModule(nullptr), m_pRenderModule(nullptr),
         m_LayerStack(), m_DebugLayer(nullptr),
         m_IsImGuiInitialized(false)
 
@@ -57,10 +59,13 @@ namespace Alvar
         m_WindowData.EventCallback = ALVAR_BIND_EVENT_FN(OnEvent);
 
         // Initialize modules.
-        m_InputModule.Initialize();
-        m_RenderModule.Initialize();
+        m_pInputModule = new Input::CInputModule();
+        m_pRenderModule = new CRenderModule();
 
-        // TODO: Initialize layers.
+        m_ModuleManager.RegisterModule(m_pInputModule);
+        m_ModuleManager.RegisterModule(m_pRenderModule);
+
+        // TODO: Initialize layers. This should not be here, layers should be independent of the engine.
         m_DebugLayer = new CDebugLayer();
         PushOverlay(m_DebugLayer);
     }
@@ -73,20 +78,20 @@ namespace Alvar
 
             auto Start = std::chrono::system_clock::now();
 
-            m_InputModule.Update(m_DeltaTime);
+            m_pInputModule->Update(m_DeltaTime);
         
             for (ILayer* Layer : m_LayerStack)
             {
                 Layer->OnUpdate(m_DeltaTime);
             }
 
-            m_RenderModule.ImGuiBeginFrame();
+            m_pRenderModule->ImGuiBeginFrame();
             for (ILayer* Layer : m_LayerStack)
             {
                 Layer->OnImGuiRender();
             }
-            m_RenderModule.ImGuiEndFrame();
-            m_RenderModule.Update(m_DeltaTime); // Has to be done after all the ImGui render calls.
+            m_pRenderModule->ImGuiEndFrame();
+            m_pRenderModule->Update(m_DeltaTime); // Has to be done after all the ImGui render calls.
 
             auto End = std::chrono::system_clock::now();
             auto Elapsed = std::chrono::duration_cast<std::chrono::microseconds>(End - Start);
@@ -100,8 +105,7 @@ namespace Alvar
 
         // TODO: Pop layers.
 
-        m_RenderModule.Shutdown();
-        m_InputModule.Shutdown();
+        m_ModuleManager.ClearModules();
 
         glfwDestroyWindow(m_pWindow);
         glfwTerminate();
@@ -229,40 +233,41 @@ namespace Alvar
         return true;
     }
 
+    // TODO: Invert dependency (delegates).
     bool CEngine::OnWindowResize(CWindowResizeEvent& aEvent)
     {
-        m_RenderModule.HandleWindowResize();
+        m_pRenderModule->HandleWindowResize();
         return true;
     }
 
     bool CEngine::OnKeyPressed(CKeyPressedEvent& aEvent)
     {
-        return m_InputModule.HandleKeyPressed(aEvent);
+        return m_pInputModule->HandleKeyPressed(aEvent);
     }
 
     bool CEngine::OnKeyReleased(CKeyReleasedEvent& aEvent)
     {
-        return m_InputModule.HandleKeyReleased(aEvent);
+        return m_pInputModule->HandleKeyReleased(aEvent);
     }
 
     bool CEngine::OnMouseMoved(CMouseMovedEvent& aEvent)
     {
-        return m_InputModule.HandleMouseMoved(aEvent);
+        return m_pInputModule->HandleMouseMoved(aEvent);
     }
 
     bool CEngine::OnMouseScrolled(CMouseScrolledEvent& aEvent)
     {
-        return m_InputModule.HandleMouseScrolled(aEvent);
+        return m_pInputModule->HandleMouseScrolled(aEvent);
     }
 
     bool CEngine::OnMouseButtonPressed(CMouseButtonPressedEvent& aEvent)
     {
-        return m_InputModule.HandleMouseButtonPressed(aEvent);
+        return m_pInputModule->HandleMouseButtonPressed(aEvent);
     }
 
     bool CEngine::OnMouseButtonReleased(CMouseButtonReleasedEvent& aEvent)
     {
-        return m_InputModule.HandleMouseButtonReleased(aEvent);
+        return m_pInputModule->HandleMouseButtonReleased(aEvent);
     }
 
     GLFWwindow* CEngine::GetWindow()
@@ -282,6 +287,7 @@ namespace Alvar
 		aLayer->OnAttach();
     }
 
+    // TODO: Invert dependency.
     void CEngine::RequireImGui(bool aRequire)
     {
         if (aRequire && !m_IsImGuiInitialized)
@@ -294,13 +300,13 @@ namespace Alvar
             io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
             io.ConfigFlags |= ImGuiConfigFlags_NavEnableSetMousePos;
 
-            m_RenderModule.InitImGuiBackend();
+            m_pRenderModule->InitImGuiBackend();
 
             m_IsImGuiInitialized = true;
         }
         else if (!aRequire && m_IsImGuiInitialized)
         {
-            m_RenderModule.ShutdownImGuiBackend();
+            m_pRenderModule->ShutdownImGuiBackend();
             ImGui_ImplGlfw_Shutdown();
             ImGui::DestroyContext();
 
